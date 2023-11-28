@@ -1,8 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="SqlDialectMappings">
+    <file url="file://$PROJECT_DIR$/IcotakuScrapper/Anime/Tanime.cs" dialect="SQLite" />
+    <file url="file://$PROJECT_DIR$/IcotakuScrapper/Anime/TanimeAlternativeTitle.cs" dialect="SQLite" />
+    <file url="file://$PROJECT_DIR$/IcotakuScrapper/Anime/TanimeWebSite.cs" dialect="SQLite" />
+    <file url="file://$PROJECT_DIR$/IcotakuScrapper/Common/Tcategory.cs" dialect="SQLite" />
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Common/Tformat.cs" dialect="SQLite" />
+    <file url="file://$PROJECT_DIR$/IcotakuScrapper/Common/TorigineAdaptation.cs" dialect="SQLite" />
+    <file url="file://$PROJECT_DIR$/IcotakuScrapper/Common/Tseason.cs" dialect="SQLite" />
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Common/TsheetIndex.cs" dialect="SQLite" />
+    <file url="file://$PROJECT_DIR$/IcotakuScrapper/Common/Ttarget.cs" dialect="SQLite" />
+    <file url="file://$PROJECT_DIR$/IcotakuScrapper/Contact/TcontactGenre.cs" dialect="SQLite" />
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Extensions/AppExtensions.cs" dialect="SQLite" />
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Model.sql" dialect="SQLite" />
   </component>

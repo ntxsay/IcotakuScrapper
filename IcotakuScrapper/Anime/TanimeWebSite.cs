@@ -5,42 +5,34 @@ using Microsoft.Data.Sqlite;
 
 namespace IcotakuScrapper.Anime;
 
-public enum CountIdKind
-{
-    Id,
-    IdAnime,
-}
-
-
-
-public class TanimeAlternativeTitle
+public class TanimeWebSite
 {
     public int Id { get; set; }
     public int IdAnime { get; set; }
-    public string Title { get; set; } = string.Empty;
+    public string Url { get; set; } = string.Empty;
     public string? Description { get; set; }
     
     public override string ToString()
     {
-        return $"{Id} - {Title}";
+        return $"{Id} - {Url}";
     }
     
-    public TanimeAlternativeTitle()
+    public TanimeWebSite()
     {
     }
     
-    public TanimeAlternativeTitle(int idAnime, string title, string? description)
+    public TanimeWebSite(int idAnime, string title, string? description)
     {
         IdAnime = idAnime;
-        Title = title;
+        Url = title;
         Description = description;
     }
     
-    public TanimeAlternativeTitle(int id, int idAnime, string title, string? description)
+    public TanimeWebSite(int id, int idAnime, string title, string? description)
     {
         Id = id;
         IdAnime = idAnime;
-        Title = title;
+        Url = title;
         Description = description;
     }
     
@@ -49,7 +41,7 @@ public class TanimeAlternativeTitle
     public static async Task<int> CountAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "SELECT COUNT(Id) FROM TanimeAlternativeTitle";
+        command.CommandText = "SELECT COUNT(Id) FROM TanimeWebSite";
 
         if (command.Parameters.Count > 0)
             command.Parameters.Clear();
@@ -66,8 +58,8 @@ public class TanimeAlternativeTitle
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
         command.CommandText = kind switch
         {
-            CountIdKind.Id => "SELECT COUNT(Id) FROM TanimeAlternativeTitle WHERE Id = $Id",
-            CountIdKind.IdAnime => "SELECT COUNT(Id) FROM TanimeAlternativeTitle WHERE IdAnime = $Id",
+            CountIdKind.Id => "SELECT COUNT(Id) FROM TanimeWebSite WHERE Id = $Id",
+            CountIdKind.IdAnime => "SELECT COUNT(Id) FROM TanimeWebSite WHERE IdAnime = $Id",
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
         };
 
@@ -81,12 +73,12 @@ public class TanimeAlternativeTitle
     }
 
     /// <summary>
-    /// Compte le nombre d'entrées dans la table TanimeAlternativeTitle ayant le nom spécifié
+    /// Compte le nombre d'entrées dans la table TanimeWebSite ayant le nom spécifié
     /// </summary>
-    /// <param name="title"></param>
-    /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
-    /// <param name="idAnime"></param>
+    /// <param Url="title"></param>
+    /// <param Url="cancellationToken"></param>
+    /// <param Url="cmd"></param>
+    /// <param Url="idAnime"></param>
     /// <returns></returns>
     public static async Task<int> CountAsync(int idAnime, string title, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
@@ -95,12 +87,12 @@ public class TanimeAlternativeTitle
             return 0;
 
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "SELECT COUNT(Id) FROM TanimeAlternativeTitle WHERE IdAnime = $IdAnime AND Name = $Name COLLATE NOCASE";
+        command.CommandText = "SELECT COUNT(Id) FROM TanimeWebSite WHERE IdAnime = $IdAnime AND Url = $Url COLLATE NOCASE";
 
         command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$IdAnime", idAnime);
-        command.Parameters.AddWithValue("$Name", title);
+        command.Parameters.AddWithValue("$Url", title);
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
         if (result is long count)
             return (int)count;
@@ -114,12 +106,12 @@ public class TanimeAlternativeTitle
             return null;
 
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "SELECT Id FROM TanimeAlternativeTitle WHERE IdAnime = $IdAnime AND Name = $Name COLLATE NOCASE";
+        command.CommandText = "SELECT Id FROM TanimeWebSite WHERE IdAnime = $IdAnime AND Url = $Url COLLATE NOCASE";
 
         command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$IdAnime", idAnime);
-        command.Parameters.AddWithValue("$Name", title);
+        command.Parameters.AddWithValue("$Url", title);
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
         if (result is long count)
             return (int)count;
@@ -141,7 +133,7 @@ public class TanimeAlternativeTitle
 
     #region Select
 
-    public static async Task<TanimeAlternativeTitle[]> SelectAsync(int idAnime, OrderBy orderBy = OrderBy.Asc,
+    public static async Task<TanimeWebSite[]> SelectAsync(int idAnime, OrderBy orderBy = OrderBy.Asc,
         uint limit = 0, uint skip = 0, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
@@ -152,13 +144,13 @@ public class TanimeAlternativeTitle
 
         command.Parameters.AddWithValue("$IdAnime", idAnime);
         command.CommandText += Environment.NewLine;
-        command.CommandText += $" ORDER BY Name {orderBy}";
+        command.CommandText += $" ORDER BY Url {orderBy}";
 
         command.AddLimitOffset(limit, skip);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
-            return Array.Empty<TanimeAlternativeTitle>();
+            return Array.Empty<TanimeWebSite>();
 
         return await GetRecords(reader, cancellationToken).ToArrayAsync(cancellationToken ?? CancellationToken.None);
     }
@@ -167,7 +159,7 @@ public class TanimeAlternativeTitle
 
     #region Single
 
-    public static async Task<TanimeAlternativeTitle?> SingleAsync(int id, CancellationToken? cancellationToken = null,
+    public static async Task<TanimeWebSite?> SingleAsync(int id, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
@@ -184,19 +176,19 @@ public class TanimeAlternativeTitle
         return await GetRecords(reader, cancellationToken).FirstOrDefaultAsync(cancellationToken ?? CancellationToken.None);
     }
     
-    public static async Task<TanimeAlternativeTitle?> SingleAsync(int idAnime, string title, CancellationToken? cancellationToken = null,
+    public static async Task<TanimeWebSite?> SingleAsync(int idAnime, string title, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
         if (idAnime <= 0 || title.IsStringNullOrEmptyOrWhiteSpace())
             return null;
 
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = SqlSelectScript + Environment.NewLine + " WHERE IdAnime = $IdAnime AND Name = $Name COLLATE NOCASE";
+        command.CommandText = SqlSelectScript + Environment.NewLine + " WHERE IdAnime = $IdAnime AND Url = $Url COLLATE NOCASE";
 
         command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$IdAnime", idAnime);
-        command.Parameters.AddWithValue("$Name", title);
+        command.Parameters.AddWithValue("$Url", title);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
@@ -211,28 +203,28 @@ public class TanimeAlternativeTitle
     
     public async Task<OperationState<int>> InsertAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
-        if (Title.IsStringNullOrEmptyOrWhiteSpace())
+        if (Url.IsStringNullOrEmptyOrWhiteSpace())
             return new OperationState<int>(false, "Le titre est invalide.");
         
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
         if (IdAnime <= 0 || !await Tanime.ExistsAsync(IdAnime, SheetIntColumnSelect.Id, cancellationToken, command))
             return new OperationState<int>(false, "L'anime n'existe pas.");
         
-        if (await ExistsAsync(IdAnime, Title, cancellationToken, command))
+        if (await ExistsAsync(IdAnime, Url, cancellationToken, command))
             return new OperationState<int>(false, "Le titre existe déjà.");
         
         command.CommandText = 
             """
-            INSERT INTO TanimeAlternativeTitle 
-                (IdAnime, Name, Description) 
+            INSERT INTO TanimeWebSite 
+                (IdAnime, Url, Description) 
             VALUES 
-                ($IdAnime, $Name, $Description)
+                ($IdAnime, $Url, $Description)
             """;
 
         command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$IdAnime", IdAnime);
-        command.Parameters.AddWithValue("$Name", Title);
+        command.Parameters.AddWithValue("$Url", Url);
         command.Parameters.AddWithValue("$Description", Description ?? (object)DBNull.Value);
 
         try
@@ -259,23 +251,23 @@ public class TanimeAlternativeTitle
         if (Id <= 0)
             return new OperationState(false, "L'id est invalide.");
         
-        if (Title.IsStringNullOrEmptyOrWhiteSpace())
+        if (Url.IsStringNullOrEmptyOrWhiteSpace())
             return new OperationState(false, "Le titre est invalide.");
         
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
         if (IdAnime <= 0 || !await Tanime.ExistsAsync(IdAnime, SheetIntColumnSelect.Id, cancellationToken, command))
             return new OperationState(false, "L'anime n'existe pas.");
         
-        var existingId = await GetIdOfAsync(IdAnime, Title, cancellationToken, command);
+        var existingId = await GetIdOfAsync(IdAnime, Url, cancellationToken, command);
         if (existingId != null && existingId != Id)
             return new OperationState(false, "Le titre existe déjà.");
         
         command.CommandText = 
             """
-            UPDATE TanimeAlternativeTitle 
+            UPDATE TanimeWebSite 
             SET 
                 IdAnime = $IdAnime, 
-                Name = $Name, 
+                Url = $Url, 
                 Description = $Description
             WHERE Id = $Id
             """;
@@ -284,7 +276,7 @@ public class TanimeAlternativeTitle
 
         command.Parameters.AddWithValue("$Id", Id);
         command.Parameters.AddWithValue("$IdAnime", IdAnime);
-        command.Parameters.AddWithValue("$Name", Title);
+        command.Parameters.AddWithValue("$Url", Url);
         command.Parameters.AddWithValue("$Description", Description ?? (object)DBNull.Value);
 
         try
@@ -314,7 +306,7 @@ public class TanimeAlternativeTitle
             return new OperationState(false, "L'id est invalide.");
         
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "DELETE FROM TanimeAlternativeTitle WHERE Id = $Id";
+        command.CommandText = "DELETE FROM TanimeWebSite WHERE Id = $Id";
 
         command.Parameters.Clear();
 
@@ -336,18 +328,18 @@ public class TanimeAlternativeTitle
     
     #endregion
     
-    internal static TanimeAlternativeTitle GetRecord(SqliteDataReader reader, int idIndex, int idAnimeIndex, int titleIndex, int descriptionIndex)
+    internal static TanimeWebSite GetRecord(SqliteDataReader reader, int idIndex, int idAnimeIndex, int urlIndex, int descriptionIndex)
     {
-        return new TanimeAlternativeTitle()
+        return new TanimeWebSite()
         {
             Id = reader.GetInt32(idIndex),
             IdAnime = reader.GetInt32(idAnimeIndex),
-            Title = reader.GetString(titleIndex),
+            Url = reader.GetString(urlIndex),
             Description = reader.IsDBNull(descriptionIndex) ? null : reader.GetString(descriptionIndex)
         };
     }
 
-    private static async IAsyncEnumerable<TanimeAlternativeTitle> GetRecords(SqliteDataReader reader,
+    private static async IAsyncEnumerable<TanimeWebSite> GetRecords(SqliteDataReader reader,
         CancellationToken? cancellationToken = null)
     {
         while (await reader.ReadAsync(cancellationToken ?? CancellationToken.None))
@@ -355,7 +347,7 @@ public class TanimeAlternativeTitle
             yield return GetRecord(reader, 
                 idIndex: reader.GetOrdinal("Id"),
                 idAnimeIndex: reader.GetOrdinal("IdAnime"),
-                titleIndex: reader.GetOrdinal("Name"),
+                urlIndex: reader.GetOrdinal("Url"),
                 descriptionIndex: reader.GetOrdinal("Description"));
         }
     }
@@ -366,8 +358,8 @@ public class TanimeAlternativeTitle
         SELECT
             Id,
             IdAnime,
-            Name,
+            Url,
             Description
-        FROM TanimeAlternativeTitle
+        FROM TanimeWebSite
         """;
 }

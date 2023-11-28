@@ -2,9 +2,9 @@
 using IcotakuScrapper.Extensions;
 using Microsoft.Data.Sqlite;
 
-namespace IcotakuScrapper.Common;
+namespace IcotakuScrapper.Contact;
 
-public enum FormatSortBy
+public enum GenreSortBy
 {
     Id,
     Name
@@ -13,28 +13,28 @@ public enum FormatSortBy
 /// <summary>
 /// Représente un format de diffusion d'un anime ou Manga ou autre
 /// </summary>
-public class Tformat
+public class TcontactGenre
 {
     public int Id { get; protected set; }
     public string Name { get; set; } = null!;
     public string? Description { get; set; }
 
-    public Tformat()
+    public TcontactGenre()
     {
     }
 
-    public Tformat(int id)
+    public TcontactGenre(int id)
     {
         Id = id;
     }
 
-    public Tformat(string name, string? description = null)
+    public TcontactGenre(string name, string? description = null)
     {
         Name = name;
         Description = description;
     }
     
-    public Tformat(int id, string name, string? description = null)
+    public TcontactGenre(int id, string name, string? description = null)
     {
         Id = id;
         Name = name;
@@ -49,7 +49,7 @@ public class Tformat
     #region Count
 
     /// <summary>
-    /// Compte le nombre d'entrées dans la table Tformat
+    /// Compte le nombre d'entrées dans la table TcontactGenre
     /// </summary>
     /// <param name="cancellationToken"></param>
     /// <param name="cmd"></param>
@@ -57,7 +57,7 @@ public class Tformat
     public static async Task<int> CountAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "SELECT COUNT(Id) FROM Tformat";
+        command.CommandText = "SELECT COUNT(Id) FROM TcontactGenre";
 
         if (command.Parameters.Count > 0)
             command.Parameters.Clear();
@@ -69,10 +69,9 @@ public class Tformat
     }
 
     /// <summary>
-    /// Compte le nombre d'entrées dans la table Tformat ayant l'identifiant spécifié
+    /// Compte le nombre d'entrées dans la table TcontactGenre ayant l'identifiant spécifié
     /// </summary>
     /// <param name="id"></param>
-    /// <param name="columnSelect"></param>
     /// <param name="cancellationToken"></param>
     /// <param name="cmd"></param>
     /// <returns></returns>
@@ -80,7 +79,7 @@ public class Tformat
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "SELECT COUNT(Id) FROM Tformat WHERE Id = $Id";
+        command.CommandText = "SELECT COUNT(Id) FROM TcontactGenre WHERE Id = $Id";
 
         command.Parameters.Clear();
 
@@ -92,7 +91,7 @@ public class Tformat
     }
 
     /// <summary>
-    /// Compte le nombre d'entrées dans la table Tformat ayant le nom spécifié
+    /// Compte le nombre d'entrées dans la table TcontactGenre ayant le nom spécifié
     /// </summary>
     /// <param name="name"></param>
     /// <param name="cancellationToken"></param>
@@ -105,7 +104,7 @@ public class Tformat
             return 0;
 
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "SELECT COUNT(Id) FROM Tformat WHERE Name = $Name COLLATE NOCASE";
+        command.CommandText = "SELECT COUNT(Id) FROM TcontactGenre WHERE Name = $Name COLLATE NOCASE";
 
         command.Parameters.Clear();
 
@@ -124,7 +123,7 @@ public class Tformat
             return null;
 
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "SELECT Id FROM Tformat WHERE Name = $Name COLLATE NOCASE";
+        command.CommandText = "SELECT Id FROM TcontactGenre WHERE Name = $Name COLLATE NOCASE";
 
         command.Parameters.Clear();
 
@@ -151,13 +150,13 @@ public class Tformat
 
     #region Select
 
-    public static async Task<Tformat[]> SelectAsync(FormatSortBy sortBy = FormatSortBy.Name,
+    public static async Task<TcontactGenre[]> SelectAsync(GenreSortBy sortBy = GenreSortBy.Name,
         OrderBy orderBy = OrderBy.Asc,
         uint limit = 0, uint skip = 0,
         CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = sqlSelectScript;
+        command.CommandText = SqlSelectScript;
 
         command.CommandText += Environment.NewLine + $"ORDER BY {sortBy} {orderBy}";
 
@@ -169,7 +168,7 @@ public class Tformat
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
-            return Array.Empty<Tformat>();
+            return Array.Empty<TcontactGenre>();
 
         return await GetRecords(reader, cancellationToken).ToArrayAsync(cancellationToken ?? CancellationToken.None);
     }
@@ -178,11 +177,11 @@ public class Tformat
 
     #region Single
 
-    public static async Task<Tformat?> SingleAsync(int id, CancellationToken? cancellationToken = null,
+    public static async Task<TcontactGenre?> SingleAsync(int id, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = sqlSelectScript + Environment.NewLine + "WHERE Id = $Id";
+        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Id = $Id";
 
         command.Parameters.Clear();
 
@@ -195,14 +194,14 @@ public class Tformat
             .FirstOrDefaultAsync(cancellationToken ?? CancellationToken.None);
     }
 
-    public static async Task<Tformat?> SingleAsync(string name, CancellationToken? cancellationToken = null,
+    public static async Task<TcontactGenre?> SingleAsync(string name, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
         if (name.IsStringNullOrEmptyOrWhiteSpace())
             return null;
 
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = sqlSelectScript + Environment.NewLine + "WHERE Name = $Name COLLATE NOCASE";
+        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Name = $Name COLLATE NOCASE";
 
         command.Parameters.Clear();
 
@@ -220,7 +219,7 @@ public class Tformat
     #region Insert
 
     /// <summary>
-    /// Insert un nouvel enregistrement dans la table Tformat
+    /// Insert un nouvel enregistrement dans la table TcontactGenre
     /// </summary>
     /// <param name="cancellationToken"></param>
     /// <param name="cmd"></param>
@@ -236,7 +235,7 @@ public class Tformat
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
         command.CommandText =
             """
-            INSERT INTO Tformat
+            INSERT INTO TcontactGenre
                 (Id, Name, Description)
             VALUES
                 ($Id, $Name, $Description)
@@ -268,7 +267,7 @@ public class Tformat
     #region Update
 
     /// <summary>
-    /// Met à jour cet enregistrement de la table Tformat
+    /// Met à jour cet enregistrement de la table TcontactGenre
     /// </summary>
     /// <param name="cancellationToken"></param>
     /// <param name="cmd"></param>
@@ -286,7 +285,7 @@ public class Tformat
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
         command.CommandText =
             """
-            UPDATE Tformat SET
+            UPDATE TcontactGenre SET
                 Name = $Name,
                 Description = $Description
             WHERE Id = $Id
@@ -316,7 +315,7 @@ public class Tformat
     #region Delete
 
     /// <summary>
-    /// Supprime cet enregistrement de la table Tformat
+    /// Supprime cet enregistrement de la table TcontactGenre
     /// </summary>
     /// <param name="cancellationToken"></param>
     /// <param name="cmd"></param>
@@ -326,7 +325,7 @@ public class Tformat
         => await DeleteAsync(Id, cancellationToken, cmd);
 
     /// <summary>
-    /// Supprime un enregistrement de la table Tformat ayant l'identifiant spécifié
+    /// Supprime un enregistrement de la table TcontactGenre ayant l'identifiant spécifié
     /// </summary>
     /// <param name="id"></param>
     /// <param name="cancellationToken"></param>
@@ -336,7 +335,7 @@ public class Tformat
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "DELETE FROM Tformat WHERE Id = $Id";
+        command.CommandText = "DELETE FROM TcontactGenre WHERE Id = $Id";
 
         command.Parameters.Clear();
 
@@ -357,9 +356,9 @@ public class Tformat
 
     #endregion
 
-    internal static Tformat GetRecord(SqliteDataReader reader, int idIndex, int nameIndex, int descriptionIndex)
+    internal static TcontactGenre GetRecord(SqliteDataReader reader, int idIndex, int nameIndex, int descriptionIndex)
     {
-        return new Tformat()
+        return new TcontactGenre()
         {
             Id = reader.GetInt32(idIndex),
             Name = reader.GetString(nameIndex),
@@ -368,7 +367,7 @@ public class Tformat
     }
 
 
-    private static async IAsyncEnumerable<Tformat> GetRecords(SqliteDataReader reader,
+    private static async IAsyncEnumerable<TcontactGenre> GetRecords(SqliteDataReader reader,
         CancellationToken? cancellationToken = null)
     {
         while (await reader.ReadAsync(cancellationToken ?? CancellationToken.None))
@@ -380,12 +379,12 @@ public class Tformat
         }
     }
 
-    private const string sqlSelectScript =
+    private const string SqlSelectScript =
         """
         SELECT
             Id,
             Name,
             Description
-        FROM Tformat
+        FROM TcontactGenre
         """;
 }

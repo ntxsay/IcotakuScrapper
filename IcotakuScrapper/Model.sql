@@ -94,9 +94,12 @@ DROP TABLE IF EXISTS Tcategory;
 CREATE TABLE IF NOT EXISTS Tcategory
 (
     Id          INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
-    Name        TEXT    NOT NULL, -- Nom de la catégorie
-    Type        INTEGER NOT NULL, -- Type de la catégorie (genre ou thème)
-    Description TEXT    NULL      -- description de la catégorie
+    SheetId     INTEGER NOT NULL DEFAULT 0, -- Id de la fiche
+    Url         TEXT    NULL UNIQUE,        -- Url de la fiche
+    Name        TEXT    NOT NULL,           -- Nom de la catégorie
+    Section     INTEGER NOT NULL,           -- Section de la catégorie (ANime, Manga, etc)
+    Type        INTEGER NOT NULL,           -- Type de la catégorie (genre ou thème)
+    Description TEXT    NULL                -- description de la catégorie
 );
 -- endregion
 
@@ -112,6 +115,21 @@ CREATE TABLE IF NOT EXISTS ToeuvreRole
     Name        TEXT    NOT NULL, -- Nom du rôle
     Type        INTEGER NOT NULL, -- Type de rôle (staff ou personnage)
     Description TEXT    NULL      -- description du rôle
+);
+-- endregion
+
+-- region Table Tseason
+/*
+ Création de la table Tseason qui permet 
+ d'enregistrer les saisons pour une année donnée
+ */
+DROP TABLE IF EXISTS Tseason;
+CREATE TABLE IF NOT EXISTS Tseason
+(
+    Id           INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
+    Year         INTEGER NOT NULL, -- Année de la saison
+    SeasonNumber INTEGER NOT NULL, -- 1 à 4
+    DisplayName  TEXT    NOT NULL -- Nom de la saison (printemps 2008, etc)
 );
 -- endregion
 
@@ -160,21 +178,24 @@ CREATE TABLE IF NOT EXISTS Tcontact
 DROP TABLE IF EXISTS Tanime;
 CREATE TABLE IF NOT EXISTS Tanime
 (
-    Id             INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
-    IdTarget       INTEGER NULL REFERENCES Ttarget (Id) ON DELETE CASCADE,
-    IdFormat       INTEGER NULL REFERENCES Tformat (Id) ON DELETE CASCADE,
-    IdOrigine      INTEGER NULL REFERENCES TorigineAdaptation (Id) ON DELETE CASCADE,
-    SheetId        INTEGER NOT NULL DEFAULT 0, -- Id de la fiche (anime, manga, etc)
-    Url            TEXT    NOT NULL UNIQUE,    -- Url de la fiche (anime, manga, etc)
-    Name           TEXT    NULL,               -- Nom de la fiche (anime, manga, etc)
-    EpisodeCount   INTEGER NULL,               -- Nombre d'épisode
-    EpisodeTime    REAL    NULL,               -- Durée d'un épisode (en minute)
-    Season         INTEGER NOT NULL DEFAULT 0, -- Saison de l'animé
-    Year           INTEGER NOT NULL DEFAULT 0, -- Année de sortie de l'animé
-    Month          INTEGER NOT NULL DEFAULT 0, -- Mois de sortie de l'animé
-    DiffusionState INTEGER NOT NULL DEFAULT 0, -- Etat de diffusion de l'animé
-    Description    TEXT    NULL,               -- Description de l'animé
-    Remark         TEXT    NULL                -- Remarque sur l'animé
+    Id               INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
+    IdTarget         INTEGER NULL REFERENCES Ttarget (Id) ON DELETE CASCADE,
+    IdFormat         INTEGER NULL REFERENCES Tformat (Id) ON DELETE CASCADE,
+    IdOrigine        INTEGER NULL REFERENCES TorigineAdaptation (Id) ON DELETE CASCADE,
+    IdSeason         INTEGER NULL REFERENCES Tseason (Id) ON DELETE CASCADE,
+    SheetId          INTEGER NOT NULL DEFAULT 0, -- Id de la fiche (anime, manga, etc)
+    Url              TEXT    NOT NULL UNIQUE,    -- Url de la fiche (anime, manga, etc)
+    Name             TEXT    NOT NULL,           -- Nom de la fiche (anime, manga, etc)
+    EpisodeCount     INTEGER NOT NULL DEFAULT 0, -- Nombre d'épisode
+    EpisodeDuration  REAL    NOT NULL DEFAULT 0, -- Durée d'un épisode (en minute)
+    Season           INTEGER NOT NULL DEFAULT 0, -- Saison de l'animé
+    ReleaseDate      TEXT    NULL,               -- Date de sortie de l'animé (yyyy-mm-dd)
+    EndDate          TEXT    NULL,               -- Date de fin de l'animé (yyyy-mm-dd)
+    DiffusionState   INTEGER NOT NULL DEFAULT 0, -- Etat de diffusion de l'animé
+    Description      TEXT    NULL,               -- Description de l'animé
+    ThumbnailUrl     TEXT    NULL,               -- Url de l'image de l'animé
+    ThumbnailMiniUrl TEXT    NULL,               -- Url de l'image miniature de l'animé
+    Remark           TEXT    NULL                -- Remarque sur l'animé
 );
 -- endregion
 
@@ -198,8 +219,8 @@ CREATE TABLE IF NOT EXISTS TanimeAlternativeTitle
  Création de la table tanimeWebSite qui permet 
  d'enregistrer les sites web d'une fiche fiche anime
  */
-DROP TABLE IF EXISTS tanimeWebSite;
-CREATE TABLE IF NOT EXISTS tanimeWebSite
+DROP TABLE IF EXISTS TanimeWebSite;
+CREATE TABLE IF NOT EXISTS TanimeWebSite
 (
     Id          INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
     IdAnime     INTEGER NOT NULL REFERENCES Tanime (Id) ON DELETE CASCADE,

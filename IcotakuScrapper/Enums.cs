@@ -1,11 +1,15 @@
 ﻿namespace IcotakuScrapper
 {
     /// <summary>
-    /// Enuméation des types de contenu sur le site icotaku.com et exploité par l'API.
+    /// Enuméation des sections du site icotaku.com et exploité par l'API.
     /// </summary>
-    public enum IcotakuContentType : byte
+    public enum IcotakuSection : byte
     {
-        Anime
+        Anime,
+        Manga,
+        LightNovel,
+        Drama,
+        Community,
     }
     
     /// <summary>
@@ -78,5 +82,22 @@
         Character,
         Studio,
         Distributor,
+    }
+    
+    public enum MoisKind
+    {
+        Unknow,
+        Janvier,
+        Février,
+        Mars,
+        Avril,
+        Mai,
+        Juin,
+        Juillet,
+        Août,
+        Septembre,
+        Octobre,
+        Novembre,
+        Décembre
     }
 }

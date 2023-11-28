@@ -42,7 +42,7 @@ public class TsheetIndex
     /// <summary>
     /// Obtient ou définit le type de contenu (anime, manga, etc.)
     /// </summary>
-    public IcotakuContentType ContentType { get; set; }
+    public IcotakuSection Section { get; set; }
 
     /// <summary>
     /// Obtient ou définit l'url de la fiche
@@ -69,11 +69,11 @@ public class TsheetIndex
         Id = id;
     }
     
-    public TsheetIndex(int id, int sheetId, IcotakuContentType contentType, string url, uint foundedPage = 0)
+    public TsheetIndex(int id, int sheetId, IcotakuSection section, string url, uint foundedPage = 0)
     {
         Id = id;
         SheetId = sheetId;
-        ContentType = contentType;
+        Section = section;
         Url = url;
         FoundedPage = foundedPage;
     }
@@ -81,16 +81,16 @@ public class TsheetIndex
     /// <summary>
     /// Obtient l'url de la page de la liste des animes
     /// </summary>
-    /// <param name="contentContentType"></param>
+    /// <param name="contentSection"></param>
     /// <param name="page"></param>
     /// <returns></returns>
     /// <exception cref="ArgumentOutOfRangeException"></exception>
-    public static string GetIcotakuFilterUrl(IcotakuContentType contentContentType, uint page = 1)
+    public static string GetIcotakuFilterUrl(IcotakuSection contentSection, uint page = 1)
     {
-        return contentContentType switch
+        return contentSection switch
         {
-            IcotakuContentType.Anime => $"https://anime.icotaku.com/animes.html?filter=all{(page == 0 ? "" : "&page=" + page.ToString())}",
-            _ => throw new ArgumentOutOfRangeException(nameof(contentContentType), contentContentType, null)
+            IcotakuSection.Anime => $"https://anime.icotaku.com/animes.html?filter=all{(page == 0 ? "" : "&page=" + page.ToString())}",
+            _ => throw new ArgumentOutOfRangeException(nameof(contentSection), contentSection, null)
         };
     }
     
@@ -98,18 +98,18 @@ public class TsheetIndex
     /// Obtient l'url de la page de la liste des animes
     /// </summary>
     /// <param name="letter"></param>
-    /// <param name="contentContentType"></param>
+    /// <param name="contentSection"></param>
     /// <param name="page"></param>
     /// <returns></returns>
     /// <exception cref="ArgumentOutOfRangeException"></exception>
-    public static string? GetIcotakuFilterUrl(char letter, IcotakuContentType contentContentType, uint page = 1)
+    public static string? GetIcotakuFilterUrl(char letter, IcotakuSection contentSection, uint page = 1)
     {
         if (!char.IsLetter(letter))
             return null;
-        return contentContentType switch
+        return contentSection switch
         {
-            IcotakuContentType.Anime => $"https://anime.icotaku.com/animes.html?filter={letter}{(page == 0 ? "" : "&page=" + page.ToString())}",
-            _ => throw new ArgumentOutOfRangeException(nameof(contentContentType), contentContentType, "Ce type de contenu n'est pas pris en charge.")
+            IcotakuSection.Anime => $"https://anime.icotaku.com/animes.html?filter={letter}{(page == 0 ? "" : "&page=" + page.ToString())}",
+            _ => throw new ArgumentOutOfRangeException(nameof(contentSection), contentSection, "Ce type de contenu n'est pas pris en charge.")
         };
     }
     
@@ -118,11 +118,11 @@ public class TsheetIndex
     /// <summary>
     /// Crée les index de toutes les fiches de la liste des animes
     /// </summary>
-    /// <param name="contentContentType"></param>
+    /// <param name="contentSection"></param>
     /// <returns></returns>
-    public static async Task<OperationState> CreateIndexesAsync(IcotakuContentType contentContentType, CancellationToken? cancellationToken = null)
+    public static async Task<OperationState> CreateIndexesAsync(IcotakuSection contentSection, CancellationToken? cancellationToken = null)
     {
-        var (minPage, maxPage) = GetMinAndMaxPage(contentContentType);
+        var (minPage, maxPage) = GetMinAndMaxPage(contentSection);
         if (minPage == 0 || maxPage == 0)
             return new OperationState(false, "Impossible de récupérer le nombre de pages de la liste des animes.");
 
@@ -132,7 +132,7 @@ public class TsheetIndex
         List<OperationState> results = new();
         for (uint i = (uint)minPage; i <= maxPage; i++)
         {
-            var pageResults = GetPageUrls(contentContentType, i).ToArray();
+            var pageResults = GetPageUrls(contentSection, i).ToArray();
             if (pageResults.Length == 0)
                 continue;
             var result = await InsertAsync(pageResults, cancellationToken, command);
@@ -146,10 +146,10 @@ public class TsheetIndex
     }
 
     
-    private static IEnumerable<TsheetIndex> GetPageUrls(IcotakuContentType contentContentType, uint currentPage = 1)
+    private static IEnumerable<TsheetIndex> GetPageUrls(IcotakuSection contentSection, uint currentPage = 1)
     {
         //url de la page en cours contenant le tableau des fiches
-        var pageUrl = GetIcotakuFilterUrl(contentContentType, currentPage);
+        var pageUrl = GetIcotakuFilterUrl(contentSection, currentPage);
         HtmlWeb web = new();
         var htmlDocument = web.Load(pageUrl);
         
@@ -163,7 +163,7 @@ public class TsheetIndex
             if (htmlNode == null)
                 continue;
             
-            var sheetIndex = GetSheetIndex(htmlNode, contentContentType, currentPage);
+            var sheetIndex = GetSheetIndex(htmlNode, contentSection, currentPage);
             if (sheetIndex != null)
                 yield return sheetIndex;
         }
@@ -173,10 +173,10 @@ public class TsheetIndex
     /// Crée un index à partir d'un noeud HTML
     /// </summary>
     /// <param name="htmlNode"></param>
-    /// <param name="contentContentType"></param>
+    /// <param name="contentSection"></param>
     /// <param name="currentPage"></param>
     /// <returns></returns>
-    private static TsheetIndex? GetSheetIndex(HtmlNode htmlNode, IcotakuContentType contentContentType, uint currentPage)
+    private static TsheetIndex? GetSheetIndex(HtmlNode htmlNode, IcotakuSection contentSection, uint currentPage)
     {
         var sheetHref = htmlNode.GetAttributeValue("href", string.Empty);
         if (sheetHref.IsStringNullOrEmptyOrWhiteSpace())
@@ -204,7 +204,7 @@ public class TsheetIndex
         return new TsheetIndex()
         {
             SheetId = sheetIdInt,
-            ContentType = contentContentType,
+            Section = contentSection,
             Url = sheetUri.OriginalString,
             Name = sheetName,
             FoundedPage = currentPage
@@ -215,14 +215,14 @@ public class TsheetIndex
     /// Retourne le nombre de pages de la liste des animes
     /// </summary>
     /// <returns></returns>
-    private static (int minPage, int maxPage) GetMinAndMaxPage(IcotakuContentType contentContentType)
+    private static (int minPage, int maxPage) GetMinAndMaxPage(IcotakuSection contentSection)
     {
         HtmlWeb web = new();
 
-        var url = contentContentType switch
+        var url = contentSection switch
         {
-            IcotakuContentType.Anime => "https://anime.icotaku.com/animes.html?filter=all",
-            _ => throw new ArgumentOutOfRangeException(nameof(contentContentType), contentContentType, null)
+            IcotakuSection.Anime => "https://anime.icotaku.com/animes.html?filter=all",
+            _ => throw new ArgumentOutOfRangeException(nameof(contentSection), contentSection, null)
         };
         
         var htmlDocument = web.Load(url);
@@ -311,11 +311,11 @@ public class TsheetIndex
     /// <summary>
     /// Compte le nombre d'entrées dans la table TsheetIndex ayant le type de contenu spécifiée
     /// </summary>
-    /// <param name="contentContentType"></param>
+    /// <param name="contentSection"></param>
     /// <param name="cancellationToken"></param>
     /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<int> CountAsync(IcotakuContentType contentContentType, CancellationToken? cancellationToken = null,
+    public static async Task<int> CountAsync(IcotakuSection contentSection, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
@@ -323,7 +323,7 @@ public class TsheetIndex
 
         command.Parameters.Clear();
 
-        command.Parameters.AddWithValue("$Type", (byte)contentContentType);
+        command.Parameters.AddWithValue("$Type", (byte)contentSection);
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
         if (result is long count)
             return (int)count;
@@ -355,7 +355,7 @@ public class TsheetIndex
         return 0;
     }
 
-    public static async Task<int> CountAsync(string url, IcotakuContentType contentContentType,
+    public static async Task<int> CountAsync(string url, IcotakuSection contentSection,
         CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
@@ -368,7 +368,7 @@ public class TsheetIndex
         command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$Url", url.Trim());
-        command.Parameters.AddWithValue("$Type", (byte)contentContentType);
+        command.Parameters.AddWithValue("$Type", (byte)contentSection);
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
         if (result is long count)
             return (int)count;
@@ -394,7 +394,7 @@ public class TsheetIndex
         return null;
     }
     
-    public static async Task<int?> GetIdOfAsync(string url, IcotakuContentType contentContentType,
+    public static async Task<int?> GetIdOfAsync(string url, IcotakuSection contentSection,
         CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
@@ -407,7 +407,7 @@ public class TsheetIndex
         command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$Url", url.Trim());
-        command.Parameters.AddWithValue("$Type", (byte)contentContentType);
+        command.Parameters.AddWithValue("$Type", (byte)contentSection);
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
         if (result is long count)
             return (int)count;
@@ -425,17 +425,17 @@ public class TsheetIndex
         SqliteCommand? cmd = null)
         => await CountAsync(id, columnSelect, cancellationToken, cmd) > 0;
 
-    public static async Task<bool> ExistsAsync(IcotakuContentType contentContentType, CancellationToken? cancellationToken = null,
+    public static async Task<bool> ExistsAsync(IcotakuSection contentSection, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
-        => await CountAsync(contentContentType, cancellationToken, cmd) > 0;
+        => await CountAsync(contentSection, cancellationToken, cmd) > 0;
 
     public static async Task<bool> ExistsAsync(string url, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
         => await CountAsync(url, cancellationToken, cmd) > 0;
 
-    public static async Task<bool> ExistsAsync(string url, IcotakuContentType contentContentType,
+    public static async Task<bool> ExistsAsync(string url, IcotakuSection contentSection,
         CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
-        => await CountAsync(url, contentContentType, cancellationToken, cmd) > 0;
+        => await CountAsync(url, contentSection, cancellationToken, cmd) > 0;
 
     #endregion
 
@@ -489,7 +489,7 @@ public class TsheetIndex
     /// <summary>
     /// Retourne tous les enregistrements de la table TsheetIndex ayant le type de contenu spécifié
     /// </summary>
-    /// <param name="contentContentType"></param>
+    /// <param name="contentSection"></param>
     /// <param name="sortBy"></param>
     /// <param name="orderBy"></param>
     /// <param name="limit"></param>
@@ -498,7 +498,7 @@ public class TsheetIndex
     /// <param name="cmd"></param>
     /// <returns></returns>
     /// <exception cref="ArgumentOutOfRangeException"></exception>
-    public static async Task<TsheetIndex[]> SelectAsync(IcotakuContentType contentContentType, SheetSortBy sortBy, OrderBy orderBy, uint limit = 0, uint skip = 0, CancellationToken? cancellationToken = null,
+    public static async Task<TsheetIndex[]> SelectAsync(IcotakuSection contentSection, SheetSortBy sortBy, OrderBy orderBy, uint limit = 0, uint skip = 0, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
@@ -528,7 +528,7 @@ public class TsheetIndex
         if (command.Parameters.Count > 0)
             command.Parameters.Clear();
         
-        command.Parameters.AddWithValue("$Type", (byte)contentContentType);
+        command.Parameters.AddWithValue("$Type", (byte)contentSection);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         var records = await GetRecordsAsync(reader, cancellationToken).ToArrayAsync();
@@ -616,7 +616,7 @@ public class TsheetIndex
         command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$SheetId", record.SheetId);
-        command.Parameters.AddWithValue("$Type", (byte)record.ContentType);
+        command.Parameters.AddWithValue("$Type", (byte)record.Section);
         command.Parameters.AddWithValue("$Url", record.Url);
         command.Parameters.AddWithValue("$FoundedPage", record.FoundedPage);
 
@@ -656,12 +656,12 @@ public class TsheetIndex
             command.CommandText += $"($SheetId{i}, $Type{i}, $Url{i}, $FoundedPage{i}, $Name{i})";
             
             command.Parameters.AddWithValue($"$SheetId{i}", record.SheetId);
-            command.Parameters.AddWithValue($"$Type{i}", (byte)record.ContentType);
+            command.Parameters.AddWithValue($"$Type{i}", (byte)record.Section);
             command.Parameters.AddWithValue($"$Url{i}", record.Url);
             command.Parameters.AddWithValue($"$FoundedPage{i}", record.FoundedPage);
             command.Parameters.AddWithValue($"$Name{i}", record.Name);
 
-            Debug.WriteLine($"SheetId: {record.SheetId}, Type: {record.ContentType}, Url: {record.Url}, FoundedPage: {record.FoundedPage}, Name: {record.Name}");
+            Debug.WriteLine($"SheetId: {record.SheetId}, Type: {record.Section}, Url: {record.Url}, FoundedPage: {record.FoundedPage}, Name: {record.Name}");
         }
 
 
@@ -713,7 +713,7 @@ public class TsheetIndex
 
         command.Parameters.AddWithValue("$Id", record.Id);
         command.Parameters.AddWithValue("$SheetId", record.SheetId);
-        command.Parameters.AddWithValue("$Type", (byte)record.ContentType);
+        command.Parameters.AddWithValue("$Type", (byte)record.Section);
         command.Parameters.AddWithValue("$Url", record.Url);
         command.Parameters.AddWithValue("$FoundedPage", record.FoundedPage);
 
@@ -822,7 +822,7 @@ public class TsheetIndex
         {
             Id = reader.GetInt32(idIndex),
             SheetId = reader.GetInt32(sheetIdIndex),
-            ContentType = (IcotakuContentType)reader.GetByte(typeIndex),
+            Section = (IcotakuSection)reader.GetByte(typeIndex),
             Url = reader.GetString(urlIndex),
             Name = reader.IsDBNull(nameIndex) ? null : reader.GetString(nameIndex),
             FoundedPage = (uint)reader.GetInt32(foundedPageIndex)

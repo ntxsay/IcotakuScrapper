@@ -24,6 +24,15 @@ namespace IcotakuScrapper.Extensions
         /// <param name="command"></param>
         /// <returns></returns>
         internal static async Task<int> GetLastInsertRowIdAsync(this SqliteCommand command) => await ExtensionMethods.GetLastInsertRowIdAsync(command);
+        
+        /// <summary>
+        ///Ajoute les clauses LIMIT et OFFSET à la commande SQL.
+        /// </summary>
+        /// <param name="command"></param>
+        /// <param name="limit"></param>
+        /// <param name="offset"></param>
+        internal static void AddLimitOffset(this SqliteCommand command, uint limit, uint offset) => ExtensionMethods.AddLimitOffset(command, limit, offset);
+        
     }
 
     internal static class ExtensionMethods
@@ -40,12 +49,20 @@ namespace IcotakuScrapper.Extensions
         
         internal static async Task<int> GetLastInsertRowIdAsync(SqliteCommand command)
         {
-            command.CommandText = @"SELECT last_insert_rowid()";
+            command.CommandText = "SELECT last_insert_rowid()";
             var value = await command.ExecuteScalarAsync();
             if (value is long id)
                 return (int)id;
 
             throw new InvalidOperationException("Impossible de récupérer l'identifiant de la ligne insérée");
+        }
+        
+        internal static void AddLimitOffset(SqliteCommand command, uint limit, uint offset)
+        {
+            if (limit > 0)
+                command.CommandText += $" LIMIT {limit}";
+            if (offset > 0)
+                command.CommandText += $" OFFSET {offset}";
         }
 
     }

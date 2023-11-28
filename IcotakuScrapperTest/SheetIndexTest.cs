@@ -8,7 +8,7 @@ public class SheetIndexTest
     [Test]
     public async Task CreateIndex()
     {
-        var result = await TsheetIndex.CreateIndexesAsync(IcotakuContentType.Anime);
+        var result = await TsheetIndex.CreateIndexesAsync(IcotakuSection.Anime);
         Assert.That(result.IsSuccess, Is.True);
     }
 }
