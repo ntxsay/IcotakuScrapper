@@ -14,11 +14,22 @@ public class TanimeWebSite
     
     public override string ToString()
     {
-        return $"{Id} - {Url}";
+        return $"{Url} ({Description})";
     }
     
     public TanimeWebSite()
     {
+    }
+    
+    public TanimeWebSite(int id)
+    {
+        Id = id;
+    }
+    
+    public TanimeWebSite(int id, int idAnime)
+    {
+        Id = id;
+        IdAnime = idAnime;
     }
     
     public TanimeWebSite(int idAnime, string title, string? description)

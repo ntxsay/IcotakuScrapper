@@ -16,7 +16,7 @@ public enum CategorySortBy
 /// <summary>
 /// Représente un format de diffusion d'un anime ou Manga ou autre
 /// </summary>
-public class Tcategory
+public partial class Tcategory
 {
     public int Id { get; protected set; }
     public int SheetId { get; set; }
@@ -35,17 +35,10 @@ public class Tcategory
         Id = id;
     }
 
-    public Tcategory(IcotakuSection section, CategoryType categoryType, string name, string? description = null)
+    public Tcategory(IcotakuSection section, CategoryType categoryType, int sheetId, Uri sheetUri, string name, string? description = null)
     {
-        Section = section;
-        Type = categoryType;
-        Name = name;
-        Description = description;
-    }
-    
-    public Tcategory(int id, IcotakuSection section, CategoryType categoryType , string name, string? description = null)
-    {
-        Id = id;
+        SheetId = sheetId;
+        Url = sheetUri.ToString();
         Section = section;
         Type = categoryType;
         Name = name;
@@ -56,159 +49,6 @@ public class Tcategory
     {
         return $"{Name} ({Type})";
     }
-
-    #region Html
-    /// <summary>
-    /// Retourne l'url de la page de catégorie en fonction du type de contenu (Anime, Manga, etc) depuis icotaku.com
-    /// </summary>
-    /// <param name="section"></param>
-    /// <param name="categoryType"></param>
-    /// <returns></returns>
-    /// <exception cref="ArgumentOutOfRangeException"></exception>
-    public static string GetCategoriesUrl(IcotakuSection section, CategoryType categoryType)
-    {
-        return section switch
-        {
-            IcotakuSection.Anime => categoryType switch
-            {
-                CategoryType.Theme => Main.GetBaseUrl(section) + "/themes.html",
-                CategoryType.Genre => Main.GetBaseUrl(section) + "/genres.html",
-                _ => throw new ArgumentOutOfRangeException(nameof(categoryType), categoryType, "Ce type de catégorie n'est pas pris en charge")
-            },
-            _ => throw new ArgumentOutOfRangeException(nameof(section), section, "Ce type de contenu n'est pas pris en charge")
-        };
-    }
-
-    /// <summary>
-    /// Retourne le type de catégorie en fonction de l'url de la page de catégorie depuis icotaku.com
-    /// </summary>
-    /// <param name="sheetUri"></param>
-    /// <returns></returns>
-    public static CategoryType? GetCategoryType(Uri sheetUri)
-    {
-        var splitUrl = sheetUri.Segments.Select(s => s.Trim('/')).Where(w => !w.IsStringNullOrEmptyOrWhiteSpace()).ToArray();
-        if (splitUrl.Length == 0)
-            return null;
-
-        return splitUrl[0] switch
-        {
-            "themes" or "theme" => CategoryType.Theme,
-            "genres" or "genre" => CategoryType.Genre,
-            _ => null
-        };
-    }
-
-    /// <summary>
-    /// Ajoute à la base de données les catégories en fonction du type de contenu (Anime, Manga, etc) depuis icotaku.com
-    /// </summary>
-    /// <param name="section"></param>
-    /// <param name="cancellationToken"></param>
-    /// <returns></returns>
-    public static async Task<OperationState> CreateIndexAsync(HashSet<IcotakuSection> sections, CancellationToken? cancellationToken = null)
-    {
-        await using var command = (await Main.GetSqliteConnectionAsync()).CreateCommand();
-
-        List<Tcategory> listOfCategories = new List<Tcategory>();
-
-        foreach (var section in sections)
-        {
-            var deleteAllResult = await DeleteAsync(section, cancellationToken, command);
-            if (!deleteAllResult.IsSuccess)
-                continue;
-
-            var categories = GetCategories(section, CategoryType.Theme).ToList();
-            if (categories.Count > 0)
-                listOfCategories.AddRange(categories);
-
-            categories = GetCategories(section, CategoryType.Genre).ToList();
-            if (categories.Count > 0)
-                listOfCategories.AddRange(categories);
-        }
-        
-
-        return await InsertAsync(listOfCategories, cancellationToken, command);
-    }
-
-    /// <summary>
-    /// Retourne les catégories en fonction du type de contenu (Anime, Manga, etc) depuis icotaku.com
-    /// </summary>
-    /// <param name="section"></param>
-    /// <param name="categoryType"></param>
-    /// <returns></returns>
-    private static IEnumerable<Tcategory> GetCategories(IcotakuSection section, CategoryType categoryType)
-    {
-        var pageUrl = GetCategoriesUrl(section, categoryType);
-        HtmlWeb web = new();
-        var htmlDocument = web.Load(pageUrl);
-
-        var nodes = htmlDocument.DocumentNode.SelectNodes("//div[@id='listecontenu']/div/div/a").ToArray();
-        if (nodes.Length == 0)
-            yield break;
-
-        foreach (var node in nodes)
-        {
-            var uri = Main.GetFullHrefFromHtmlNode(node, section);
-            if (uri == null)
-                continue;
-
-            var sheetId = Main.GetSheetId(uri);
-            if (!sheetId.HasValue)
-                continue;
-
-            var checksection = Main.GetIcotakuSection(uri);
-            if (!checksection.HasValue)
-                continue;
-
-            if (checksection.Value != section)
-                continue;
-
-            var checkCategoryType = GetCategoryType(uri);
-            if (!checkCategoryType.HasValue)
-                continue;
-
-            if (checkCategoryType.Value != categoryType)
-                continue;
-
-            Tcategory tcategory = new()
-            {
-                SheetId = sheetId.Value,
-                Section = section,
-                Type = categoryType,
-                Url = uri.ToString()
-            };
-
-            var result = GetCategory(tcategory);
-            if (result != null)
-                yield return result;
-        }
-    }
-
-
-    /// <summary>
-    /// Rempli les propriétés Name et Description de l'objet Tcategory
-    /// </summary>
-    /// <param name="tcategory"></param>
-    /// <returns></returns>
-    private static Tcategory? GetCategory(Tcategory tcategory)
-    {
-        HtmlWeb web = new();
-        var htmlDocument = web.Load(tcategory.Url);
-
-        var nameNode = htmlDocument.DocumentNode.SelectSingleNode("//div[@id='fiche_entete']//h1/text()");
-
-        var name = HttpUtility.HtmlDecode(nameNode?.InnerText?.Trim())?.Trim();
-        if (name == null || name.IsStringNullOrEmptyOrWhiteSpace())
-            return null;
-
-        var descriptionNode = htmlDocument.DocumentNode.SelectSingleNode("//div[@id='page']/div[@class='contenu']/p[1]/text()");
-        var description = HttpUtility.HtmlDecode(descriptionNode?.InnerText?.Trim())?.Trim();
-
-        tcategory.Name = name;
-        tcategory.Description = description;
-
-        return tcategory;
-    }
-    #endregion
 
     #region Count
 
@@ -239,11 +79,16 @@ public class Tcategory
     /// <param name="cancellationToken"></param>
     /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<int> CountAsync(int id, CancellationToken? cancellationToken = null,
+    public static async Task<int> CountAsync(int id, SheetIntColumnSelect columnSelect, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "SELECT COUNT(Id) FROM Tcategory WHERE Id = $Id";
+        command.CommandText = columnSelect switch
+        {
+            SheetIntColumnSelect.Id => "SELECT COUNT(Id) FROM Tcategory WHERE Id = $Id",
+            SheetIntColumnSelect.SheetId => "SELECT COUNT(Id) FROM Tcategory WHERE SheetId = $Id",
+            _ => throw new ArgumentOutOfRangeException(nameof(columnSelect), columnSelect, null)
+        };
 
         command.Parameters.Clear();
 
@@ -371,9 +216,9 @@ public class Tcategory
 
     #region Exists
 
-    public static async Task<bool> ExistsAsync(int id, CancellationToken? cancellationToken = null,
+    public static async Task<bool> ExistsAsync(int id, SheetIntColumnSelect columnSelect, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
-        => await CountAsync(id, cancellationToken, cmd) > 0;
+        => await CountAsync(id, columnSelect, cancellationToken, cmd) > 0;
 
     public static async Task<bool> ExistsAsync(string name, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
@@ -567,6 +412,9 @@ public class Tcategory
         
         if (Url.IsStringNullOrEmptyOrWhiteSpace())
             return new OperationState<int>(false, "L'url ne peut pas être vide");
+
+        if (!Uri.TryCreate(Url, UriKind.Absolute, out var uri))
+            return new OperationState<int>(false, "L'url n'est pas valide");
         
         if (await ExistsAsync(Name, cancellationToken, cmd))
             return new OperationState<int>(false, "Le nom de l'item existe déjà");
@@ -582,12 +430,12 @@ public class Tcategory
 
         command.Parameters.Clear();
 
-        command.Parameters.AddWithValue("$Name", Name.Trim());
+        command.Parameters.AddWithValue("$Name", Name);
         command.Parameters.AddWithValue("$Section", (byte)Section);
         command.Parameters.AddWithValue("$Type", (byte)Type);
         command.Parameters.AddWithValue("$Description", Description ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$SheetId", SheetId);
-        command.Parameters.AddWithValue("$Url", Url.Trim());
+        command.Parameters.AddWithValue("$Url", uri.ToString());
 
         try
         {
@@ -773,9 +621,8 @@ public class Tcategory
 
         try
         {
-            return await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None) <= 0
-                ? new OperationState(false, "Une erreur est survenue lors de la suppression")
-                : new OperationState(true, "Suppression réussie");
+            var countRowAffected = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
+            return new OperationState(true, $"{countRowAffected} enregistrement(s) supprimé(s) avec succès.");
         }
         catch (Exception e)
         {

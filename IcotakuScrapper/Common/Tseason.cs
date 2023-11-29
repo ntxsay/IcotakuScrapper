@@ -51,7 +51,7 @@ public class Tseason
     
     public override string ToString()
     {
-        return $"{DisplayName} {Year}";
+        return $"{DisplayName} ({SeasonNumber}-{Year})";
     }
 
     #region Count

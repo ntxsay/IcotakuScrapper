@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using IcotakuScrapper.Common;
+using IcotakuScrapper.Contact;
 using IcotakuScrapper.Extensions;
 using Microsoft.Data.Sqlite;
 
@@ -74,6 +75,11 @@ public partial class Tanime : TanimeBase
     /// Obtient ou définit la liste des  catégories de l'anime (genre et thèmes).
     /// </summary>
     public HashSet<Tcategory> Categories { get; } = new();
+    
+    /// <summary>
+    /// Obtient ou définit la liste des studios de l'anime.
+    /// </summary>
+    public HashSet<Tcontact> Studios { get; } = new();
 
 
     /// <summary>
@@ -133,8 +139,17 @@ public partial class Tanime : TanimeBase
         if (anime == null)
             return new OperationState<int>(false, "L'anime n'a pas été trouvé");
 
+        if (!anime.Url.IsStringNullOrEmptyOrWhiteSpace())
+        {
+            _ = await CreateIndexAsync(anime.Name, anime.Url, anime.SheetId, cancellationToken, command);
+        }
+        anime.Url = uri.ToString();
+
         return await anime.InsertAync(cancellationToken, command);
     }
+
+    private static async Task<OperationState<int>> CreateIndexAsync(string animeName, string animeUrl, int animeSheetId, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        => await TsheetIndex.InsertAsync(IcotakuSection.Anime, animeName, animeUrl, animeSheetId, 0, cancellationToken, cmd);
     
     #region Count
 
@@ -244,25 +259,6 @@ public partial class Tanime : TanimeBase
         return null;
     }
     
-    public static async Task<int?> GetIdOfAsync(string name, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-    {
-        if (name.IsStringNullOrEmptyOrWhiteSpace())
-            return 0;
-        
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "SELECT Id FROM Tanime WHERE Name = $Name COLLATE NOCASE";
-
-        command.Parameters.Clear();
-        
-        command.Parameters.AddWithValue("$Name", name);
-        
-        var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
-        if (result is long count)
-            return (int)count;
-        return null;
-    }
-    
     public static async Task<int?> GetIdOfAsync(string name, int sheetId, Uri sheetUri, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
@@ -313,10 +309,9 @@ public partial class Tanime : TanimeBase
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
         command.CommandText = SqlSelectScript + Environment.NewLine;
         
-        command.CommandText += $"ORDER BY {sortBy} {orderBy}";
+        AddSortOrderBy(command, sortBy, orderBy);
         
-        if (limit > 0)
-            command.CommandText += $" LIMIT {limit} OFFSET {skip}";
+        command.AddLimitOffset(limit, skip);
 
         command.Parameters.Clear();
         
@@ -427,11 +422,11 @@ public partial class Tanime : TanimeBase
         command.Parameters.AddWithValue("$DiffusionState", (byte)DiffusionState);
         command.Parameters.AddWithValue("$EpisodeCount", EpisodesCount);
         command.Parameters.AddWithValue("$EpisodeDuration", Duration.TotalMinutes);
-        command.Parameters.AddWithValue("$ReleaseDate", ReleaseDate);
-        command.Parameters.AddWithValue("$EndDate", EndDate);
+        command.Parameters.AddWithValue("$ReleaseDate", ReleaseDate ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$EndDate", EndDate ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$Description", Description ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("$ThumbnailMiniUrl", ThumbnailMiniUrl);
-        command.Parameters.AddWithValue("$ThumbnailUrl", ThumbnailUrl);
+        command.Parameters.AddWithValue("$ThumbnailMiniUrl", ThumbnailMiniUrl ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$ThumbnailUrl", ThumbnailUrl ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$IdFormat", Format?.Id ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$IdTarget", Target?.Id ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$IdOrigine", OrigineAdaptation?.Id ?? (object)DBNull.Value);
@@ -457,7 +452,12 @@ public partial class Tanime : TanimeBase
                     webSite.IdAnime = Id;
                     _ = await webSite.InsertAsync(cancellationToken, command);
                 }
+            
+            if (Studios.Count > 0)
+                _ = await TanimeStudio.InsertAsync(Id, Studios.Select(s => s.Id).ToArray(), cancellationToken, command);
 
+            if (Categories.Count > 0)
+                _ = await TanimeCategory.InsertAsync(Id, Categories.Select(s => s.Id).ToArray(), cancellationToken, command);
 
             return new OperationState<int>(true, "L'anime a été ajouté avec succès", Id);
 
@@ -524,11 +524,11 @@ public partial class Tanime : TanimeBase
         command.Parameters.AddWithValue("$DiffusionState", (byte)DiffusionState);
         command.Parameters.AddWithValue("$EpisodeCount", EpisodesCount);
         command.Parameters.AddWithValue("$EpisodeDuration", Duration.TotalMinutes);
-        command.Parameters.AddWithValue("$ReleaseDate", ReleaseDate);
-        command.Parameters.AddWithValue("$EndDate", EndDate);
+        command.Parameters.AddWithValue("$ReleaseDate", ReleaseDate ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$EndDate", EndDate ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$Description", Description ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("$ThumbnailMiniUrl", ThumbnailMiniUrl);
-        command.Parameters.AddWithValue("$ThumbnailUrl", ThumbnailUrl);
+        command.Parameters.AddWithValue("$ThumbnailMiniUrl", ThumbnailMiniUrl ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$ThumbnailUrl", ThumbnailUrl ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$IdFormat", Format?.Id ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$IdTarget", Target?.Id ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$IdOrigine", OrigineAdaptation?.Id ?? (object)DBNull.Value);
@@ -649,11 +649,94 @@ public partial class Tanime : TanimeBase
                 
                 animeList.Add(anime);
             }
+            
+            if (!reader.IsDBNull(reader.GetOrdinal("AlternativeTitleId")))
+            {
+                var alternativeTitleId = reader.GetInt32(reader.GetOrdinal("AlternativeTitleId"));
+                var alternativeTitle = anime.AlternativeTitles.FirstOrDefault(x => x.Id == alternativeTitleId);
+                if (alternativeTitle == null)
+                {
+                    alternativeTitle = new TanimeAlternativeTitle(alternativeTitleId, animeId)
+                    {
+                        Title = reader.GetString(reader.GetOrdinal("AlternativeTitle")),
+                        Description = reader.IsDBNull(reader.GetOrdinal("AlternativeTitleDescription"))
+                            ? null
+                            : reader.GetString(reader.GetOrdinal("AlternativeTitleDescription"))
+                    };
+                    anime.AlternativeTitles.Add(alternativeTitle);
+                }
+            }
+            
+            if (!reader.IsDBNull(reader.GetOrdinal("WebSiteId")))
+            {
+                var webSiteId = reader.GetInt32(reader.GetOrdinal("WebSiteId"));
+                var webSite = anime.WebSites.FirstOrDefault(x => x.Id == webSiteId);
+                if (webSite == null)
+                {
+                    webSite = new TanimeWebSite(webSiteId, animeId)
+                    {
+                        Url = reader.GetString(reader.GetOrdinal("WebSiteUrl")),
+                        Description = reader.IsDBNull(reader.GetOrdinal("WebSiteDescription"))
+                            ? null
+                            : reader.GetString(reader.GetOrdinal("WebSiteDescription"))
+                    };
+                    anime.WebSites.Add(webSite);
+                }
+            }
+            
+            if (!reader.IsDBNull(reader.GetOrdinal("CategoryId")))
+            {
+                var categoryId = reader.GetInt32(reader.GetOrdinal("CategoryId"));
+                var category = anime.Categories.FirstOrDefault(x => x.Id == categoryId);
+                if (category == null)
+                {
+                    category = Tcategory.GetRecord(reader,
+                        idIndex: reader.GetOrdinal("CategoryId"),
+                        sheetIdIndex: reader.GetOrdinal("CategorySheetId"),
+                        typeIndex: reader.GetOrdinal("CategoryType"),
+                        urlIndex: reader.GetOrdinal("CategoryUrl"),
+                        sectionIndex: reader.GetOrdinal("CategorySection"),
+                        nameIndex: reader.GetOrdinal("CategoryName"),
+                        descriptionIndex: reader.GetOrdinal("CategoryDescription"));
+                    anime.Categories.Add(category);
+                }
+            }
+            
+            if (!reader.IsDBNull(reader.GetOrdinal("StudioId")))
+            {
+                var studioId = reader.GetInt32(reader.GetOrdinal("StudioId"));
+                var studio = anime.Studios.FirstOrDefault(x => x.Id == studioId);
+                if (studio == null)
+                {
+                    studio = await Tcontact.SingleAsync(studioId, SheetIntColumnSelect.Id, cancellationToken);
+                    if (studio != null)
+                        anime.Studios.Add(studio);
+                }
+            }
         }
         
         return animeList.ToArray();
     }
-    
+
+    internal static void AddSortOrderBy(SqliteCommand command, AnimeSortBy sortBy, OrderBy orderBy)
+    {
+        command.CommandText += Environment.NewLine;
+        command.CommandText += sortBy switch
+        {
+            AnimeSortBy.Id => $" ORDER BY Tanime.Id {orderBy}",
+            AnimeSortBy.Name => $" ORDER BY Tanime.Name {orderBy}",
+            AnimeSortBy.Duration => $" ORDER BY Tanime.Duration {orderBy}",
+            AnimeSortBy.OrigineAdaptation => $" ORDER BY TorigineAdaptation.Name {orderBy}",
+            AnimeSortBy.SheetId => $" ORDER BY Tanime.SheetId {orderBy}",
+            AnimeSortBy.Target => $" ORDER BY Ttarget.Name {orderBy}",
+            AnimeSortBy.EpisodesCount => $" ORDER BY Tanime.EpisodeCount {orderBy}",
+            AnimeSortBy.EndDate => $" ORDER BY Tanime.EndDate {orderBy}",
+            AnimeSortBy.Format => $" ORDER BY Tformat.Name {orderBy}",
+            AnimeSortBy.ReleaseDate => $" ORDER BY Tanime.ReleaseDate {orderBy}",
+            _ => throw new ArgumentOutOfRangeException(nameof(sortBy), sortBy, null)
+        };
+    }
+
     private const string SqlSelectScript =
         """
         SELECT
@@ -686,12 +769,35 @@ public partial class Tanime : TanimeBase
             
             Tseason.DisplayName as SeasonDisplayName,
             Tseason.Year as SeasonYear,
-            Tseason.SeasonNumber as SeasonNumber
+            Tseason.SeasonNumber as SeasonNumber,
+            
+            TanimeAlternativeTitle.Id AS AlternativeTitleId,
+            TanimeAlternativeTitle.Name AS AlternativeTitle,
+            TanimeAlternativeTitle.Description AS AlternativeTitleDescription,
+            
+            TanimeWebSite.Id AS WebSiteId,
+            TanimeWebSite.Url AS WebSiteUrl,
+            TanimeWebSite.Description AS WebSiteDescription,
+            
+            TanimeStudio.IdStudio AS StudioId,
+            
+            TanimeCategory.IdCategory AS CategoryId,
+            Tcategory.SheetId AS CategorySheetId,
+            Tcategory.Type AS CategoryType,
+            Tcategory.Url AS CategoryUrl,
+            Tcategory.Section AS CategorySection,
+            Tcategory.Name AS CategoryName,
+            Tcategory.Description AS CategoryDescription
         
         FROM Tanime
         LEFT JOIN main.Tformat  on Tformat.Id = Tanime.IdFormat
         LEFT JOIN main.Ttarget  on Ttarget.Id = Tanime.IdTarget
         LEFT JOIN main.TorigineAdaptation on TorigineAdaptation.Id = Tanime.IdOrigine
         LEFT JOIN main.Tseason  on Tseason.Id = Tanime.IdSeason
+        LEFT JOIN main.TanimeAlternativeTitle TanimeAlternativeTitle on Tanime.Id = TanimeAlternativeTitle.IdAnime
+        LEFT JOIN main.TanimeWebSite on Tanime.Id = TanimeWebSite.IdAnime
+        LEFT JOIN main.TanimeCategory on Tanime.Id = TanimeCategory.IdAnime
+        LEFT JOIN main.Tcategory on Tcategory.Id = TanimeCategory.IdCategory
+        LEFT JOIN main.TanimeStudio on Tanime.Id = TanimeStudio.IdAnime
         """;
 }

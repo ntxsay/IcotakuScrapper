@@ -6,63 +6,39 @@ using Microsoft.Data.Sqlite;
 
 namespace IcotakuScrapper.Anime;
 
-public enum AnimeStudioIdSelector
+public enum AnimeCategoryIdSelector
 {
     Id,
     IdAnime,
-    IdStudio,
+    IdCategory,
 }
 
-public class TanimeStudio
+public class TanimeCategory
 {
     public int Id { get; protected set; }
     public int IdAnime { get; set; }
-    public Tcontact Studio { get; set; } = new ();
-    
-    public TanimeStudio()
+    public Tcategory Category { get; set; } = new();
+
+    public TanimeCategory()
     {
     }
 
-    public TanimeStudio(int id)
+    public TanimeCategory(int id)
     {
         Id = id;
     }
-    
-    public TanimeStudio(int idAnime, Tcontact studio)
+
+    public TanimeCategory(int idAnime, Tcategory category)
     {
         IdAnime = idAnime;
-        Studio = studio;
+        Category = category;
     }
-    
-    private static async IAsyncEnumerable<TanimeStudio> GetRecords(SqliteDataReader reader,
-        CancellationToken? cancellationToken = null)
-    {
-        while (await reader.ReadAsync(cancellationToken ?? CancellationToken.None))
-        {
-            yield return GetRecord(reader,
-                idIndex: reader.GetOrdinal("BaseId"),
-                idAnimeIndex: reader.GetOrdinal("IdAnime"),
-                idContactIndex: reader.GetOrdinal("IdStudio"),
-                sheetIdContactIndex: reader.GetOrdinal("SheetId"),
-                displayNameIndex: reader.GetOrdinal("DisplayName"),
-                presentationIndex: reader.GetOrdinal("Presentation"),
-                urlContactIndex: reader.GetOrdinal("Url"),
-                birthNameIndex: reader.GetOrdinal("BirthName"),
-                firstNameIndex: reader.GetOrdinal("FirstName"),
-                originalNameIndex: reader.GetOrdinal("OriginalName"),
-                birthDateIndex: reader.GetOrdinal("BirthDate"),
-                ageIndex: reader.GetOrdinal("Age"),
-                contactTypeIndex: reader.GetOrdinal("Type"),
-                idGenreIndex: reader.GetOrdinal("IdGenre"),
-                genreNameIndex: reader.GetOrdinal("GenreName"),
-                genreDescriptionIndex: reader.GetOrdinal("GenreDescription"));
-        }
-    }
-    
-     #region Count
+
+
+    #region Count
 
     /// <summary>
-    /// Compte le nombre d'entrées dans la table TanimeStudio
+    /// Compte le nombre d'entrées dans la table TanimeCategory
     /// </summary>
     /// <param name="cancellationToken"></param>
     /// <param name="cmd"></param>
@@ -70,7 +46,7 @@ public class TanimeStudio
     public static async Task<int> CountAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "SELECT COUNT(Id) FROM TanimeStudio";
+        command.CommandText = "SELECT COUNT(Id) FROM TanimeCategory";
 
         if (command.Parameters.Count > 0)
             command.Parameters.Clear();
@@ -82,7 +58,7 @@ public class TanimeStudio
     }
 
     /// <summary>
-    /// Compte le nombre d'entrées dans la table TanimeStudio ayant l'identifiant spécifié
+    /// Compte le nombre d'entrées dans la table TanimeCategory ayant l'identifiant spécifié
     /// </summary>
     /// <param name="id"></param>
     /// <param name="cancellationToken"></param>
@@ -92,7 +68,7 @@ public class TanimeStudio
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "SELECT COUNT(Id) FROM TanimeStudio WHERE Id = $Id";
+        command.CommandText = "SELECT COUNT(Id) FROM TanimeCategory WHERE Id = $Id";
 
         command.Parameters.Clear();
 
@@ -104,7 +80,7 @@ public class TanimeStudio
     }
 
     /// <summary>
-    /// Compte le nombre d'entrées dans la table TanimeStudio ayant le nom spécifié
+    /// Compte le nombre d'entrées dans la table TanimeCategory ayant le nom spécifié
     /// </summary>
     /// <param name="idContact"></param>
     /// <param name="cancellationToken"></param>
@@ -115,12 +91,12 @@ public class TanimeStudio
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "SELECT COUNT(Id) FROM TanimeStudio WHERE IdAnime = $IdAnime AND IdStudio = $IdStudio";
+        command.CommandText = "SELECT COUNT(Id) FROM TanimeCategory WHERE IdAnime = $IdAnime AND IdCategory = $IdCategory";
 
         command.Parameters.Clear();
-        
+
         command.Parameters.AddWithValue("$IdAnime", idAnime);
-        command.Parameters.AddWithValue("$IdStudio", idContact);
+        command.Parameters.AddWithValue("$IdCategory", idContact);
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
         if (result is long count)
             return (int)count;
@@ -131,12 +107,12 @@ public class TanimeStudio
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "SELECT Id FROM TanimeStudio WHERE IdAnime = $IdAnime AND IdStudio = $IdStudio";
+        command.CommandText = "SELECT Id FROM TanimeCategory WHERE IdAnime = $IdAnime AND IdCategory = $IdCategory";
 
         command.Parameters.Clear();
-        
+
         command.Parameters.AddWithValue("$IdAnime", idAnime);
-        command.Parameters.AddWithValue("$IdStudio", idContact);
+        command.Parameters.AddWithValue("$IdCategory", idContact);
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
         if (result is long count)
             return (int)count;
@@ -159,28 +135,29 @@ public class TanimeStudio
 
     #region Select
 
-    public static async Task<TanimeStudio[]> SelectAsync(int id, AnimeStudioIdSelector selector, OrderBy orderBy = OrderBy.Asc, uint limit = 0, uint skip = 0 , CancellationToken? cancellationToken = null,
+    public static async Task<TanimeCategory[]> SelectAsync(int id, AnimeCategoryIdSelector selector,
+        OrderBy orderBy = OrderBy.Asc, uint limit = 0, uint skip = 0, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
         command.CommandText = SqlSelectScript + Environment.NewLine + selector switch
         {
-            AnimeStudioIdSelector.Id => "WHERE TanimeStudio.Id = $Id",
-            AnimeStudioIdSelector.IdAnime => "WHERE TanimeStudio.IdAnime = $Id",
-            AnimeStudioIdSelector.IdStudio => "WHERE TanimeStudio.IdStudio = $Id",
+            AnimeCategoryIdSelector.Id => "WHERE TanimeCategory.Id = $Id",
+            AnimeCategoryIdSelector.IdAnime => "WHERE TanimeCategory.IdAnime = $Id",
+            AnimeCategoryIdSelector.IdCategory => "WHERE TanimeCategory.IdCategory = $Id",
             _ => throw new ArgumentOutOfRangeException(nameof(selector), selector, null)
         };
-        
+
         command.CommandText += Environment.NewLine + $"ORDER BY Tcontact.DisplayName {orderBy}";
-        
+
         command.AddLimitOffset(limit, skip);
 
         command.Parameters.Clear();
-        
+
         command.Parameters.AddWithValue("$Id", id);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
-            return Array.Empty<TanimeStudio>();
+            return Array.Empty<TanimeCategory>();
         return await GetRecords(reader, cancellationToken).ToArrayAsync(cancellationToken ?? CancellationToken.None);
     }
 
@@ -188,20 +165,23 @@ public class TanimeStudio
 
     #region Single
 
-    public static async Task<TanimeStudio?> SingleAsync(int idAnime, int idContact, CancellationToken? cancellationToken = null,
+    public static async Task<TanimeCategory?> SingleAsync(int idAnime, int idContact,
+        CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE TanimeStudio.IdAnime = $IdAnime AND TanimeStudio.IdStudio = $IdStudio";
-        
+        command.CommandText = SqlSelectScript + Environment.NewLine +
+                              "WHERE TanimeCategory.IdAnime = $IdAnime AND TanimeCategory.IdCategory = $IdCategory";
+
         command.Parameters.Clear();
-        
+
         command.Parameters.AddWithValue("$IdAnime", idAnime);
-        command.Parameters.AddWithValue("$IdStudio", idContact);
+        command.Parameters.AddWithValue("$IdCategory", idContact);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
             return null;
-        return await GetRecords(reader, cancellationToken).FirstOrDefaultAsync(cancellationToken ?? CancellationToken.None);
+        return await GetRecords(reader, cancellationToken)
+            .FirstOrDefaultAsync(cancellationToken ?? CancellationToken.None);
     }
 
     #endregion
@@ -215,21 +195,22 @@ public class TanimeStudio
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
         if (IdAnime <= 0 || !await Tanime.ExistsAsync(IdAnime, SheetIntColumnSelect.Id, cancellationToken, command))
             return new OperationState<int>(false, "L'anime n'existe pas.", 0);
-        
-        
-        if (Studio.Id <= 0 || !await Tcontact.ExistsAsync(Studio.Id, SheetIntColumnSelect.Id, cancellationToken, command))
+
+
+        if (Category.Id <= 0 ||
+            !await Tcontact.ExistsAsync(Category.Id, SheetIntColumnSelect.Id, cancellationToken, command))
             return new OperationState<int>(false, "Le studio n'existe pas.", 0);
-        
-        if (await ExistsAsync(IdAnime, Studio.Id, cancellationToken, command))
+
+        if (await ExistsAsync(IdAnime, Category.Id, cancellationToken, command))
             return new OperationState<int>(false, "Le lien existe déjà.", 0);
-        
-        command.CommandText = "INSERT INTO TanimeStudio (IdAnime, IdStudio) VALUES ($IdAnime, $IdStudio);";
-        
+
+        command.CommandText = "INSERT INTO TanimeCategory (IdAnime, IdCategory) VALUES ($IdAnime, $IdCategory);";
+
         command.Parameters.Clear();
-        
+
         command.Parameters.AddWithValue("$IdAnime", IdAnime);
-        command.Parameters.AddWithValue("$IdStudio", Studio.Id);
-        
+        command.Parameters.AddWithValue("$IdCategory", Category.Id);
+
         try
         {
             if (await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None) <= 0)
@@ -245,53 +226,53 @@ public class TanimeStudio
         }
     }
 
-    public static async Task<OperationState> InsertAsync(int idAnime, IReadOnlyCollection<int> contactIdValues,
+    public static async Task<OperationState> InsertAsync(int idAnime, IReadOnlyCollection<int> idCategoryValues,
         CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
-        
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
         if (idAnime <= 0 || !await Tanime.ExistsAsync(idAnime, SheetIntColumnSelect.Id, cancellationToken, command))
             return new OperationState(false, "L'anime n'existe pas.");
-        
-        if (contactIdValues.Count == 0)
+
+        if (idCategoryValues.Count == 0)
             return new OperationState(false, "Aucun studio n'a été sélectionné.");
 
         List<OperationState<int>> results = new();
-        command.CommandText = "INSERT INTO TanimeStudio (IdAnime, IdStudio) VALUES ($IdAnime, $IdStudio) VALUES";
+        command.CommandText = "INSERT INTO TanimeCategory (IdAnime, IdCategory) VALUES ($IdAnime, $IdCategory) VALUES";
         command.Parameters.Clear();
-        
-        for (var i = 0; i < contactIdValues.Count; i++)
+
+        for (var i = 0; i < idCategoryValues.Count; i++)
         {
-            var idContact = contactIdValues.ElementAt(i);
-            if (idContact <= 0 || !await Tcontact.ExistsAsync(idContact, SheetIntColumnSelect.Id, cancellationToken, command))
+            var idCategory = idCategoryValues.ElementAt(i);
+            if (idCategory <= 0 ||
+                !await Tcategory.ExistsAsync(idCategory, SheetIntColumnSelect.Id, cancellationToken, null))
             {
-                results.Add(new OperationState<int>(false, $"Un des studios sélectionnés n'existe pas ({idContact})."));
+                results.Add(new OperationState<int>(false, $"Une des catégories sélectionnées n'existe pas ({idCategory})."));
                 continue;
             }
 
-            if (await ExistsAsync(idAnime, idContact, cancellationToken, command))
-                results.Add(new OperationState<int>(false, $"Le lien existe déjà ({idContact})."));
-            
-            command.CommandText += Environment.NewLine + $"($IdAnime, $IdStudio{i})";
-            command.Parameters.AddWithValue($"$IdStudio{i}", idContact);
-            
-            if (i == contactIdValues.Count - 1)
+            if (await ExistsAsync(idAnime, idCategory, cancellationToken, command))
+                results.Add(new OperationState<int>(false, $"Le lien existe déjà ({idCategory})."));
+
+            command.CommandText += Environment.NewLine + $"($IdAnime, $IdCategory{i})";
+            command.Parameters.AddWithValue($"$IdCategory{i}", idCategory);
+
+            if (i == idCategoryValues.Count - 1)
                 command.CommandText += ";";
             else
                 command.CommandText += ",";
         }
-        
+
         if (command.Parameters.Count == 0)
             return new OperationState(false, "Aucun studio n'a été sélectionné.");
-        
+
         command.Parameters.AddWithValue("$IdAnime", idAnime);
-        
+
         try
         {
             if (await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None) <= 0)
                 return new OperationState(false, "Une erreur est survenue lors de l'insertion");
-            
+
             if (results.All(a => a.IsSuccess))
                 return new OperationState(true, "Insertion réussie");
             if (results.All(a => !a.IsSuccess))
@@ -304,10 +285,11 @@ public class TanimeStudio
             return new OperationState(false, "Une erreur est survenue lors de l'insertion");
         }
     }
+
     #endregion
-    
+
     #region Update
-    
+
     public async Task<OperationState> UpdateAsync(CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
@@ -315,22 +297,23 @@ public class TanimeStudio
 
         if (IdAnime <= 0 || !await Tanime.ExistsAsync(IdAnime, SheetIntColumnSelect.Id, cancellationToken, command))
             return new OperationState(false, "L'anime n'existe pas.");
-        
-        if (Studio.Id <= 0 || !await Tcontact.ExistsAsync(Studio.Id, SheetIntColumnSelect.Id, cancellationToken, command))
+
+        if (Category.Id <= 0 ||
+            !await Tcontact.ExistsAsync(Category.Id, SheetIntColumnSelect.Id, cancellationToken, command))
             return new OperationState(false, "Le studio n'existe pas.");
-        
-        var existingId = await GetIdOfAsync(IdAnime, Studio.Id, cancellationToken, command);
+
+        var existingId = await GetIdOfAsync(IdAnime, Category.Id, cancellationToken, command);
         if (existingId is not null && existingId != Id)
             return new OperationState(false, "Le lien existe déjà.");
-        
-        command.CommandText = "UPDATE TanimeStudio SET IdAnime = $IdAnime, IdStudio = $IdStudio WHERE Id = $Id;";
-        
+
+        command.CommandText = "UPDATE TanimeCategory SET IdAnime = $IdAnime, IdCategory = $IdCategory WHERE Id = $Id;";
+
         command.Parameters.Clear();
-        
+
         command.Parameters.AddWithValue("$Id", Id);
         command.Parameters.AddWithValue("$IdAnime", IdAnime);
-        command.Parameters.AddWithValue("$IdStudio", Studio.Id);
-        
+        command.Parameters.AddWithValue("$IdCategory", Category.Id);
+
         try
         {
             if (await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None) <= 0)
@@ -344,28 +327,30 @@ public class TanimeStudio
             return new OperationState(false, "Une erreur est survenue lors de la mise à jour");
         }
     }
-    
+
     #endregion
-    
+
     #region Delete
-    public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+
+    public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null,
+        SqliteCommand? cmd = null)
         => await DeleteAsync(Id, cancellationToken, cmd);
 
     public static async Task<OperationState> DeleteAsync(int id, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "DELETE FROM TanimeStudio WHERE Id = $Id";
-        
+        command.CommandText = "DELETE FROM TanimeCategory WHERE Id = $Id";
+
         command.Parameters.Clear();
-        
+
         command.Parameters.AddWithValue("$Id", id);
-        
+
         try
         {
             var result = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
-            return result > 0 
-                ? new OperationState(true, "Le lien a été supprimé avec succès") 
+            return result > 0
+                ? new OperationState(true, "Le lien a été supprimé avec succès")
                 : new OperationState(false, "Une erreur est survenue lors de la suppression du lien");
         }
         catch (Exception e)
@@ -377,60 +362,61 @@ public class TanimeStudio
 
     #endregion
 
-    
-    public static TanimeStudio GetRecord(SqliteDataReader reader, int idIndex, int idAnimeIndex, int idContactIndex, int sheetIdContactIndex, int displayNameIndex, int presentationIndex, int urlContactIndex, 
-        int birthNameIndex, int firstNameIndex, int originalNameIndex, int birthDateIndex, int ageIndex, int contactTypeIndex, 
-        int idGenreIndex, int genreNameIndex, int genreDescriptionIndex)
+    private static async IAsyncEnumerable<TanimeCategory> GetRecords(SqliteDataReader reader,
+        CancellationToken? cancellationToken = null)
     {
-        var record = new TanimeStudio()
+        while (await reader.ReadAsync(cancellationToken ?? CancellationToken.None))
+        {
+            yield return GetRecord(reader,
+                idIndex: reader.GetOrdinal("BaseId"),
+                idAnimeIndex: reader.GetOrdinal("IdAnime"),
+                idCategoryIndex: reader.GetOrdinal("IdCategory"),
+                categoryTypeIndex: reader.GetOrdinal("CategoryType"),
+                sheetCategoryIdIndex: reader.GetOrdinal("CategorySheetId"),
+                sectionIndex: reader.GetOrdinal("CategorySection"),
+                urlCategoryIndex: reader.GetOrdinal("CategoryUrl"),
+                categoryNameIndex: reader.GetOrdinal("CategoryName"),
+                categoryDescriptionIndex: reader.GetOrdinal("CategoryDescription"));
+        }
+    }
+
+
+    public static TanimeCategory GetRecord(SqliteDataReader reader, int idIndex, int idAnimeIndex,
+        int idCategoryIndex, int sheetCategoryIdIndex, int urlCategoryIndex, int sectionIndex,
+        int categoryTypeIndex, int categoryNameIndex, int categoryDescriptionIndex)
+    {
+        var record = new TanimeCategory()
         {
             Id = reader.GetInt32(idIndex),
             IdAnime = reader.GetInt32(idAnimeIndex),
-            Studio = Tcontact.GetRecord(reader, 
-                idIndex:  idContactIndex,
-                sheetIdIndex: sheetIdContactIndex,
-                displayNameIndex: displayNameIndex,
-                presentationIndex: presentationIndex,
-                urlIndex: urlContactIndex,
-                birthNameIndex: birthNameIndex,
-                firstNameIndex: firstNameIndex,
-                originalNameIndex: originalNameIndex,
-                birthDateIndex: birthDateIndex,
-                ageIndex: ageIndex,
-                contactTypeIndex: contactTypeIndex,
-                idGenreIndex: idGenreIndex,
-                genreNameIndex: genreNameIndex,
-                genreDescriptionIndex: genreDescriptionIndex)
-                
+            Category = Tcategory.GetRecord(reader,
+                idIndex: idCategoryIndex,
+                sheetIdIndex: sheetCategoryIdIndex,
+                urlIndex: urlCategoryIndex,
+                sectionIndex: sectionIndex,
+                typeIndex: categoryTypeIndex,
+                nameIndex: categoryNameIndex,
+                descriptionIndex: categoryDescriptionIndex)
         };
-        
+
         return record;
     }
-    
+
     private const string SqlSelectScript =
         """
         SELECT
-            TanimeStudio.Id AS BaseId,
-            TanimeStudio.IdAnime,
-            TanimeStudio.IdStudio,
+            TanimeCategory.Id AS BaseId,
+            TanimeCategory.IdAnime,
+            TanimeCategory.IdCategory,
             
-            Tcontact.SheetId,
-            Tcontact.IdGenre,
-            Tcontact.Type,
-            Tcontact.DisplayName,
-            Tcontact.Presentation,
-            Tcontact.Url,
-            Tcontact.BirthName,
-            Tcontact.FirstName,
-            Tcontact.OriginalName,
-            Tcontact.BirthDate,
-            Tcontact.Age,
-            
-            TcontactGenre.Name AS GenreName,
-            TcontactGenre.Description AS GenreDescription
-        
-        FROM TanimeStudio
-        LEFT JOIN main.Tcontact Tcontact on Tcontact.Id = TanimeStudio.IdStudio
-        LEFT JOIN main.TcontactGenre TcontactGenre on TcontactGenre.Id = Tcontact.IdGenre
+            Tcategory.Type AS CategoryType,
+            Tcategory.SheetId AS CategorySheetId,
+            Tcategory.Url AS CategoryUrl,
+            Tcategory.Section AS CategorySection,
+            Tcategory.Name AS CategoryName,
+            Tcategory.Description AS CategoryDescription
+
+        FROM TanimeCategory
+        LEFT JOIN main.Tcategory on Tcategory.Id = TanimeCategory.IdCategory
         """;
 }

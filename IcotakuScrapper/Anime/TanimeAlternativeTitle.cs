@@ -29,6 +29,17 @@ public class TanimeAlternativeTitle
     {
     }
     
+    public TanimeAlternativeTitle(int id)
+    {
+        Id = id;
+    }
+    
+    public TanimeAlternativeTitle(int id, int idAnime)
+    {
+        Id = id;
+        IdAnime = idAnime;
+    }
+    
     public TanimeAlternativeTitle(int idAnime, string title, string? description)
     {
         IdAnime = idAnime;

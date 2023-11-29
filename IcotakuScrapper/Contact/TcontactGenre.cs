@@ -335,7 +335,11 @@ public class TcontactGenre
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "DELETE FROM TcontactGenre WHERE Id = $Id";
+        command.CommandText = 
+            """
+            UPDATE Tcontact SET IdGenre = NULL WHERE IdGenre = $Id;
+            DELETE FROM TcontactGenre WHERE Id = $Id;
+            """;
 
         command.Parameters.Clear();
 

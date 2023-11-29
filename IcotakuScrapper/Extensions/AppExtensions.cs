@@ -1,4 +1,5 @@
-﻿using Microsoft.Data.Sqlite;
+﻿using IcotakuScrapper.Anime;
+using Microsoft.Data.Sqlite;
 
 namespace IcotakuScrapper.Extensions
 {
@@ -64,6 +65,8 @@ namespace IcotakuScrapper.Extensions
             if (offset > 0)
                 command.CommandText += $" OFFSET {offset}";
         }
+
+        
 
     }
 }

@@ -28,6 +28,12 @@ public class Ttarget
         Id = id;
     }
 
+    public Ttarget(string name, string? description = null)
+    {
+        Name = name;
+        Description = description;
+    }
+
     public Ttarget(int id, string name, string? description = null)
     {
         Id = id;
@@ -230,14 +236,13 @@ public class Ttarget
         command.CommandText =
             """
             INSERT INTO Ttarget
-                (Id, Name, Description)
+                (Name, Description)
             VALUES
-                ($Id, $Name, $Description)
+                ($Name, $Description)
             """;
 
         command.Parameters.Clear();
 
-        command.Parameters.AddWithValue("$Id", Id);
         command.Parameters.AddWithValue("$Name", Name.Trim());
         command.Parameters.AddWithValue("$Description", Description ?? (object)DBNull.Value);
 

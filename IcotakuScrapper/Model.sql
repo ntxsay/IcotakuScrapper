@@ -80,7 +80,7 @@ DROP TABLE IF EXISTS Tcountry;
 CREATE TABLE IF NOT EXISTS Tcountry
 (
     Id       INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
-    Name     TEXT    NOT NULL UNIQUE, -- Nom de l'origine
+    Name     TEXT    NOT NULL UNIQUE, -- Nom du pays
     FileName TEXT    NULL             -- Nom du fichier du drapeau 
 );
 -- endregion
@@ -229,13 +229,27 @@ CREATE TABLE IF NOT EXISTS TanimeWebSite
 );
 -- endregion
 
+-- region Table TanimeCategory
+/*
+ Création de la table TanimeCategory qui permet 
+ de lier les catégories aux fiches anime
+ */
+DROP TABLE IF EXISTS TanimeCategory;
+CREATE TABLE IF NOT EXISTS TanimeCategory
+(
+    Id       INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
+    IdAnime  INTEGER NOT NULL REFERENCES Tanime (Id) ON DELETE CASCADE,
+    IdCategory INTEGER NOT NULL REFERENCES Tcategory (Id) ON DELETE CASCADE
+);
+-- endregion
+    
 -- region Table tanimeStudio
 /*
  Création de la table tanimeStudio qui permet 
  de lier les studios aux fiches anime
  */
-DROP TABLE IF EXISTS tanimeStudio;
-CREATE TABLE IF NOT EXISTS tanimeStudio
+DROP TABLE IF EXISTS TanimeStudio;
+CREATE TABLE IF NOT EXISTS TanimeStudio
 (
     Id       INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
     IdAnime  INTEGER NOT NULL REFERENCES Tanime (Id) ON DELETE CASCADE,
@@ -248,8 +262,8 @@ CREATE TABLE IF NOT EXISTS tanimeStudio
  Création de la table tanimeStudio qui permet 
  de lier les distributeurs aux fiches anime
  */
-DROP TABLE IF EXISTS tanimeLicence;
-CREATE TABLE IF NOT EXISTS tanimeLicence
+DROP TABLE IF EXISTS TanimeLicence;
+CREATE TABLE IF NOT EXISTS TanimeLicence
 (
     Id            INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
     IdAnime       INTEGER NOT NULL REFERENCES Tanime (Id) ON DELETE CASCADE,
@@ -263,8 +277,8 @@ CREATE TABLE IF NOT EXISTS tanimeLicence
  Création de la table tanimeStaff qui permet 
  de lier le staff aux fiches anime
  */
-DROP TABLE IF EXISTS tanimeStaff;
-CREATE TABLE IF NOT EXISTS tanimeStaff
+DROP TABLE IF EXISTS TanimeStaff;
+CREATE TABLE IF NOT EXISTS TanimeStaff
 (
     Id         INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
     IdAnime    INTEGER NOT NULL REFERENCES Tanime (Id) ON DELETE CASCADE,
@@ -278,8 +292,8 @@ CREATE TABLE IF NOT EXISTS tanimeStaff
  Création de la table tanimeCharacter qui permet 
  de lier les personnages aux fiches anime
  */
-DROP TABLE IF EXISTS tanimeCharacter;
-CREATE TABLE IF NOT EXISTS tanimeCharacter
+DROP TABLE IF EXISTS TanimeCharacter;
+CREATE TABLE IF NOT EXISTS TanimeCharacter
 (
     Id          INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
     IdAnime     INTEGER NOT NULL REFERENCES Tanime (Id) ON DELETE CASCADE,

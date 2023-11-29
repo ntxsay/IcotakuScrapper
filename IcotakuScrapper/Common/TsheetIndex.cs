@@ -258,6 +258,7 @@ public class TsheetIndex
     
 
     #endregion
+
     #region Count
 
     /// <summary>
@@ -489,7 +490,7 @@ public class TsheetIndex
     /// <summary>
     /// Retourne tous les enregistrements de la table TsheetIndex ayant le type de contenu spécifié
     /// </summary>
-    /// <param name="contentSection"></param>
+    /// <param name="sections"></param>
     /// <param name="sortBy"></param>
     /// <param name="orderBy"></param>
     /// <param name="limit"></param>
@@ -498,13 +499,25 @@ public class TsheetIndex
     /// <param name="cmd"></param>
     /// <returns></returns>
     /// <exception cref="ArgumentOutOfRangeException"></exception>
-    public static async Task<TsheetIndex[]> SelectAsync(IcotakuSection contentSection, SheetSortBy sortBy, OrderBy orderBy, uint limit = 0, uint skip = 0, CancellationToken? cancellationToken = null,
+    public static async Task<TsheetIndex[]> SelectAsync(HashSet<IcotakuSection> sections, SheetSortBy sortBy, OrderBy orderBy, uint limit = 0, uint skip = 0, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
         command.CommandText = sqlSelectScript + Environment.NewLine;
-        command.CommandText += " WHERE Type = $Type" + Environment.NewLine;
-        
+        if (command.Parameters.Count > 0)
+            command.Parameters.Clear();
+
+        if (sections.Count > 0)
+        {
+            command.CommandText += Environment.NewLine + "WHERE Type IN (";
+            for (var i = 0; i < sections.Count; i++)
+            {
+                command.CommandText += i == 0 ? $"$Section{i}" : $", $Section{i}";
+                command.Parameters.AddWithValue($"$Section{i}", (byte)sections.ElementAt(i));
+            }
+            command.CommandText += ")";
+        }
+
         command.CommandText += sortBy switch
         {
             SheetSortBy.Id => " ORDER BY Id",
@@ -524,11 +537,6 @@ public class TsheetIndex
         
         if (limit > 0)
             command.CommandText += $" LIMIT {limit} OFFSET {skip}";
-
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
-        
-        command.Parameters.AddWithValue("$Type", (byte)contentSection);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         var records = await GetRecordsAsync(reader, cancellationToken).ToArrayAsync();
@@ -595,6 +603,49 @@ public class TsheetIndex
 
     public async Task<OperationState<int>> InsertAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
         => await InsertAsync(this, cancellationToken, cmd);
+    
+    internal static async Task<OperationState<int>> InsertAsync(IcotakuSection section, string name, string url, int sheetId, uint foundedPage, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        if (name.IsStringNullOrEmptyOrWhiteSpace())
+            return new OperationState<int>(false, "Le nom de l'anime ne peut pas être vide");
+        
+        if (url.IsStringNullOrEmptyOrWhiteSpace())
+            return new OperationState<int>(false, "L'url de la fiche de l'anime ne peut pas être vide");
+        
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || !uri.IsAbsoluteUri)
+            return new OperationState<int>(false, "L'url de la fiche de l'anime n'est pas valide");
+        
+        if (sheetId <= 0)
+            return new OperationState<int>(false, "L'id de la fiche de l'anime Icotaku n'est pas valide");
+        
+        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        if (await ExistsAsync(url, cancellationToken, command))
+            return new OperationState<int>(false, "L'url existe déjà dans la base de données.");
+        
+        command.CommandText = "INSERT INTO TsheetIndex (SheetId, Url, Name, Type, FoundedPage) VALUES ($SheetId, $Url, $Name, $Type, $FoundedPage)";
+        
+        command.Parameters.Clear();
+        
+        command.Parameters.AddWithValue("$SheetId", sheetId);
+        command.Parameters.AddWithValue("$Url", url);
+        command.Parameters.AddWithValue("$Name", name);
+        command.Parameters.AddWithValue("$Type", (byte)section);
+        command.Parameters.AddWithValue("$FoundedPage", foundedPage);
+        
+        try
+        {
+            var result = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
+            return result > 0 
+                ? new OperationState<int>(true, "L'anime a été ajouté avec succès") 
+                : new OperationState<int>(false, "Une erreur est survenue lors de l'ajout de l'anime");
+        }
+        catch (Exception e)
+        {
+            Debug.WriteLine(e.Message);
+            return new OperationState<int>(false, "Une erreur est survenue lors de l'ajout de l'anime");
+        }
+    }
+
     
     public static async Task<OperationState<int>> InsertAsync(TsheetIndex record, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)

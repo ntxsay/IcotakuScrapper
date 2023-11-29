@@ -18,6 +18,24 @@ namespace IcotakuScrapper
             _ => "https://icotaku.com"
         };
 
+        public static IcotakuSection? GetIcotakuSection(Uri sheetUri)
+        {
+            var host = sheetUri.Host;
+            if (host.IsStringNullOrEmptyOrWhiteSpace())
+                return null;
+
+            return host switch
+            {
+                "anime.icotaku.com" => IcotakuSection.Anime,
+                "manga.icotaku.com" => IcotakuSection.Manga,
+                "novel.icotaku.com" => IcotakuSection.LightNovel,
+                "drama.icotaku.com" => IcotakuSection.Drama,
+                "communaute.icotaku.com" => IcotakuSection.Community,
+                _ => null
+            };
+        }
+
+
         public static int? GetSheetId(Uri sheetUri)
         {
             var splitUrl = sheetUri.Segments.Select(s => s.Trim('/')).Where(w => !w.IsStringNullOrEmptyOrWhiteSpace()).ToArray();
@@ -37,28 +55,6 @@ namespace IcotakuScrapper
             return sheetIdInt;
         }
 
-        public static IcotakuSection? GetIcotakuSection(Uri sheetUri)
-        {
-            var splitUrl = sheetUri.Segments.Select(s => s.Trim('/')).Where(w => !w.IsStringNullOrEmptyOrWhiteSpace()).ToArray();
-            if (splitUrl.Length == 0)
-                return null;
-
-            var section = splitUrl.FirstOrDefault(f =>
-                                  f.Any(a => char.IsLetter(a) || a == '-' || a == '_'));
-
-            if (section.IsStringNullOrEmptyOrWhiteSpace())
-                return null;
-
-            return section switch
-            {
-                "anime" => IcotakuSection.Anime,
-                "manga" => IcotakuSection.Manga,
-                "novel" => IcotakuSection.LightNovel,
-                "drama" => IcotakuSection.Drama,
-                "communaute" => IcotakuSection.Community,
-                _ => null
-            };
-        }
 
         public static Uri? GetFullHrefFromHtmlNode(HtmlNode node, IcotakuSection section)
         {

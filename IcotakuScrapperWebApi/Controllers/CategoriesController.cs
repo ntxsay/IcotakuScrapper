@@ -12,13 +12,13 @@ namespace IcotakuScrapperWebApi.Controllers
     public class CategoriesController : ControllerBase
     {
         [HttpPost("Create/Index")]
-        public async Task<OperationState> CreateIndexAsync(IcotakuSection[] sections)
+        public async Task<OperationState> CreateIndexAsync([FromQuery] IcotakuSection[] sections)
         {
             var distinctSections = sections.Distinct();
             return await Tcategory.CreateIndexAsync([.. distinctSections]);
         }
 
-        [HttpGet(Name = "all")]
+        [HttpGet("All")]
 
         public async Task<Tcategory[]> SelectAllAsync([FromQuery] IcotakuSection[] sections, [FromQuery] CategoryType[] categoryType, [FromQuery] FormatSortBy sortBy = FormatSortBy.Name,
         [FromQuery] OrderBy orderBy = OrderBy.Asc,

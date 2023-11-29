@@ -84,6 +84,15 @@
         Distributor,
     }
     
+    public enum SheetType : byte
+    {
+        Unknown,
+        Person,
+        Character,
+        Studio,
+        Distributor,
+    }
+    
     public enum MoisKind
     {
         Unknow,

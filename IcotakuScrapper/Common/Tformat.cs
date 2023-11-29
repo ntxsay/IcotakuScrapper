@@ -237,14 +237,13 @@ public class Tformat
         command.CommandText =
             """
             INSERT INTO Tformat
-                (Id, Name, Description)
+                (Name, Description)
             VALUES
-                ($Id, $Name, $Description)
+                ($Name, $Description)
             """;
 
         command.Parameters.Clear();
 
-        command.Parameters.AddWithValue("$Id", Id);
         command.Parameters.AddWithValue("$Name", Name.Trim());
         command.Parameters.AddWithValue("$Description", Description ?? (object)DBNull.Value);
 
