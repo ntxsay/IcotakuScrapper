@@ -237,22 +237,18 @@ public class TanimeCategory
         if (idCategoryValues.Count == 0)
             return new OperationState(false, "Aucun studio n'a été sélectionné.");
 
-        List<OperationState<int>> results = new();
-        command.CommandText = "INSERT INTO TanimeCategory (IdAnime, IdCategory) VALUES ($IdAnime, $IdCategory) VALUES";
+        List<OperationState<int>> results = [];
+        command.CommandText = "INSERT OR IGNORE INTO TanimeCategory (IdAnime, IdCategory) VALUES ($IdAnime, $IdCategory) VALUES";
         command.Parameters.Clear();
 
         for (var i = 0; i < idCategoryValues.Count; i++)
         {
             var idCategory = idCategoryValues.ElementAt(i);
-            if (idCategory <= 0 ||
-                !await Tcategory.ExistsAsync(idCategory, SheetIntColumnSelect.Id, cancellationToken, null))
+            if (idCategory <= 0)
             {
                 results.Add(new OperationState<int>(false, $"Une des catégories sélectionnées n'existe pas ({idCategory})."));
                 continue;
             }
-
-            if (await ExistsAsync(idAnime, idCategory, cancellationToken, command))
-                results.Add(new OperationState<int>(false, $"Le lien existe déjà ({idCategory})."));
 
             command.CommandText += Environment.NewLine + $"($IdAnime, $IdCategory{i})";
             command.Parameters.AddWithValue($"$IdCategory{i}", idCategory);

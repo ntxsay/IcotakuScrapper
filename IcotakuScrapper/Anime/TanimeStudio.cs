@@ -257,21 +257,18 @@ public class TanimeStudio
         if (contactIdValues.Count == 0)
             return new OperationState(false, "Aucun studio n'a été sélectionné.");
 
-        List<OperationState<int>> results = new();
-        command.CommandText = "INSERT INTO TanimeStudio (IdAnime, IdStudio) VALUES ($IdAnime, $IdStudio) VALUES";
+        List<OperationState<int>> results = [];
+        command.CommandText = "INSERT OR IGNORE INTO TanimeStudio (IdAnime, IdStudio) VALUES ($IdAnime, $IdStudio) VALUES";
         command.Parameters.Clear();
         
         for (var i = 0; i < contactIdValues.Count; i++)
         {
             var idContact = contactIdValues.ElementAt(i);
-            if (idContact <= 0 || !await Tcontact.ExistsAsync(idContact, SheetIntColumnSelect.Id, cancellationToken, command))
+            if (idContact <= 0)
             {
                 results.Add(new OperationState<int>(false, $"Un des studios sélectionnés n'existe pas ({idContact})."));
                 continue;
             }
-
-            if (await ExistsAsync(idAnime, idContact, cancellationToken, command))
-                results.Add(new OperationState<int>(false, $"Le lien existe déjà ({idContact})."));
             
             command.CommandText += Environment.NewLine + $"($IdAnime, $IdStudio{i})";
             command.Parameters.AddWithValue($"$IdStudio{i}", idContact);

@@ -126,10 +126,10 @@ public partial class Tanime
 
     private static TanimeAlternativeTitle[] GetAlternativeTitles(HtmlNode htmlNode)
     {
-        var nodes = htmlNode.SelectNodes("//div[contains(@class, 'info_fiche')]/div/b[starts-with(text(), 'Titre ')]").ToArray();
+        var nodes = htmlNode.SelectNodes("//div[contains(@class, 'info_fiche')]/div/b[starts-with(text(), 'Titre ')]")?.ToArray();
 
-        if (nodes.Length == 0)
-            return Array.Empty<TanimeAlternativeTitle>();
+        if (nodes == null || nodes.Length == 0)
+            return [];
 
         return nodes.Select(s => new TanimeAlternativeTitle()
         {
@@ -140,8 +140,8 @@ public partial class Tanime
 
     private static IEnumerable<TanimeWebSite> GetWebsites(HtmlNode htmlNode)
     {
-        var nodes = htmlNode.SelectNodes("//div[contains(@class, 'info_fiche')]/div/b[starts-with(text(), 'Site ')]").ToArray();
-        if (nodes.Length == 0)
+        var nodes = htmlNode.SelectNodes("//div[contains(@class, 'info_fiche')]/div/b[starts-with(text(), 'Site ')]")?.ToArray();
+        if (nodes == null || nodes.Length == 0)
             yield break;
 
         foreach (var node in nodes)
@@ -169,14 +169,14 @@ public partial class Tanime
 
     private static async IAsyncEnumerable<Tcategory> GetCategoriesAsync(HtmlNode htmlNode, CategoryType categoryType, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
-        HtmlNode[] nodes = categoryType switch
+        HtmlNode[]? nodes = categoryType switch
         {
-            CategoryType.Genre => htmlNode.SelectNodes("//span[@id='id_genre']/a[contains(@href, '/genre/')]").ToArray(),
-            CategoryType.Theme => htmlNode.SelectNodes("//span[@id='id_theme']/a[contains(@href, '/theme/')]").ToArray(),
-            _ => throw new ArgumentOutOfRangeException(nameof(categoryType), categoryType, "Le type de catégorie est invalide.")
+            CategoryType.Genre => htmlNode.SelectNodes("//span[@id='id_genre']/a[contains(@href, '/genre/')]")?.ToArray(),
+            CategoryType.Theme => htmlNode.SelectNodes("//span[@id='id_theme']/a[contains(@href, '/theme/')]")?.ToArray(),
+            _ => null
         };
 
-        if (nodes.Length == 0)
+        if (nodes == null || nodes.Length == 0)
             yield break;
 
         foreach (var node in nodes)
