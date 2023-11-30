@@ -122,6 +122,14 @@ public partial class Tanime : TanimeBase
 
     public override string ToString() => $"{Name} ({Id}/{SheetId})";
 
+
+    /// <summary>
+    /// Récupère l'anime depuis l'url de la fiche icotaku.
+    /// </summary>
+    /// <param name="url"></param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
     public static async Task<OperationState<int>> GetAnimeFromUrl(string url, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         if (url.IsStringNullOrEmptyOrWhiteSpace())
@@ -135,9 +143,14 @@ public partial class Tanime : TanimeBase
 
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
 
-        var anime = await GetAnimeAsync(uri, cancellationToken, command);
+        var animeResult = await GetAnimeAsync(uri, cancellationToken, command);
+
+        if (!animeResult.IsSuccess)
+            return new OperationState<int>(false, animeResult.Message);
+
+        var anime = animeResult.Data;
         if (anime == null)
-            return new OperationState<int>(false, "L'anime n'a pas été trouvé");
+            return new OperationState<int>(false, "Une erreur est survenue lors de la récupération de l'anime");
 
         if (!anime.Url.IsStringNullOrEmptyOrWhiteSpace())
         {
@@ -149,7 +162,7 @@ public partial class Tanime : TanimeBase
     }
 
     private static async Task<OperationState<int>> CreateIndexAsync(string animeName, string animeUrl, int animeSheetId, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
-        => await TsheetIndex.InsertAsync(IcotakuSection.Anime, animeName, animeUrl, animeSheetId, 0, cancellationToken, cmd);
+        => await TsheetIndex.InsertAsync(IcotakuSection.Anime, SheetType.Anime, animeName, animeUrl, animeSheetId, 0, cancellationToken, cmd);
     
     #region Count
 
@@ -559,13 +572,13 @@ public partial class Tanime : TanimeBase
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "DELETE FROM TanimeAlternativeTitle WHERE IdAnime = $Id";
-        command.CommandText += Environment.NewLine + "DELETE FROM tanimeWebSite WHERE IdAnime = $Id";
-        command.CommandText += Environment.NewLine + "DELETE FROM tanimeStudio WHERE IdAnime = $Id";
-        command.CommandText += Environment.NewLine + "DELETE FROM tanimeLicence WHERE IdAnime = $Id";
-        command.CommandText += Environment.NewLine + "DELETE FROM tanimeStaff WHERE IdAnime = $Id";
-        command.CommandText += Environment.NewLine + "DELETE FROM tanimeCharacter WHERE IdAnime = $Id";
-        command.CommandText += Environment.NewLine + "DELETE FROM Tanime WHERE Id = $Id";
+        command.CommandText = "DELETE FROM TanimeAlternativeTitle WHERE IdAnime = $Id;";
+        command.CommandText += Environment.NewLine + "DELETE FROM tanimeWebSite WHERE IdAnime = $Id;";
+        command.CommandText += Environment.NewLine + "DELETE FROM tanimeStudio WHERE IdAnime = $Id;";
+        command.CommandText += Environment.NewLine + "DELETE FROM tanimeLicence WHERE IdAnime = $Id;";
+        command.CommandText += Environment.NewLine + "DELETE FROM tanimeStaff WHERE IdAnime = $Id;";
+        command.CommandText += Environment.NewLine + "DELETE FROM tanimeCharacter WHERE IdAnime = $Id;";
+        command.CommandText += Environment.NewLine + "DELETE FROM Tanime WHERE Id = $Id;";
         
         command.Parameters.Clear();
         
@@ -573,10 +586,8 @@ public partial class Tanime : TanimeBase
         
         try
         {
-            var result = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
-            return result > 0 
-                ? new OperationState(true, "L'anime a été supprimé avec succès") 
-                : new OperationState(false, "Une erreur est survenue lors de la suppression de l'anime");
+            var countAffectedRows = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
+            return new OperationState(true, $"{countAffectedRows} lignes affectées");
         }
         catch (Exception e)
         {
@@ -585,8 +596,20 @@ public partial class Tanime : TanimeBase
         }
     }
 
+    public static async Task<OperationState> DeleteAsync(Uri uri, CancellationToken? cancellationToken = null,
+        SqliteCommand? cmd = null)
+    {
+        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+
+        var id = await GetIdOfAsync(uri, cancellationToken, command);
+        if (!id.HasValue)
+            return new OperationState(false, "L'anime n'a pas été trouvé");
+
+        return await DeleteAsync(id.Value, SheetIntColumnSelect.Id, cancellationToken, command);
+    }
+
     #endregion
-    
+
     private static async Task<Tanime[]> GetRecords(SqliteDataReader reader,
         CancellationToken? cancellationToken = null)
     {

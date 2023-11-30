@@ -12,7 +12,14 @@ namespace IcotakuScrapper.Anime;
 
 public partial class Tanime
 {
-    private static async Task<Tanime?> GetAnimeAsync(Uri uri, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    /// <summary>
+    /// Récupère les informations de la fiche anime à partir de son url
+    /// </summary>
+    /// <param name="uri">Url de la fiche de l'animé</param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
+    private static async Task<OperationState<Tanime?>> GetAnimeAsync(Uri uri, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         try
         {
@@ -93,15 +100,24 @@ public partial class Tanime
                 }
             }
             
-            return anime;
+            return new OperationState<Tanime?>()
+            {
+                IsSuccess = true,
+                Data = anime,
+            };
         }
         catch (Exception ex)
         {
             Debug.WriteLine(ex.Message);
-            return null;
+            return new OperationState<Tanime?>(false, ex.Message);
         }
     }
 
+    /// <summary>
+    /// Obtient le nom principal de l'animé
+    /// </summary>
+    /// <param name="htmlNode"></param>
+    /// <returns></returns>
     private static string? GetMainName(HtmlNode htmlNode)
     {
         var node = htmlNode.SelectSingleNode("//div[@id='fiche_entete']//h1/text()");
@@ -116,7 +132,7 @@ public partial class Tanime
     /// <summary>
     /// Retourne la description complète de l'animé
     /// </summary>
-    /// <param name="htmlNode">Correspond au DocumentNode</param>
+    /// <param name="htmlNode">Noeud à partir duquel commencer la recherche</param>
     /// <returns></returns>
     private static string? GetDescription(HtmlNode htmlNode)
     {
@@ -124,6 +140,11 @@ public partial class Tanime
         return HttpUtility.HtmlDecode(node?.InnerText?.Trim());
     }
 
+    /// <summary>
+    /// Retourne les titres alternatifs de l'animé
+    /// </summary>
+    /// <param name="htmlNode"></param>
+    /// <returns></returns>
     private static TanimeAlternativeTitle[] GetAlternativeTitles(HtmlNode htmlNode)
     {
         var nodes = htmlNode.SelectNodes("//div[contains(@class, 'info_fiche')]/div/b[starts-with(text(), 'Titre ')]")?.ToArray();
@@ -134,10 +155,16 @@ public partial class Tanime
         return nodes.Select(s => new TanimeAlternativeTitle()
         {
             Title = HttpUtility.HtmlDecode(s.NextSibling.InnerText.Trim()),
-            Description = HttpUtility.HtmlDecode(s.InnerText.Trim()),
+            Description = HttpUtility.HtmlDecode(s.InnerText.Trim()?.TrimEnd(':')?.Trim()),
         }).Where(w => !w.Title.IsStringNullOrEmptyOrWhiteSpace()).ToArray();
     }
 
+
+    /// <summary>
+    /// Retourne les sites web de l'animé
+    /// </summary>
+    /// <param name="htmlNode"></param>
+    /// <returns></returns>
     private static IEnumerable<TanimeWebSite> GetWebsites(HtmlNode htmlNode)
     {
         var nodes = htmlNode.SelectNodes("//div[contains(@class, 'info_fiche')]/div/b[starts-with(text(), 'Site ')]")?.ToArray();
@@ -161,12 +188,20 @@ public partial class Tanime
                     yield return new TanimeWebSite()
                     {
                         Url = uri.ToString(),
-                        Description = description,
+                        Description = description?.TrimEnd(':')?.Trim(),
                     };
             }         
         }
     }
 
+    /// <summary>
+    /// Retourne les catégories de l'animé
+    /// </summary>
+    /// <param name="htmlNode"></param>
+    /// <param name="categoryType"></param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
     private static async IAsyncEnumerable<Tcategory> GetCategoriesAsync(HtmlNode htmlNode, CategoryType categoryType, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         HtmlNode[]? nodes = categoryType switch
@@ -199,6 +234,14 @@ public partial class Tanime
             var sheetId = Main.GetSheetId(uri);
             if (sheetId == null)
                 continue;
+
+            /*
+             * De préférence, créez l'index des catégories (genre et thème) dans la base de données 
+             * via <see cref="Tcategory.CreateIndexAsync(CancellationToken?, SqliteCommand?)"/> 
+             * pour améliorer les performances
+             */
+
+            //Vérifie si la catégorie existe déjà dans la base de données sinon l'ajoute
 
             await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
             command.Parameters.Clear();
@@ -256,6 +299,13 @@ public partial class Tanime
         return ushort.TryParse(text, out ushort result) ? TimeSpan.FromMinutes(result) : TimeSpan.Zero;
     }
 
+    /// <summary>
+    /// Retourne l'origine de l'adaptation de l'animé
+    /// </summary>
+    /// <param name="htmlNode"></param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
     private static async Task<TorigineAdaptation?> GetOrigineAdaptationAsync(HtmlNode htmlNode, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         var node = htmlNode.SelectSingleNode("//div[contains(@class, 'info_fiche')]//b[starts-with(text(), 'Origine :')]/following-sibling::text()[1]");
@@ -273,6 +323,14 @@ public partial class Tanime
         return result.IsSuccess ? record : null;
     }
 
+
+    /// <summary>
+    /// Retourne le format de l'animé (série, film, oav, etc...)
+    /// </summary>
+    /// <param name="htmlNode"></param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
     private static async Task<Tformat?> GetFormatAsync(HtmlNode htmlNode, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         var node = htmlNode.SelectSingleNode("//div[contains(@class, 'info_fiche')]//b[starts-with(text(), 'Catégorie :')]/following-sibling::text()[1]");
@@ -290,6 +348,13 @@ public partial class Tanime
         return result.IsSuccess ? record : null;
     }
 
+    /// <summary>
+    /// Retourne le public visé de l'animé
+    /// </summary>
+    /// <param name="htmlNode"></param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
     private static async Task<Ttarget?> GetTargetAsync(HtmlNode htmlNode, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         var node = htmlNode.SelectSingleNode("//div[contains(@class, 'info_fiche')]//b[starts-with(text(), 'Public visé :')]/following-sibling::text()[1]");
@@ -307,6 +372,13 @@ public partial class Tanime
         return result.IsSuccess ? record : null;
     }
 
+    /// <summary>
+    /// Retourne les studios d'aimation de l'animé
+    /// </summary>
+    /// <param name="htmlNode"></param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
     private static async IAsyncEnumerable<Tcontact> GetStudioAsync(HtmlNode htmlNode, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         var _node = htmlNode.SelectSingleNode("//div[contains(@class, 'info_fiche')]//b[starts-with(text(), 'Studio')]");
@@ -356,6 +428,134 @@ public partial class Tanime
         }
     }
 
+    /// <summary>
+    /// Retourne l'état de diffusion de l'animé
+    /// </summary>
+    /// <param name="htmlNode"></param>
+    /// <returns></returns>
+    private static DiffusionStateKind GetDiffusionState(HtmlNode htmlNode)
+    {
+        var node = htmlNode.SelectSingleNode("//div[contains(@class, 'info_fiche')]//b[starts-with(text(), 'Diffusion :')]/following-sibling::text()[1]");
+
+        var text = node?.InnerText?.Trim();
+        if (text == null || text.IsStringNullOrEmptyOrWhiteSpace())
+            return DiffusionStateKind.Unknown;
+
+        return text switch
+        {
+            "Bientôt" => DiffusionStateKind.UpComing,
+            "En cours" => DiffusionStateKind.InProgress,
+            "En pause" => DiffusionStateKind.Paused,
+            "Terminée" => DiffusionStateKind.Completed,
+            "Arrêtée" => DiffusionStateKind.Stopped,
+            _ => DiffusionStateKind.Unknown,
+        };
+    }
+
+    /// <summary>
+    /// Retourne la saison de diffusion de l'animé
+    /// </summary>
+    /// <param name="htmlNode"></param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
+    private static async Task<Tseason?> GetSeason(HtmlNode htmlNode, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        var year = GetYearDiffusion(htmlNode);
+        if (year == null)
+            return null;
+
+        var seasonNumber = GetSeasonNumber(htmlNode);
+        if (seasonNumber == null)
+            return null;
+
+        var record = await Tseason.SingleAsync(year.Value, seasonNumber.Value, cancellationToken, cmd);
+        if (record != null)
+            return record;
+
+        record = new Tseason
+        {
+            Year = year.Value,
+            SeasonNumber = seasonNumber.Value,
+            DisplayName = $"{DateHelpers.GetSeasonName(seasonNumber.Value)} {year.Value}"
+        };
+
+        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        var result = await record.InsertAsync(cancellationToken, command);
+        return result.IsSuccess ? record : null;
+    }
+
+    /// <summary>
+    /// Retourne le numéro de la saison de diffusion de l'animé
+    /// </summary>
+    /// <param name="htmlNode"></param>
+    /// <returns></returns>
+    private static byte? GetSeasonNumber(HtmlNode htmlNode)
+    {
+        var year = GetYearDiffusion(htmlNode);
+        if (year == null)
+            return null;
+
+        var seasonNode = htmlNode.SelectSingleNode(
+            "//div[contains(@class, 'info_fiche')]//b[starts-with(text(), 'Saison :')]/following-sibling::text()[1]");
+
+        var text = seasonNode?.InnerText?.Trim();
+        if (text == null || text.IsStringNullOrEmptyOrWhiteSpace())
+            return null;
+
+        var number = DateHelpers.GetSeasonNumber(text);
+        return number == 0 ? null : number;
+    }
+
+    /// <summary>
+    /// Retourne la date de début de diffusion de l'animé
+    /// </summary>
+    /// <param name="htmlNode"></param>
+    /// <returns></returns>
+    private static string? GetBeginDate(HtmlNode htmlNode)
+    {
+        var year = GetYearDiffusion(htmlNode);
+        if (year == null)
+            return null;
+
+        var month = GetMonthDiffusion(htmlNode);
+        if (month == null)
+            return $"{year.Value}-00-00";
+
+        return $"{year.Value}-{month.Value:00}-00";
+    }
+
+    /// <summary>
+    /// Retourne l'année de diffusion de l'animé
+    /// </summary>
+    /// <param name="htmlNode"></param>
+    /// <returns></returns>
+    private static ushort? GetYearDiffusion(HtmlNode htmlNode)
+    {
+        var yearNode = htmlNode.SelectSingleNode("//div[contains(@class, 'info_fiche')]//b[starts-with(text(), 'Année de diffusion :')]/following-sibling::text()[1]");
+        if (yearNode == null || yearNode.InnerText.IsStringNullOrEmptyOrWhiteSpace())
+            return null;
+        var yearText = yearNode.InnerText.Trim();
+        return ushort.TryParse(yearText, out ushort year) ? year : null;
+    }
+
+    /// <summary>
+    /// Retourne le mois de diffusion de l'animé
+    /// </summary>
+    /// <param name="htmlNode"></param>
+    /// <returns></returns>
+    private static byte? GetMonthDiffusion(HtmlNode htmlNode)
+    {
+        var monthNode = htmlNode.SelectSingleNode("//div[contains(@class, 'info_fiche')]//b[starts-with(text(), 'Mois de début de diffusion :')]/following-sibling::text()[1]");
+        if (monthNode == null || monthNode.InnerText.IsStringNullOrEmptyOrWhiteSpace())
+            return null;
+
+        var monthText = monthNode.InnerText.Trim();
+
+        return DateHelpers.GetMonthNumber(monthText);
+    }
+
+
     #region Thumbnail
 
     /// <summary>
@@ -393,100 +593,4 @@ public partial class Tanime
     }
 
     #endregion
-
-
-    private static DiffusionStateKind GetDiffusionState(HtmlNode htmlNode)
-    {
-        var node = htmlNode.SelectSingleNode("//div[contains(@class, 'info_fiche')]//b[starts-with(text(), 'Diffusion :')]/following-sibling::text()[1]");
-
-        var text = node?.InnerText?.Trim();
-        if (text == null || text.IsStringNullOrEmptyOrWhiteSpace())
-            return DiffusionStateKind.Unknown;
-
-        return text switch
-        {
-            "Bientôt" => DiffusionStateKind.UpComing,
-            "En cours" => DiffusionStateKind.InProgress,
-            "En pause" => DiffusionStateKind.Paused,
-            "Terminée" => DiffusionStateKind.Completed,
-            "Arrêtée" => DiffusionStateKind.Stopped,
-            _ => DiffusionStateKind.Unknown,
-        };
-    }
-
-    private static async Task<Tseason?> GetSeason(HtmlNode htmlNode, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
-    {
-        var year = GetYearDiffusion(htmlNode);
-        if (year == null)
-            return null;
-
-        var seasonNumber = GetSeasonNumber(htmlNode);
-        if (seasonNumber == null)
-            return null;
-
-        var record = await Tseason.SingleAsync(year.Value, seasonNumber.Value, cancellationToken, cmd);
-        if (record != null)
-            return record;
-
-        record = new Tseason
-        {
-            Year = year.Value,
-            SeasonNumber = seasonNumber.Value,
-            DisplayName = $"{DateHelpers.GetSeasonName(seasonNumber.Value)} {year.Value}"
-        };
-
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        var result = await record.InsertAsync(cancellationToken, command);
-        return result.IsSuccess ? record : null;
-    }
-
-    private static byte? GetSeasonNumber(HtmlNode htmlNode)
-    {
-        var year = GetYearDiffusion(htmlNode);
-        if (year == null)
-            return null;
-
-        var seasonNode = htmlNode.SelectSingleNode(
-            "//div[contains(@class, 'info_fiche')]//b[starts-with(text(), 'Saison :')]/following-sibling::text()[1]");
-
-        var text = seasonNode?.InnerText?.Trim();
-        if (text == null || text.IsStringNullOrEmptyOrWhiteSpace())
-            return null;
-
-        var number = DateHelpers.GetSeasonNumber(text);
-        return number == 0 ? null : number;
-    }
-
-    private static string? GetBeginDate(HtmlNode htmlNode)
-    {
-        var year = GetYearDiffusion(htmlNode);
-        if (year == null)
-            return null;
-
-        var month = GetMonthDiffusion(htmlNode);
-        if (month == null)
-            return $"{year.Value}-00-00";
-
-        return $"{year.Value}-{month.Value:00}-00";
-    }
-
-    private static ushort? GetYearDiffusion(HtmlNode htmlNode)
-    {
-        var yearNode = htmlNode.SelectSingleNode("//div[contains(@class, 'info_fiche')]//b[starts-with(text(), 'Année de diffusion :')]/following-sibling::text()[1]");
-        if (yearNode == null || yearNode.InnerText.IsStringNullOrEmptyOrWhiteSpace())
-            return null;
-        var yearText = yearNode.InnerText.Trim();
-        return ushort.TryParse(yearText, out ushort year) ? year : null;
-    }
-
-    private static byte? GetMonthDiffusion(HtmlNode htmlNode)
-    {
-        var monthNode = htmlNode.SelectSingleNode("//div[contains(@class, 'info_fiche')]//b[starts-with(text(), 'Mois de début de diffusion :')]/following-sibling::text()[1]");
-        if (monthNode == null || monthNode.InnerText.IsStringNullOrEmptyOrWhiteSpace())
-            return null;
-
-        var monthText = monthNode.InnerText.Trim();
-
-        return DateHelpers.GetMonthNumber(monthText);
-    }
 }

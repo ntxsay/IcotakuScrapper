@@ -343,6 +343,7 @@ public class Tcontact : TcontactBase
                 return new OperationState<int>(false, "Une erreur est survenue lors de l'insertion du contact");
 
             Id = await command.GetLastInsertRowIdAsync();
+
             return new OperationState<int>(true, "Le contact a été inséré avec succès", Id);
         }
         catch (Exception e)
@@ -435,11 +436,11 @@ public class Tcontact : TcontactBase
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "DELETE FROM tanimeStudio WHERE IdStudio = $Id";
-        command.CommandText += Environment.NewLine + "DELETE FROM TanimeLicence WHERE IdDistributor = $Id";
-        command.CommandText += Environment.NewLine + "DELETE FROM TanimeStaff WHERE IdIndividu = $Id";
-        command.CommandText += Environment.NewLine + "DELETE FROM TanimeCharacter WHERE IdCharacter = $Id";
-        command.CommandText += Environment.NewLine + "DELETE FROM Tcontact WHERE Id = $Id";
+        command.CommandText = "DELETE FROM tanimeStudio WHERE IdStudio = $Id;";
+        command.CommandText += Environment.NewLine + "DELETE FROM TanimeLicence WHERE IdDistributor = $Id;";
+        command.CommandText += Environment.NewLine + "DELETE FROM TanimeStaff WHERE IdIndividu = $Id;";
+        command.CommandText += Environment.NewLine + "DELETE FROM TanimeCharacter WHERE IdCharacter = $Id;";
+        command.CommandText += Environment.NewLine + "DELETE FROM Tcontact WHERE Id = $Id;";
         
         command.Parameters.Clear();
         

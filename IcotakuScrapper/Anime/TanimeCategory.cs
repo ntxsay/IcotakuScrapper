@@ -238,7 +238,7 @@ public class TanimeCategory
             return new OperationState(false, "Aucun studio n'a été sélectionné.");
 
         List<OperationState<int>> results = [];
-        command.CommandText = "INSERT OR IGNORE INTO TanimeCategory (IdAnime, IdCategory) VALUES ($IdAnime, $IdCategory) VALUES";
+        command.CommandText = "INSERT OR IGNORE INTO TanimeCategory (IdAnime, IdCategory) VALUES";
         command.Parameters.Clear();
 
         for (var i = 0; i < idCategoryValues.Count; i++)

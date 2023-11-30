@@ -6,12 +6,13 @@
 DROP TABLE IF EXISTS TsheetIndex;
 CREATE TABLE IF NOT EXISTS TsheetIndex
 (
-    Id          INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
-    SheetId     INTEGER NOT NULL DEFAULT 0, -- Id de la fiche (anime, manga, etc)
-    Url         TEXT    NOT NULL UNIQUE,    -- Url de la fiche (anime, manga, etc)
-    Name        TEXT    NULL,               -- Nom de la fiche (anime, manga, etc)
-    Type        INTEGER NOT NULL,           -- Type de la fiche (anime, manga, etc)
-    FoundedPage INTEGER NOT NULL DEFAULT 0  -- Page de recherche sur laquelle la fiche a été trouvée
+    "Id"          INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
+    "SheetId"     INTEGER NOT NULL DEFAULT 0, -- Id de la fiche (anime, manga, etc)
+    "Url"         TEXT    NOT NULL UNIQUE,    -- Url de la fiche (anime, manga, etc)
+    "Section"     INTEGER NOT NULL,           -- Section de la fiche (ANime, Manga, etc)
+    "ItemName"    TEXT    NOT NULL,               -- Nom de la fiche (anime, manga, etc)
+    "ItemType"    INTEGER NOT NULL,           -- Type de la fiche (anime, manga, character, studios, individual, etc)
+    "FoundedPage" INTEGER NOT NULL DEFAULT 0  -- Page de recherche sur laquelle la fiche a été trouvée
 );
 -- endregion
 
@@ -129,7 +130,7 @@ CREATE TABLE IF NOT EXISTS Tseason
     Id           INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
     Year         INTEGER NOT NULL, -- Année de la saison
     SeasonNumber INTEGER NOT NULL, -- 1 à 4
-    DisplayName  TEXT    NOT NULL -- Nom de la saison (printemps 2008, etc)
+    DisplayName  TEXT    NOT NULL  -- Nom de la saison (printemps 2008, etc)
 );
 -- endregion
 
@@ -237,12 +238,12 @@ CREATE TABLE IF NOT EXISTS TanimeWebSite
 DROP TABLE IF EXISTS TanimeCategory;
 CREATE TABLE IF NOT EXISTS TanimeCategory
 (
-    Id       INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
-    IdAnime  INTEGER NOT NULL REFERENCES Tanime (Id) ON DELETE CASCADE,
+    Id         INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
+    IdAnime    INTEGER NOT NULL REFERENCES Tanime (Id) ON DELETE CASCADE,
     IdCategory INTEGER NOT NULL REFERENCES Tcategory (Id) ON DELETE CASCADE
 );
 -- endregion
-    
+
 -- region Table tanimeStudio
 /*
  Création de la table tanimeStudio qui permet 

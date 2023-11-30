@@ -44,5 +44,22 @@ namespace IcotakuScrapperWebApi.Controllers
                 return new OperationState<int>(false, "L'url n'est pas valide");
             return await Tanime.GetAnimeFromUrl(uri.ToString());
         }
+
+
+        [HttpDelete("Delete/Id")]
+        public async Task<OperationState> DeleteByIdAsync([FromQuery] uint id)
+            => await Tanime.DeleteAsync((int)id, SheetIntColumnSelect.Id);
+
+        [HttpDelete("Delete/SheetId")]
+        public async Task<OperationState> DeleteBySheetIdAsync([FromQuery] uint id)
+           => await Tanime.DeleteAsync((int)id, SheetIntColumnSelect.SheetId);
+
+        [HttpDelete("Delete/Url")]
+        public async Task<OperationState> DeleteBySheetIdAsync([FromQuery] string url)
+        {
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+                return new OperationState(false, "L'url n'est pas valide");
+            return await Tanime.DeleteAsync(uri);
+        }
     }
 }

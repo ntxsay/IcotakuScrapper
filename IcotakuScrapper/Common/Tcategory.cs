@@ -318,6 +318,15 @@ public partial class Tcategory
             .FirstOrDefaultAsync(cancellationToken ?? CancellationToken.None);
     }
 
+    /// <summary>
+    /// Retourne un enregistrement de la table Tcategory ayant le nom spécifié
+    /// </summary>
+    /// <param name="name"></param>
+    /// <param name="section"></param>
+    /// <param name="categoryType"></param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
     public static async Task<Tcategory?> SingleAsync(string name, IcotakuSection section, CategoryType categoryType, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {

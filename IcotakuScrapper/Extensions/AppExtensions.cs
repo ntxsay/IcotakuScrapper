@@ -1,5 +1,4 @@
-﻿using IcotakuScrapper.Anime;
-using Microsoft.Data.Sqlite;
+﻿using Microsoft.Data.Sqlite;
 
 namespace IcotakuScrapper.Extensions
 {
@@ -18,14 +17,14 @@ namespace IcotakuScrapper.Extensions
         /// <param name="self">Valeur</param>
         /// <returns>Une valeur booléenne</returns>
         public static bool IsStringEmptyOrWhiteSpace(this string self) => ExtensionMethods.IsStringEmptyOrWhiteSpace(self);
-        
+
         /// <summary>
         /// Retourne l'identifiant de la dernière ligne insérée dans la base de données.
         /// </summary>
         /// <param name="command"></param>
         /// <returns></returns>
         internal static async Task<int> GetLastInsertRowIdAsync(this SqliteCommand command) => await ExtensionMethods.GetLastInsertRowIdAsync(command);
-        
+
         /// <summary>
         ///Ajoute les clauses LIMIT et OFFSET à la commande SQL.
         /// </summary>
@@ -33,7 +32,10 @@ namespace IcotakuScrapper.Extensions
         /// <param name="limit"></param>
         /// <param name="offset"></param>
         internal static void AddLimitOffset(this SqliteCommand command, uint limit, uint offset) => ExtensionMethods.AddLimitOffset(command, limit, offset);
-        
+
+        public static ContactType ConvertTo(this SheetType sheetType) => ExtensionMethods.ConvertTo(sheetType);
+        public static SheetType ConvertTo(this ContactType contactType) => ExtensionMethods.ConvertTo(contactType);
+
     }
 
     internal static class ExtensionMethods
@@ -47,7 +49,7 @@ namespace IcotakuScrapper.Extensions
             value == null || string.IsNullOrEmpty(value) || string.IsNullOrWhiteSpace(value);
         internal static bool IsStringEmptyOrWhiteSpace(string value) =>
             string.IsNullOrEmpty(value) || string.IsNullOrWhiteSpace(value);
-        
+
         internal static async Task<int> GetLastInsertRowIdAsync(SqliteCommand command)
         {
             command.CommandText = "SELECT last_insert_rowid()";
@@ -57,7 +59,7 @@ namespace IcotakuScrapper.Extensions
 
             throw new InvalidOperationException("Impossible de récupérer l'identifiant de la ligne insérée");
         }
-        
+
         internal static void AddLimitOffset(SqliteCommand command, uint limit, uint offset)
         {
             if (limit > 0)
@@ -66,7 +68,26 @@ namespace IcotakuScrapper.Extensions
                 command.CommandText += $" OFFSET {offset}";
         }
 
-        
+        public static ContactType ConvertTo(SheetType sheetType) => sheetType switch
+        {
+            SheetType.Anime => ContactType.Unknown,
+            SheetType.Unknown => ContactType.Unknown,
+            SheetType.Person => ContactType.Person,
+            SheetType.Character => ContactType.Character,
+            SheetType.Studio => ContactType.Studio,
+            SheetType.Distributor => ContactType.Distributor,
+            _ => throw new ArgumentOutOfRangeException(nameof(sheetType), sheetType, "La valeur spécifiée est invalide")
+        };
+
+        public static SheetType ConvertTo(ContactType contactType) => contactType switch
+        {
+            ContactType.Unknown => SheetType.Unknown,
+            ContactType.Person => SheetType.Person,
+            ContactType.Character => SheetType.Character,
+            ContactType.Studio => SheetType.Studio,
+            ContactType.Distributor => SheetType.Distributor,
+            _ => throw new ArgumentOutOfRangeException(nameof(contactType), contactType, "La valeur spécifiée est invalide")
+        };
 
     }
 }

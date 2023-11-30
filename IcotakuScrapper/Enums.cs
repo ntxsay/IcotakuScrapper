@@ -12,6 +12,16 @@
         Community,
     }
     
+    public enum SheetType : byte
+    {
+        Unknown,
+        Anime,
+        Person,
+        Character,
+        Studio,
+        Distributor,
+    }
+    
     /// <summary>
     /// Enumération des modes de tri.
     /// </summary>
@@ -84,14 +94,7 @@
         Distributor,
     }
     
-    public enum SheetType : byte
-    {
-        Unknown,
-        Person,
-        Character,
-        Studio,
-        Distributor,
-    }
+    
     
     public enum MoisKind
     {
