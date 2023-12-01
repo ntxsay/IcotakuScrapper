@@ -21,7 +21,7 @@ Je tiens à préciser que ce projet est une initiative personnelle et n'a pas é
 Ce projet permet l'obtention et le stockage local de synopsis d'animés (pour le moment) depuis le site web de l'association Icotaku vers une base de données SQLite.
 
 ## Contribution
-Je ne suis pas un (spécialement) ingénieur en la matière mais si vous trouvez que ce projet mérite une contribution, alors on y va ensemble avec ntxsay depuis la Guadeloupe.
+Je ne suis pas (spécialement) un ingénieur en la matière mais si vous trouvez que ce projet mérite une contribution, alors on y va ensemble avec ntxsay from GP.
 
 ## Soutenez Icotaku.com
 Sauf erreur de ma part mais je n'ai trouvé aucun autre site ou plateforme assez bien structuré(e) et permettant l'utilisation de leur ressource gratuitement et sans contrepartie contraignante. Merci Icotaku !
