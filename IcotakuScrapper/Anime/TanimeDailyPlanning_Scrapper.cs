@@ -6,12 +6,12 @@ using System.Web;
 
 namespace IcotakuScrapper.Anime;
 
-public partial class TanimePlanning
+public partial class TanimeDailyPlanning
 {
     private static string GetAnimeMonthPlanningUrl(DateOnly date)
         => $"https://anime.icotaku.com/planning/calendrierDiffusion/date_debut/{date:yyyy-MM-dd}";
 
-    public static async Task<TanimePlanning[]> GetAnimePlanningAsync(HashSet<DateOnly> dates, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public static async Task<TanimeDailyPlanning[]> GetAnimePlanningAsync(HashSet<DateOnly> dates, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         if (dates is null || dates.Count == 0)
             return [];
@@ -20,7 +20,7 @@ public partial class TanimePlanning
         return plannings;
     }
 
-    private static async IAsyncEnumerable<TanimePlanning> GetAnimeDaysPlanningAsync(HashSet<DateOnly> dates, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    private static async IAsyncEnumerable<TanimeDailyPlanning> GetAnimeDaysPlanningAsync(HashSet<DateOnly> dates, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         if (dates is null || dates.Count == 0)
             yield break;
@@ -32,7 +32,7 @@ public partial class TanimePlanning
         }
     }
 
-    public static async Task<TanimePlanning[]> GetAnimePlanningAsync(string minDate, string maxDate, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public static async Task<TanimeDailyPlanning[]> GetAnimePlanningAsync(string minDate, string maxDate, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         if (!DateOnly.TryParse(minDate, out var min) || !DateOnly.TryParse(maxDate, out var max))
             return [];
@@ -41,13 +41,13 @@ public partial class TanimePlanning
         return plannings;
     }
 
-    public static async Task<TanimePlanning[]> GetAnimePlanningAsync(DateOnly minDate, DateOnly maxDate, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public static async Task<TanimeDailyPlanning[]> GetAnimePlanningAsync(DateOnly minDate, DateOnly maxDate, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         var plannings = await GetAnimeMonthRangePlanningAsync(minDate, maxDate, cancellationToken, cmd).Where(w => w.ReleaseDate >= minDate && w.ReleaseDate <= maxDate).ToArrayAsync();
         return plannings;
     }
 
-    private static async IAsyncEnumerable<TanimePlanning> GetAnimeMonthRangePlanningAsync(DateOnly minDate, DateOnly maxDate, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    private static async IAsyncEnumerable<TanimeDailyPlanning> GetAnimeMonthRangePlanningAsync(DateOnly minDate, DateOnly maxDate, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         int value = DateTime.Compare(minDate.ToDateTime(default), maxDate.ToDateTime(default));
         if (value == 0) //minDate == maxDate
@@ -68,7 +68,7 @@ public partial class TanimePlanning
         }
     }
 
-    internal static async IAsyncEnumerable<TanimePlanning> GetAnimePlanning(DateOnly date, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    internal static async IAsyncEnumerable<TanimeDailyPlanning> GetAnimePlanning(DateOnly date, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         var url = GetAnimeMonthPlanningUrl(date);
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || !uri.IsAbsoluteUri)
@@ -147,7 +147,7 @@ public partial class TanimePlanning
 
                 var idAnime = await Tanime.GetIdOfAsync(animeSheetId.Value, cancellationToken, cmd);
 
-                yield return new TanimePlanning()
+                yield return new TanimeDailyPlanning()
                 {
                     SheetId = animeSheetId.Value,
                     AnimeName = animeName,
@@ -163,7 +163,7 @@ public partial class TanimePlanning
         }
     }
 
-    internal static async IAsyncEnumerable<TanimePlanning> GetAnimePlanning(DateOnly minDate, DateOnly maxDate, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    internal static async IAsyncEnumerable<TanimeDailyPlanning> GetAnimePlanning(DateOnly minDate, DateOnly maxDate, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         int value = DateTime.Compare(minDate.ToDateTime(default), maxDate.ToDateTime(default));
         if (value > 0)
@@ -249,7 +249,7 @@ public partial class TanimePlanning
 
                 var idAnime = await Tanime.GetIdOfAsync(animeSheetId.Value, cancellationToken, cmd);
 
-                yield return new TanimePlanning()
+                yield return new TanimeDailyPlanning()
                 {
                     SheetId = animeSheetId.Value,
                     AnimeName = animeName,

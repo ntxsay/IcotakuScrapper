@@ -746,7 +746,6 @@ public partial class TanimePlanning
                                 : Tseason.GetRecord(reader,
                                     idIndex: reader.GetOrdinal("IdSeason"),
                                     displayNameIndex: reader.GetOrdinal("SeasonDisplayName"),
-                                    yearIndex: reader.GetOrdinal("SeasonYear"),
                                     seasonNumberIndex: reader.GetOrdinal("SeasonNumber")),
                         },
                 };
@@ -812,7 +811,6 @@ public partial class TanimePlanning
             TorigineAdaptation.Description as OrigineAdaptationDescription,
             
             Tseason.DisplayName as SeasonDisplayName,
-            Tseason.Year as SeasonYear,
             Tseason.SeasonNumber as SeasonNumber,
             
             TanimeCategory.IdCategory AS CategoryId,
