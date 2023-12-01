@@ -24,7 +24,7 @@ Ce projet permet l'obtention et le stockage local de synopsis d'animés (pour le
 Je ne suis pas (spécialement) un ingénieur en la matière mais si vous trouvez que ce projet mérite une contribution, alors on y va ensemble avec ntxsay from GP.
 
 ## Soutenez Icotaku.com
-Sauf erreur de ma part mais je n'ai trouvé aucun autre site ou plateforme assez bien structuré(e) et permettant l'utilisation de leur ressource gratuitement et sans contrepartie contraignante. Merci Icotaku !
+Sauf erreur de ma part mais je n'ai trouvé aucun autre site ou plateforme assez bien structuré(e) et permettant l'utilisation de leur ressource gratuitement et sans contrepartie contraignante. Vraiment un grand merci Icotaku !
 
 ## Utilisation
 Ce projet est libre, vous pouvez le modifier, simplement n'oubliez pas que la documentation d'Icotaku.com est sous licence de documentation libre GNU (GFDL).
