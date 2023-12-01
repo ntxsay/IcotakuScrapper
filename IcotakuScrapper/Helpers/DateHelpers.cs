@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Globalization;
+using IcotakuScrapper.Common;
 using IcotakuScrapper.Extensions;
 
 namespace IcotakuScrapper.Helpers;
@@ -37,42 +38,7 @@ public static class DateHelpers
         };
     }
     
-    /// <summary>
-    /// Retourne le numéro de la saison en fonction de son nom (en français)
-    /// </summary>
-    /// <param name="saisonName"></param>
-    /// <returns></returns>
-    public static byte GetSeasonNumber(string saisonName)
-    {
-        if (saisonName.IsStringNullOrEmptyOrWhiteSpace())
-            return 0;
-
-        return saisonName.Trim().ToLower() switch
-        {
-            "printemps" => 1,
-            "ete" or "été" or "éte" or "eté" => 2,
-            "automne" => 3,
-            "hivers" => 4,
-            _ => 0
-        };
-    }
     
-    /// <summary>
-    /// Retourne le nom de la saison en fonction de son numéro
-    /// </summary>
-    /// <param name="seasonNumber"></param>
-    /// <returns></returns>
-    public static string GetSeasonName(byte seasonNumber)
-    {
-        return seasonNumber switch
-        {
-            1 => "Printemps",
-            2 => "Été",
-            3 => "Automne",
-            4 => "Hivers",
-            _ => "Inconnu"
-        };
-    }
 
     /// <summary>
     /// Retourne le nom du mois en fonction de son numéro
@@ -81,7 +47,7 @@ public static class DateHelpers
     /// <returns></returns>
     public static string? GetMonthName(byte monthNumber)
     {
-        if (monthNumber is < 1 or > 12)
+        if (monthNumber is < 1 or > 13)
             return null;
 
         try
@@ -130,4 +96,166 @@ public static class DateHelpers
 
         return null;
     }
+    
+    public static string? GetYearMonthLiteral(uint intDate)
+    {
+        if (intDate == 0)
+            return null;
+        var stringIntDate = intDate.ToString();
+        if (stringIntDate.Length != 6)//2308 -//202304
+            return null;
+        var yearString = stringIntDate[..4];
+        var monthString = stringIntDate.Substring(4, 2);
+        
+        if (!uint.TryParse(yearString, out var year))
+            return null;
+        
+        if (!byte.TryParse(monthString, out var month))
+            return null;
+        
+        var monthName = GetMonthName(month);
+        return monthName == null ? null : $"{monthName} {year}";
+    }
+    
+    public static uint GetYearMonthInt(DateOnly date)
+    {
+        var year = date.Year;
+        var month = date.Month;
+        return uint.Parse($"{year:0000}{month:00}");
+    }
+
+    #region Season
+
+    /// <summary>
+    /// Retourne le numéro de la saison en fonction de son nom (en français)
+    /// </summary>
+    /// <param name="saisonName"></param>
+    /// <returns></returns>
+    public static byte GetSeasonNumber(string saisonName)
+    {
+        if (saisonName.IsStringNullOrEmptyOrWhiteSpace())
+            return 0;
+
+        return (byte)GetSeasonKind(saisonName);
+    }
+
+    /// <summary>
+    /// Retourne le numéro de la saison en fonction de son nom (en français)
+    /// </summary>
+    /// <param name="saisonName"></param>
+    /// <returns></returns>
+    public static FourSeasonsKind GetSeasonKind(string saisonName)
+    {
+        if (saisonName.IsStringNullOrEmptyOrWhiteSpace())
+            return 0;
+
+        return saisonName.Trim().ToLower() switch
+        {
+            "printemps" => FourSeasonsKind.Spring,
+            "ete" or "été" or "éte" or "eté" => FourSeasonsKind.Summer,
+            "automne" => FourSeasonsKind.Fall,
+            "hivers" or "hiver" => FourSeasonsKind.Winter,
+            _ => FourSeasonsKind.Unknown
+        };
+    }
+
+    /// <summary>
+    /// Retourne le nom de la saison en fonction de son numéro
+    /// </summary>
+    /// <param name="seasonNumber"></param>
+    /// <returns></returns>
+    public static string? GetSeasonName(byte seasonNumber)
+    {
+        return seasonNumber switch
+        {
+            1 => "Printemps",
+            2 => "Été",
+            3 => "Automne",
+            4 => "Hiver",
+            _ => null
+        };
+    }
+
+    /// <summary>
+    /// Retourne le nom de la saison en fonction de son numéro
+    /// </summary>
+    /// <param name="season"></param>
+    /// <returns></returns>
+    public static string? GetSeasonName(FourSeasonsKind season)
+    {
+        return season switch
+        {
+            FourSeasonsKind.Spring => "Printemps",
+            FourSeasonsKind.Summer => "Été",
+            FourSeasonsKind.Fall => "Automne",
+            FourSeasonsKind.Winter => "Hiver",
+            _ => null
+        };
+    }
+
+    public static string? GetSeasonLiteral(uint intSeason)
+    {
+        if (intSeason == 0)
+            return null;
+        var stringIntDate = intSeason.ToString();
+        if (stringIntDate.Length != 6)//2301-202304
+            return null;
+        var yearString = stringIntDate[..4];
+        var seasonNumberString = stringIntDate.Substring(4, 2);
+        
+        if (!uint.TryParse(yearString, out var year) || year < DateOnly.MinValue.Year || year > DateOnly.MaxValue.Year)
+            return null;
+        
+        if (!byte.TryParse(seasonNumberString, out var seasonNumber) || seasonNumber is < 1 or > 4)
+            return null;
+        
+        return GetSeasonLiteral((FourSeasonsKind)seasonNumber, year);
+    }
+
+    public static string? GetSeasonLiteral(FourSeasonsKind season, uint year)
+    {
+        if (year < DateOnly.MinValue.Year || year > DateOnly.MaxValue.Year)
+            return null;
+
+        var seasonName = GetSeasonName(season);
+        return seasonName == null ? null : $"{seasonName} {year}";
+    }
+
+    public static uint GetIntSeason(FourSeasonsKind season, uint year)
+    {
+        if (year < DateOnly.MinValue.Year || year > DateOnly.MaxValue.Year)
+            return 0;
+
+        return GetIntSeason((byte)season, year);
+    }
+
+    public static uint GetIntSeason(byte seasonNumber, uint year)
+    {
+        if (year < DateOnly.MinValue.Year || year > DateOnly.MaxValue.Year || seasonNumber is < 1 or > 4)
+            return 0;
+
+        return uint.Parse($"{year:0000}{seasonNumber:00}");
+    }
+
+
+    public static bool IsSeasonValidated(uint intSeason)
+    {
+        if (intSeason == 0)
+            return false;
+        var stringIntDate = intSeason.ToString();
+        if (stringIntDate.Length != 6)//2301-202304
+            return false;
+        var yearString = stringIntDate[..4];
+        var seasonNumberString = stringIntDate.Substring(4, 2);
+        
+        if (!uint.TryParse(yearString, out var year) || year < DateOnly.MinValue.Year || year > DateOnly.MaxValue.Year)
+            return false;
+        
+        if (!byte.TryParse(seasonNumberString, out var seasonNumber) || seasonNumber is < 1 or > 4)
+            return false;
+
+        return true;
+    }
+
+    #endregion
 }

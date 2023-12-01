@@ -128,8 +128,7 @@ DROP TABLE IF EXISTS Tseason;
 CREATE TABLE IF NOT EXISTS Tseason
 (
     Id           INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
-    Year         INTEGER NOT NULL, -- Année de la saison
-    SeasonNumber INTEGER NOT NULL, -- 1 à 4
+    SeasonNumber INTEGER NOT NULL, -- 202301 (année + numéro de saison)
     DisplayName  TEXT    NOT NULL  -- Nom de la saison (printemps 2008, etc)
 );
 -- endregion
@@ -322,13 +321,13 @@ CREATE TABLE IF NOT EXISTS TanimeEpisode
 );
 -- endregion
     
--- region Table TanimePlanning
+-- region Table TanimeDailyPlanning
 /*
  Création de la table TanimePlanning qui permet 
  d'enregistrer les dates de diffusion des épisodes des animés
  */
-DROP TABLE IF EXISTS TanimePlanning;
-CREATE TABLE IF NOT EXISTS TanimePlanning
+DROP TABLE IF EXISTS TanimeDailyPlanning;
+CREATE TABLE IF NOT EXISTS TanimeDailyPlanning
 (
     Id          INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
     IdAnime     INTEGER NULL REFERENCES Tanime (Id) ON DELETE CASCADE,
@@ -340,6 +339,29 @@ CREATE TABLE IF NOT EXISTS TanimePlanning
     EpisodeName TEXT    NULL,
     NoDay       INTEGER NOT NULL, -- Numéro du jour de diffusion
     Description TEXT    NULL
+);
+-- endregion
+
+-- region Table TanimeSeasonalPlanning
+/*
+ Création de la table TanimeSeasonalPlanning qui permet 
+ d'enregistrer les dates de diffusion des épisodes des animés
+ */
+DROP TABLE IF EXISTS TanimeSeasonalPlanning;
+CREATE TABLE IF NOT EXISTS TanimeSeasonalPlanning
+(
+    Id          INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
+    IdOrigine   INTEGER NULL REFERENCES TorigineAdaptation (Id) ON DELETE CASCADE,
+    IdSeason    INTEGER NOT NULL REFERENCES Tseason (Id) ON DELETE CASCADE,
+    SheetId     INTEGER NOT NULL, -- Id de la fiche (anime, manga, etc)
+    Url         TEXT    NOT NULL, -- Url de la fiche (anime, manga, etc)
+    GroupName   TEXT    NOT NULL, --  Ex (Séries, OAV / OAD / Format court/Bonus, Films, ONA, Spéciaux)
+    AnimeName   TEXT    NOT NULL, -- Nom de la fiche (anime, manga, etc)
+    Description TEXT    NULL,
+    Studios     TEXT    NULL,     -- Nom des studios (séparé par des virgules)
+    Distributors TEXT    NULL,    -- Nom des distributeurs (séparé par des virgules)
+    ReleaseMonth INTEGER    NOT NULL DEFAULT 0, -- annnéé et mois de sortie (yymm)
+    ThumbnailUrl TEXT    NULL    -- Url de l'image de l'animé
 );
 -- endregion
     

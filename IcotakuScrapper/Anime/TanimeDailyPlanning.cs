@@ -17,7 +17,7 @@ public enum AnimePlanningSortBy : byte
     AnimeName
 }
 
-public partial class TanimePlanning
+public partial class TanimeDailyPlanning
 {
     private const string ReleaseDateFormat = "yyyy-MM-dd";
     public int Id { get; protected set; }
@@ -32,22 +32,22 @@ public partial class TanimePlanning
     public DayOfWeek Day { get; set; }
     public string? Description { get; set; }
 
-    public TanimePlanning()
+    public TanimeDailyPlanning()
     {
     }
 
-    public TanimePlanning(int id)
+    public TanimeDailyPlanning(int id)
     {
         Id = id;
     }
 
-    public TanimePlanning(int id, int idAnime)
+    public TanimeDailyPlanning(int id, int idAnime)
     {
         Id = id;
         IdAnime = idAnime;
     }
 
-    public TanimePlanning(int id, int idAnime, DateOnly releaseDate, ushort episodeNumber, string episodeName,
+    public TanimeDailyPlanning(int id, int idAnime, DateOnly releaseDate, ushort episodeNumber, string episodeName,
         DayOfWeek day, string? description)
     {
         Id = id;
@@ -64,7 +64,7 @@ public partial class TanimePlanning
     #region Count
 
     /// <summary>
-    /// Compte le nombre d'entrées dans la table TanimePlanning
+    /// Compte le nombre d'entrées dans la table TanimeDailyPlanning
     /// </summary>
     /// <param name="cancellationToken"></param>
     /// <param name="cmd"></param>
@@ -72,7 +72,7 @@ public partial class TanimePlanning
     public static async Task<int> CountAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "SELECT COUNT(Id) FROM TanimePlanning";
+        command.CommandText = "SELECT COUNT(Id) FROM TanimeDailyPlanning";
 
         if (command.Parameters.Count > 0)
             command.Parameters.Clear();
@@ -84,7 +84,7 @@ public partial class TanimePlanning
     }
 
     /// <summary>
-    /// Compte le nombre d'entrées dans la table TanimePlanning ayant l'identifiant spécifié
+    /// Compte le nombre d'entrées dans la table TanimeDailyPlanning ayant l'identifiant spécifié
     /// </summary>
     /// <param name="id"></param>
     /// <param name="columnSelect"></param>
@@ -98,9 +98,9 @@ public partial class TanimePlanning
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
         command.CommandText = columnSelect switch
         {
-            SelectCountIdIdAnimeSheetIdKind.Id => "SELECT COUNT(Id) FROM TanimePlanning WHERE Id = $Id",
-            SelectCountIdIdAnimeSheetIdKind.IdAnime => "SELECT COUNT(Id) FROM TanimePlanning WHERE IdAnime = $Id",
-            SelectCountIdIdAnimeSheetIdKind.SheetId => "SELECT COUNT(Id) FROM TanimePlanning WHERE SheetId = $Id",
+            SelectCountIdIdAnimeSheetIdKind.Id => "SELECT COUNT(Id) FROM TanimeDailyPlanning WHERE Id = $Id",
+            SelectCountIdIdAnimeSheetIdKind.IdAnime => "SELECT COUNT(Id) FROM TanimeDailyPlanning WHERE IdAnime = $Id",
+            SelectCountIdIdAnimeSheetIdKind.SheetId => "SELECT COUNT(Id) FROM TanimeDailyPlanning WHERE SheetId = $Id",
             _ => throw new ArgumentOutOfRangeException(nameof(columnSelect), columnSelect,
                 "La valeur spécifiée est invalide")
         };
@@ -115,7 +115,7 @@ public partial class TanimePlanning
     }
 
     /// <summary>
-    /// Compte le nombre d'entrées dans la table TanimePlanning
+    /// Compte le nombre d'entrées dans la table TanimeDailyPlanning
     /// </summary>
     /// <param name="releaseDate"></param>
     /// <param name="cancellationToken"></param>
@@ -125,7 +125,7 @@ public partial class TanimePlanning
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "SELECT COUNT(Id) FROM TanimePlanning WHERE ReleaseDate = $ReleaseDate";
+        command.CommandText = "SELECT COUNT(Id) FROM TanimeDailyPlanning WHERE ReleaseDate = $ReleaseDate";
 
         command.Parameters.Clear();
 
@@ -142,7 +142,7 @@ public partial class TanimePlanning
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "SELECT COUNT(Id) FROM TanimePlanning WHERE ReleaseDate = $ReleaseDate AND SheetId = $SheetId";
+        command.CommandText = "SELECT COUNT(Id) FROM TanimeDailyPlanning WHERE ReleaseDate = $ReleaseDate AND SheetId = $SheetId";
 
         command.Parameters.Clear();
 
@@ -161,8 +161,8 @@ public partial class TanimePlanning
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
         command.CommandText = idAnime.HasValue
-            ? "SELECT COUNT(Id) FROM TanimePlanning WHERE ReleaseDate = $ReleaseDate AND IdAnime = $IdAnime"
-            : "SELECT COUNT(Id) FROM TanimePlanning WHERE ReleaseDate = $ReleaseDate AND IdAnime IS NULL";
+            ? "SELECT COUNT(Id) FROM TanimeDailyPlanning WHERE ReleaseDate = $ReleaseDate AND IdAnime = $IdAnime"
+            : "SELECT COUNT(Id) FROM TanimeDailyPlanning WHERE ReleaseDate = $ReleaseDate AND IdAnime IS NULL";
 
         command.Parameters.Clear();
 
@@ -181,7 +181,7 @@ public partial class TanimePlanning
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "SELECT COUNT(Id) FROM TanimePlanning WHERE ReleaseDate = $ReleaseDate AND SheetId = $SheetId AND NoEpisode = $NoEpisode";
+        command.CommandText = "SELECT COUNT(Id) FROM TanimeDailyPlanning WHERE ReleaseDate = $ReleaseDate AND SheetId = $SheetId AND NoEpisode = $NoEpisode";
 
         command.Parameters.Clear();
 
@@ -201,8 +201,8 @@ public partial class TanimePlanning
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
         command.CommandText = idAnime.HasValue
-            ? "SELECT COUNT(Id) FROM TanimePlanning WHERE ReleaseDate = $ReleaseDate AND IdAnime = $IdAnime AND NoEpisode = $NoEpisode"
-            : "SELECT COUNT(Id) FROM TanimePlanning WHERE ReleaseDate = $ReleaseDate AND IdAnime IS NULL AND NoEpisode = $NoEpisode";
+            ? "SELECT COUNT(Id) FROM TanimeDailyPlanning WHERE ReleaseDate = $ReleaseDate AND IdAnime = $IdAnime AND NoEpisode = $NoEpisode"
+            : "SELECT COUNT(Id) FROM TanimeDailyPlanning WHERE ReleaseDate = $ReleaseDate AND IdAnime IS NULL AND NoEpisode = $NoEpisode";
 
         command.Parameters.Clear();
 
@@ -218,7 +218,7 @@ public partial class TanimePlanning
     }
 
     /// <summary>
-    /// Compte le nombre d'entrées dans la table TanimePlanning
+    /// Compte le nombre d'entrées dans la table TanimeDailyPlanning
     /// </summary>
     /// <param name="noEpisode"></param>
     /// <param name="cancellationToken"></param>
@@ -230,7 +230,7 @@ public partial class TanimePlanning
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
         command.CommandText =
-            "SELECT COUNT(Id) FROM TanimePlanning WHERE IdAnime = $IdAnime AND NoEpisode = $NoEpisode";
+            "SELECT COUNT(Id) FROM TanimeDailyPlanning WHERE IdAnime = $IdAnime AND NoEpisode = $NoEpisode";
 
         command.Parameters.Clear();
 
@@ -249,7 +249,7 @@ public partial class TanimePlanning
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
         command.CommandText =
-            "SELECT COUNT(Id) FROM TanimePlanning WHERE IdAnime = $IdAnime AND NoEpisode = $NoEpisode";
+            "SELECT COUNT(Id) FROM TanimeDailyPlanning WHERE IdAnime = $IdAnime AND NoEpisode = $NoEpisode";
 
         command.Parameters.Clear();
 
@@ -268,7 +268,7 @@ public partial class TanimePlanning
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
         command.CommandText =
-            "SELECT COUNT(Id) FROM TanimePlanning WHERE ReleaseDate = $ReleaseDate AND SheetId = $SheetId AND NoEpisode = $NoEpisode";
+            "SELECT COUNT(Id) FROM TanimeDailyPlanning WHERE ReleaseDate = $ReleaseDate AND SheetId = $SheetId AND NoEpisode = $NoEpisode";
 
         command.Parameters.Clear();
 
@@ -324,18 +324,18 @@ public partial class TanimePlanning
 
     #region Select
 
-    public static async Task<TanimePlanning[]> SelectAsync(AnimePlanningSortBy sortBy, OrderBy orderBy, uint limit = 0,
+    public static async Task<TanimeDailyPlanning[]> SelectAsync(AnimePlanningSortBy sortBy, OrderBy orderBy, uint limit = 0,
         uint offset = 0, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
         command.CommandText = SqlSelectScript + Environment.NewLine + sortBy switch
         {
-            AnimePlanningSortBy.Id => $"ORDER BY TanimePlanning.Id {orderBy}",
-            AnimePlanningSortBy.IdAnime => $"ORDER BY TanimePlanning.IdAnime {orderBy}",
-            AnimePlanningSortBy.ReleaseDate => $"ORDER BY TanimePlanning.ReleaseDate {orderBy}",
-            AnimePlanningSortBy.EpisodeNumber => $"ORDER BY TanimePlanning.NoEpisode {orderBy}",
-            AnimePlanningSortBy.EpisodeName => $"ORDER BY TanimePlanning.EpisodeName {orderBy}",
-            AnimePlanningSortBy.Day => $"ORDER BY TanimePlanning.NoDay {orderBy}",
+            AnimePlanningSortBy.Id => $"ORDER BY TanimeDailyPlanning.Id {orderBy}",
+            AnimePlanningSortBy.IdAnime => $"ORDER BY TanimeDailyPlanning.IdAnime {orderBy}",
+            AnimePlanningSortBy.ReleaseDate => $"ORDER BY TanimeDailyPlanning.ReleaseDate {orderBy}",
+            AnimePlanningSortBy.EpisodeNumber => $"ORDER BY TanimeDailyPlanning.NoEpisode {orderBy}",
+            AnimePlanningSortBy.EpisodeName => $"ORDER BY TanimeDailyPlanning.EpisodeName {orderBy}",
+            AnimePlanningSortBy.Day => $"ORDER BY TanimeDailyPlanning.NoDay {orderBy}",
             AnimePlanningSortBy.AnimeName => $"ORDER BY Tanime.Name {orderBy}",
             _ => throw new ArgumentOutOfRangeException(nameof(sortBy), sortBy, "La valeur spécifiée est invalide")
         };
@@ -346,24 +346,24 @@ public partial class TanimePlanning
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
-            return Array.Empty<TanimePlanning>();
+            return Array.Empty<TanimeDailyPlanning>();
 
         return await GetRecords(reader, cancellationToken);
     }
 
-    public static async Task<TanimePlanning[]> SelectAsync(int idAnime, AnimePlanningSortBy sortBy, OrderBy orderBy,
+    public static async Task<TanimeDailyPlanning[]> SelectAsync(int idAnime, AnimePlanningSortBy sortBy, OrderBy orderBy,
         uint limit = 0, uint offset = 0, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
         command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE IdAnime = $IdAnime" + Environment.NewLine +
                               sortBy switch
                               {
-                                  AnimePlanningSortBy.Id => $"ORDER BY TanimePlanning.Id {orderBy}",
-                                  AnimePlanningSortBy.IdAnime => $"ORDER BY TanimePlanning.IdAnime {orderBy}",
-                                  AnimePlanningSortBy.ReleaseDate => $"ORDER BY TanimePlanning.ReleaseDate {orderBy}",
-                                  AnimePlanningSortBy.EpisodeNumber => $"ORDER BY TanimePlanning.NoEpisode {orderBy}",
-                                  AnimePlanningSortBy.EpisodeName => $"ORDER BY TanimePlanning.EpisodeName {orderBy}",
-                                  AnimePlanningSortBy.Day => $"ORDER BY TanimePlanning.NoDay {orderBy}",
+                                  AnimePlanningSortBy.Id => $"ORDER BY TanimeDailyPlanning.Id {orderBy}",
+                                  AnimePlanningSortBy.IdAnime => $"ORDER BY TanimeDailyPlanning.IdAnime {orderBy}",
+                                  AnimePlanningSortBy.ReleaseDate => $"ORDER BY TanimeDailyPlanning.ReleaseDate {orderBy}",
+                                  AnimePlanningSortBy.EpisodeNumber => $"ORDER BY TanimeDailyPlanning.NoEpisode {orderBy}",
+                                  AnimePlanningSortBy.EpisodeName => $"ORDER BY TanimeDailyPlanning.EpisodeName {orderBy}",
+                                  AnimePlanningSortBy.Day => $"ORDER BY TanimeDailyPlanning.NoDay {orderBy}",
                                   AnimePlanningSortBy.AnimeName => $"ORDER BY Tanime.Name {orderBy}",
                                   _ => throw new ArgumentOutOfRangeException(nameof(sortBy), sortBy,
                                       "La valeur spécifiée est invalide")
@@ -378,12 +378,12 @@ public partial class TanimePlanning
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
-            return Array.Empty<TanimePlanning>();
+            return Array.Empty<TanimeDailyPlanning>();
 
         return await GetRecords(reader, cancellationToken);
     }
 
-    public static async Task<TanimePlanning[]> SelectAsync(DateOnly minDate, DateOnly maxDate,
+    public static async Task<TanimeDailyPlanning[]> SelectAsync(DateOnly minDate, DateOnly maxDate,
         AnimePlanningSortBy sortBy, OrderBy orderBy,
         uint limit = 0, uint offset = 0, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
@@ -391,12 +391,12 @@ public partial class TanimePlanning
         command.CommandText = SqlSelectScript + Environment.NewLine +
                               "WHERE ReleaseDate BETWEEN $MinDate AND $MaxDate" + Environment.NewLine + sortBy switch
                               {
-                                  AnimePlanningSortBy.Id => $"ORDER BY TanimePlanning.Id {orderBy}",
-                                  AnimePlanningSortBy.IdAnime => $"ORDER BY TanimePlanning.IdAnime {orderBy}",
-                                  AnimePlanningSortBy.ReleaseDate => $"ORDER BY TanimePlanning.ReleaseDate {orderBy}",
-                                  AnimePlanningSortBy.EpisodeNumber => $"ORDER BY TanimePlanning.NoEpisode {orderBy}",
-                                  AnimePlanningSortBy.EpisodeName => $"ORDER BY TanimePlanning.EpisodeName {orderBy}",
-                                  AnimePlanningSortBy.Day => $"ORDER BY TanimePlanning.NoDay {orderBy}",
+                                  AnimePlanningSortBy.Id => $"ORDER BY TanimeDailyPlanning.Id {orderBy}",
+                                  AnimePlanningSortBy.IdAnime => $"ORDER BY TanimeDailyPlanning.IdAnime {orderBy}",
+                                  AnimePlanningSortBy.ReleaseDate => $"ORDER BY TanimeDailyPlanning.ReleaseDate {orderBy}",
+                                  AnimePlanningSortBy.EpisodeNumber => $"ORDER BY TanimeDailyPlanning.NoEpisode {orderBy}",
+                                  AnimePlanningSortBy.EpisodeName => $"ORDER BY TanimeDailyPlanning.EpisodeName {orderBy}",
+                                  AnimePlanningSortBy.Day => $"ORDER BY TanimeDailyPlanning.NoDay {orderBy}",
                                   AnimePlanningSortBy.AnimeName => $"ORDER BY Tanime.Name {orderBy}",
                                   _ => throw new ArgumentOutOfRangeException(nameof(sortBy), sortBy,
                                       "La valeur spécifiée est invalide")
@@ -412,7 +412,7 @@ public partial class TanimePlanning
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
-            return Array.Empty<TanimePlanning>();
+            return Array.Empty<TanimeDailyPlanning>();
 
         return await GetRecords(reader, cancellationToken);
     }
@@ -421,7 +421,7 @@ public partial class TanimePlanning
 
     #region Single
 
-    public static async Task<TanimePlanning?> SingleAsync(int id,
+    public static async Task<TanimeDailyPlanning?> SingleAsync(int id,
         CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
@@ -441,7 +441,7 @@ public partial class TanimePlanning
         return records.Length > 0 ? records[0] : null;
     }
 
-    public static async Task<TanimePlanning?> SingleAsync(int idAnime, ushort noEpisode,
+    public static async Task<TanimeDailyPlanning?> SingleAsync(int idAnime, ushort noEpisode,
         CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
@@ -484,7 +484,7 @@ public partial class TanimePlanning
 
         command.CommandText =
             """
-            INSERT INTO TanimePlanning
+            INSERT INTO TanimeDailyPlanning
                 (IdAnime, SheetId, Url, AnimeName, ReleaseDate, NoEpisode, EpisodeName, NoDay, Description)
             VALUES
                 ($IdAnime, $SheetId, $Url, $AnimeName, $ReleaseDate, $NoEpisode, $EpisodeName, $NoDay, $Description)
@@ -519,7 +519,7 @@ public partial class TanimePlanning
         }
     }
 
-    public static async Task<OperationState> InsertAsync(IReadOnlyCollection<TanimePlanning> values,
+    public static async Task<OperationState> InsertAsync(IReadOnlyCollection<TanimeDailyPlanning> values,
         CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
@@ -529,7 +529,7 @@ public partial class TanimePlanning
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
 
         command.CommandText =
-            "INSERT OR REPLACE INTO TanimePlanning (SheetId, Url, AnimeName, ReleaseDate, NoEpisode, EpisodeName, NoDay, Description) VALUES";
+            "INSERT OR REPLACE INTO TanimeDailyPlanning (SheetId, Url, AnimeName, ReleaseDate, NoEpisode, EpisodeName, NoDay, Description) VALUES";
         command.Parameters.Clear();
 
         List<OperationState<int>> results = [];
@@ -603,7 +603,7 @@ public partial class TanimePlanning
 
         command.CommandText =
             """
-            UPDATE TanimePlanning SET
+            UPDATE TanimeDailyPlanning SET
                 IdAnime = $IdAnime,
                 SheetId = $SheetId,
                 Url = $Url,
@@ -659,7 +659,7 @@ public partial class TanimePlanning
         if (id <= 0 || !await ExistsAsync(id, SelectCountIdIdAnimeSheetIdKind.Id, cancellationToken, command))
             return new OperationState(false, "L'identifiant de l'épisode est invalide");
 
-        command.CommandText = "DELETE FROM TanimePlanning WHERE Id = $Id";
+        command.CommandText = "DELETE FROM TanimeDailyPlanning WHERE Id = $Id";
 
         if (command.Parameters.Count > 0)
             command.Parameters.Clear();
@@ -680,17 +680,17 @@ public partial class TanimePlanning
 
     #endregion
 
-    private static async Task<TanimePlanning[]> GetRecords(SqliteDataReader reader,
+    private static async Task<TanimeDailyPlanning[]> GetRecords(SqliteDataReader reader,
         CancellationToken? cancellationToken = null)
     {
-        List<TanimePlanning> records = new();
+        List<TanimeDailyPlanning> records = new();
         while (await reader.ReadAsync(cancellationToken ?? CancellationToken.None))
         {
             var idPlanning = reader.GetInt32(reader.GetOrdinal("BaseId"));
             var record = records.Find(f => f.Id == idPlanning);
             if (record == null)
             {
-                record = new TanimePlanning()
+                record = new TanimeDailyPlanning()
                 {
                     Id = idPlanning,
                     IdAnime = reader.IsDBNull(reader.GetOrdinal("IdAnime"))
@@ -783,16 +783,16 @@ public partial class TanimePlanning
     private const string SqlSelectScript =
         """
         SELECT
-            TanimePlanning.Id AS BaseId,
-            TanimePlanning.IdAnime,
-            TanimePlanning.SheetId AS BaseSheetId,
-            TanimePlanning.Url AS BaseUrl,
-            TanimePlanning.AnimeName AS BaseAnimeName,
-            TanimePlanning.ReleaseDate,
-            TanimePlanning.NoEpisode,
-            TanimePlanning.EpisodeName,
-            TanimePlanning.NoDay,
-            TanimePlanning.Description AS BaseDescription,
+            TanimeDailyPlanning.Id AS BaseId,
+            TanimeDailyPlanning.IdAnime,
+            TanimeDailyPlanning.SheetId AS BaseSheetId,
+            TanimeDailyPlanning.Url AS BaseUrl,
+            TanimeDailyPlanning.AnimeName AS BaseAnimeName,
+            TanimeDailyPlanning.ReleaseDate,
+            TanimeDailyPlanning.NoEpisode,
+            TanimeDailyPlanning.EpisodeName,
+            TanimeDailyPlanning.NoDay,
+            TanimeDailyPlanning.Description AS BaseDescription,
             
             Tanime.Name AS AnimeName,
             Tanime.Url AS AnimeUrl,
@@ -822,8 +822,8 @@ public partial class TanimePlanning
             Tcategory.Description AS CategoryDescription
 
         FROM
-            TanimePlanning
-        LEFT JOIN main.Tanime on Tanime.Id = TanimePlanning.IdAnime
+            TanimeDailyPlanning
+        LEFT JOIN main.Tanime on Tanime.Id = TanimeDailyPlanning.IdAnime
         LEFT JOIN main.Tformat  on Tformat.Id = Tanime.IdFormat
         LEFT JOIN main.Ttarget  on Ttarget.Id = Tanime.IdTarget
         LEFT JOIN main.TorigineAdaptation on TorigineAdaptation.Id = Tanime.IdOrigine

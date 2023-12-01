@@ -142,171 +142,7 @@ public partial class Tanime : TanimeBase
     private static async Task<OperationState<int>> CreateIndexAsync(string animeName, string animeUrl, int animeSheetId, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
         => await TsheetIndex.InsertAsync(IcotakuSection.Anime, SheetType.Anime, animeName, animeUrl, animeSheetId, 0, cancellationToken, cmd);
     
-    #region Count
 
-    public static async Task<int> CountAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
-    {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "SELECT COUNT(Id) FROM Tanime";
-
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
-
-        var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
-        if (result is long count)
-            return (int)count;
-        return 0;
-    }
-
-    public static async Task<int> CountAsync(int id, SheetIntColumnSelect columnSelect, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-    {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = columnSelect switch
-        {
-            SheetIntColumnSelect.Id => "SELECT COUNT(Id) FROM Tanime WHERE Id = $Id",
-            SheetIntColumnSelect.SheetId => "SELECT COUNT(Id) FROM Tanime WHERE SheetId = $Id",
-            _ => throw new ArgumentOutOfRangeException(nameof(columnSelect), columnSelect, null)
-        };
-
-        command.Parameters.Clear();
-
-        command.Parameters.AddWithValue("$Id", id);
-        var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
-        if (result is long count)
-            return (int)count;
-        return 0;
-    }
-    
-    public static async Task<int> CountAsync(string name, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-    {
-        if (name.IsStringNullOrEmptyOrWhiteSpace())
-            return 0;
-        
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "SELECT COUNT(Id) FROM Tanime WHERE Name = $Name COLLATE NOCASE";
-
-        command.Parameters.Clear();
-        
-        command.Parameters.AddWithValue("$Name", name);
-        
-        var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
-        if (result is long count)
-            return (int)count;
-        return 0;
-    }
-    
-    public static async Task<int> CountAsync(Uri sheetUri, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-    {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "SELECT COUNT(Id) FROM Tanime WHERE Url = $Url COLLATE NOCASE";
-
-        command.Parameters.Clear();
-        
-        command.Parameters.AddWithValue("$Url", sheetUri.ToString());
-        
-        var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
-        if (result is long count)
-            return (int)count;
-        return 0;
-    }
-    
-    public static async Task<int> CountAsync(string name, int sheetId, Uri sheetUri, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-    {
-        if (name.IsStringNullOrEmptyOrWhiteSpace())
-            return 0;
-        
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "SELECT COUNT(Id) FROM Tanime WHERE Name = $Name COLLATE NOCASE OR Url = $Url COLLATE NOCASE OR SheetId = $SheetId";
-
-        command.Parameters.Clear();
-        
-        command.Parameters.AddWithValue("$Url", sheetUri.ToString());
-        command.Parameters.AddWithValue("$Name", name);
-        command.Parameters.AddWithValue("$SheetId", sheetId);
-        
-        var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
-        if (result is long count)
-            return (int)count;
-        return 0;
-    }
-    
-    public static async Task<int?> GetIdOfAsync(Uri sheetUri, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-    {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "SELECT Id FROM Tanime WHERE Url = $Url COLLATE NOCASE";
-
-        command.Parameters.Clear();
-        
-        command.Parameters.AddWithValue("$Url", sheetUri.ToString());
-        
-        var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
-        if (result is long count)
-            return (int)count;
-        return null;
-    }
-    
-    public static async Task<int?> GetIdOfAsync(int sheetId, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-    {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "SELECT Id FROM Tanime WHERE SheetId = $SheetId";
-
-        command.Parameters.Clear();
-        
-        command.Parameters.AddWithValue("$SheetId", sheetId);
-        
-        var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
-        if (result is long count)
-            return (int)count;
-        return null;
-    }
-    
-    public static async Task<int?> GetIdOfAsync(string name, int sheetId, Uri sheetUri, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-    {
-        if (name.IsStringNullOrEmptyOrWhiteSpace())
-            return null;
-        
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "SELECT Id FROM Tanime WHERE Name = $Name COLLATE NOCASE OR Url = $Url COLLATE NOCASE OR SheetId = $SheetId";
-
-        command.Parameters.Clear();
-        
-        command.Parameters.AddWithValue("$Url", sheetUri.ToString());
-        command.Parameters.AddWithValue("$Name", name);
-        command.Parameters.AddWithValue("$SheetId", sheetId);
-        
-        var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
-        if (result is long count)
-            return (int)count;
-        return null;
-    }
-    #endregion
-
-    #region Exists
-
-    public static async Task<bool> ExistsAsync(int id, SheetIntColumnSelect columnSelect, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(id, columnSelect, cancellationToken, cmd) > 0;
-    
-    public static async Task<bool> ExistsAsync(string name, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(name, cancellationToken, cmd) > 0;
-    
-    public static async Task<bool> ExistsAsync(Uri sheetUri, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(sheetUri, cancellationToken, cmd) > 0;
-    
-    public static async Task<bool> ExistsAsync(string name, int sheetId, Uri sheetUri, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(name, sheetId, sheetUri, cancellationToken, cmd) > 0;
-
-    #endregion
 
     #region Select
 
@@ -333,7 +169,7 @@ public partial class Tanime : TanimeBase
 
     #region Single
 
-    public static async Task<Tanime?> SingleAsync(int id, SheetIntColumnSelect columnSelect, CancellationToken? cancellationToken = null,
+    public new static async Task<Tanime?> SingleAsync(int id, SheetIntColumnSelect columnSelect, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
@@ -354,7 +190,7 @@ public partial class Tanime : TanimeBase
         return !reader.HasRows ? null : (await GetRecords(reader, cancellationToken)).FirstOrDefault();
     }
     
-    public static async Task<Tanime?> SingleAsync(string name, CancellationToken? cancellationToken = null,
+    public new static async Task<Tanime?> SingleAsync(string name, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
         if (name.IsStringNullOrEmptyOrWhiteSpace())
@@ -373,7 +209,7 @@ public partial class Tanime : TanimeBase
         return !reader.HasRows ? null : (await GetRecords(reader, cancellationToken)).FirstOrDefault();
     }
     
-    public static async Task<Tanime?> SingleAsync(Uri sheetUri, CancellationToken? cancellationToken = null,
+    public new static async Task<Tanime?> SingleAsync(Uri sheetUri, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
@@ -663,7 +499,6 @@ public partial class Tanime : TanimeBase
                         : Tseason.GetRecord(reader,
                             idIndex: reader.GetOrdinal("IdSeason"),
                             displayNameIndex: reader.GetOrdinal("SeasonDisplayName"),
-                            yearIndex: reader.GetOrdinal("SeasonYear"),
                             seasonNumberIndex: reader.GetOrdinal("SeasonNumber")),
                 };
 
@@ -795,7 +630,6 @@ public partial class Tanime : TanimeBase
             TorigineAdaptation.Description as OrigineAdaptationDescription,
             
             Tseason.DisplayName as SeasonDisplayName,
-            Tseason.Year as SeasonYear,
             Tseason.SeasonNumber as SeasonNumber,
             
             TanimeAlternativeTitle.Id AS AlternativeTitleId,

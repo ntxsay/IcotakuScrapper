@@ -1,4 +1,5 @@
-﻿using Microsoft.Data.Sqlite;
+﻿using IcotakuScrapper.Anime;
+using Microsoft.Data.Sqlite;
 
 namespace IcotakuScrapper.Extensions
 {
@@ -36,6 +37,8 @@ namespace IcotakuScrapper.Extensions
         public static ContactType ConvertTo(this SheetType sheetType) => ExtensionMethods.ConvertTo(sheetType);
         public static SheetType ConvertTo(this ContactType contactType) => ExtensionMethods.ConvertTo(contactType);
 
+        public static void AddOrderSort(this SqliteCommand command, AnimeSeasonalPlanningSortBy sortBy, OrderBy orderBy) 
+            => ExtensionMethods.AddOrderSort(command, sortBy, orderBy);
     }
 
     internal static class ExtensionMethods
@@ -89,5 +92,19 @@ namespace IcotakuScrapper.Extensions
             _ => throw new ArgumentOutOfRangeException(nameof(contactType), contactType, "La valeur spécifiée est invalide")
         };
 
+        public static void AddOrderSort(SqliteCommand command, AnimeSeasonalPlanningSortBy sortBy, OrderBy orderBy)
+        {
+            command.CommandText += Environment.NewLine + sortBy switch
+            {
+                AnimeSeasonalPlanningSortBy.Id => $"ORDER BY TanimeSeasonalPlanning.Id {orderBy}",
+                AnimeSeasonalPlanningSortBy.SheetId => $"ORDER BY TanimeSeasonalPlanning.SheetId {orderBy}",
+                AnimeSeasonalPlanningSortBy.ReleaseDate => $"ORDER BY TanimeSeasonalPlanning.ReleaseMonth {orderBy}",
+                AnimeSeasonalPlanningSortBy.AnimeName => $"ORDER BY TanimeSeasonalPlanning.AnimeName {orderBy}",
+                AnimeSeasonalPlanningSortBy.OrigineAdaptation => $"ORDER BY TorigineAdaptation.Name {orderBy}",
+                AnimeSeasonalPlanningSortBy.Season => $"ORDER BY Tseason.SeasonNumber {orderBy}",
+                AnimeSeasonalPlanningSortBy.GroupName => $"ORDER BY TanimeSeasonalPlanning.GroupName {orderBy}",
+                _ => throw new ArgumentOutOfRangeException(nameof(sortBy), sortBy, "La valeur spécifiée est invalide")
+            };
+        }
     }
 }

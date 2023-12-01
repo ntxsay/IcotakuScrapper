@@ -1,5 +1,15 @@
 ﻿namespace IcotakuScrapper
 {
+    public enum IntColumnSelect
+    {
+        Id,
+        SheetId,
+        IdAnime,
+        IdOrigine,
+        IdSeason,
+        IdTarget
+    }
+
     /// <summary>
     /// Afin d'éviter de créer plusieurs méthodes de sélection, cette énumération permet de sélectionner la colonne à utiliser pour la sélection.
     /// </summary>
@@ -8,7 +18,7 @@
         Id,
         SheetId,
     }
-    
+
     /// <summary>
     /// Enumération des colonnes d'id permettant de sélectionner ou de compter  des enrehistrements via l'id ou l'idAnime.
     /// </summary>
@@ -136,5 +146,29 @@
         Octobre,
         Novembre,
         Décembre
+    }
+
+    /// <summary>
+    /// Enumération des saisons.
+    /// </summary>
+    public enum FourSeasonsKind : byte
+    {
+        Unknown = 0,
+        /// <summary>
+        /// Printemps
+        /// </summary>
+        Spring = 1,
+        /// <summary>
+        /// Eté
+        /// </summary>
+        Summer = 2,
+        /// <summary>
+        /// Automne
+        /// </summary>
+        Fall = 3,
+        /// <summary>
+        /// Hiver
+        /// </summary>
+        Winter = 4,
     }
 }

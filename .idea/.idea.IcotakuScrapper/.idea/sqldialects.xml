@@ -3,9 +3,11 @@
   <component name="SqlDialectMappings">
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Anime/Tanime.cs" dialect="SQLite" />
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Anime/TanimeAlternativeTitle.cs" dialect="SQLite" />
+    <file url="file://$PROJECT_DIR$/IcotakuScrapper/Anime/TanimeBase.cs" dialect="SQLite" />
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Anime/TanimeCategory.cs" dialect="SQLite" />
+    <file url="file://$PROJECT_DIR$/IcotakuScrapper/Anime/TanimeDailyPlanning.cs" dialect="SQLite" />
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Anime/TanimeEpisode.cs" dialect="SQLite" />
-    <file url="file://$PROJECT_DIR$/IcotakuScrapper/Anime/TanimePlanning.cs" dialect="SQLite" />
+    <file url="file://$PROJECT_DIR$/IcotakuScrapper/Anime/TanimeSeasonalPlanning.cs" dialect="SQLite" />
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Anime/TanimeStudio.cs" dialect="SQLite" />
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Anime/TanimeWebSite.cs" dialect="SQLite" />
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Common/Tcategory.cs" dialect="SQLite" />

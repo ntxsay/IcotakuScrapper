@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using IcotakuScrapper.Extensions;
+using IcotakuScrapper.Helpers;
 using Microsoft.Data.Sqlite;
 
 namespace IcotakuScrapper.Common;
@@ -28,8 +29,7 @@ public class Tseason
 {
     public int Id { get; protected set; }
     public string DisplayName { get; set; } = string.Empty;
-    public ushort Year { get; set; }
-    public byte SeasonNumber { get; set; }
+    public uint SeasonNumber { get; set; }
     
     public Tseason()
     {
@@ -40,18 +40,17 @@ public class Tseason
         Id = id;
     }
     
-    public Tseason(int id, string displayName, ushort year, byte seasonNumber)
+    public Tseason(int id, string displayName, uint seasonNumber)
     {
         Id = id;
         DisplayName = displayName;
-        Year = year;
         SeasonNumber = seasonNumber;
     }
     
     
     public override string ToString()
     {
-        return $"{DisplayName} ({SeasonNumber}-{Year})";
+        return $"{DisplayName} ({SeasonNumber})";
     }
 
     #region Count
@@ -113,40 +112,34 @@ public class Tseason
     /// <summary>
     /// Compte le nombre d'entrées dans la table Tseason ayant le nom spécifié
     /// </summary>
-    /// <param name="season"></param>
+    /// <param name="seasonNumber"></param>
     /// <param name="cancellationToken"></param>
     /// <param name="cmd"></param>
-    /// <param name="year"></param>
     /// <returns></returns>
-    public static async Task<int> CountAsync(ushort year, byte season, CancellationToken? cancellationToken = null,
+    public static async Task<int> CountAsync(uint seasonNumber, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
-        if (year is < 1900 or > 2100 || season is < 1 or > 4)
-            return 0;
-
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "SELECT COUNT(Id) FROM Tseason WHERE Year = $Year AND Tseason.SeasonNumber = $SeasonNumber";
+        command.CommandText = "SELECT COUNT(Id) FROM Tseason WHERE Tseason.SeasonNumber = $SeasonNumber";
 
         command.Parameters.Clear();
         
-        command.Parameters.AddWithValue("$Year", year);
-        command.Parameters.AddWithValue("$SeasonNumber", season);
+        command.Parameters.AddWithValue("$SeasonNumber", seasonNumber);
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
         if (result is long count)
             return (int)count;
         return 0;
     }
     
-    public static async Task<int?> GetIdOfAsync(ushort year, byte season, CancellationToken? cancellationToken = null,
+    public static async Task<int?> GetIdOfAsync(uint seasonNumber, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "SELECT Id FROM Tseason WHERE Year = $Year AND Tseason.SeasonNumber = $SeasonNumber";
+        command.CommandText = "SELECT Id FROM Tseason WHERE Tseason.SeasonNumber = $SeasonNumber";
 
         command.Parameters.Clear();
         
-        command.Parameters.AddWithValue("$Year", year);
-        command.Parameters.AddWithValue("$SeasonNumber", season);
+       command.Parameters.AddWithValue("$SeasonNumber", seasonNumber);
         
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
         if (result is long count)
@@ -163,8 +156,8 @@ public class Tseason
     public static async Task<bool> ExistsAsync(string displayName, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
         => await CountAsync(displayName, cancellationToken, cmd) > 0;
     
-    public static async Task<bool> ExistsAsync(ushort year, byte season, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
-        => await CountAsync(year, season, cancellationToken, cmd) > 0;
+    public static async Task<bool> ExistsAsync(uint seasonNumber, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        => await CountAsync(seasonNumber, cancellationToken, cmd) > 0;
 
     #endregion
 
@@ -173,7 +166,7 @@ public class Tseason
     public static async Task<Tseason[]> SelectAsync(SeasonSortBy sortBy = SeasonSortBy.Default, OrderBy orderBy = OrderBy.Asc, uint limit = 0, uint skip = 0, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = sqlSelectScript + Environment.NewLine;
+        command.CommandText = SqlSelectScript + Environment.NewLine;
         
         command.CommandText += sortBy switch
         {
@@ -195,10 +188,10 @@ public class Tseason
         return await GetRecords(reader, cancellationToken).ToArrayAsync(cancellationToken ?? CancellationToken.None);
     }
     
-    public static async Task<Tseason[]> SelectAsync(ushort year, SeasonSortBy sortBy = SeasonSortBy.Default, OrderBy orderBy = OrderBy.Asc, uint limit = 0, uint skip = 0, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public static async Task<Tseason[]> SelectAsync(uint year, SeasonSortBy sortBy = SeasonSortBy.Default, OrderBy orderBy = OrderBy.Asc, uint limit = 0, uint skip = 0, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = sqlSelectScript + Environment.NewLine + "WHERE Year = $Year";
+        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Year = $Year";
         
         command.CommandText += sortBy switch
         {
@@ -225,7 +218,7 @@ public class Tseason
     public static async Task<Tseason[]> SelectAsync(byte seasonNumber, SeasonSortBy sortBy = SeasonSortBy.Default, OrderBy orderBy = OrderBy.Asc, uint limit = 0, uint skip = 0, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = sqlSelectScript + Environment.NewLine + "WHERE SeasonNumber = $SeasonNumber";
+        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE SeasonNumber = $SeasonNumber";
         
         command.CommandText += sortBy switch
         {
@@ -256,7 +249,7 @@ public class Tseason
     public static async Task<Tseason?> SingleAsync(int id, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = sqlSelectScript + Environment.NewLine + "WHERE Id = $Id";
+        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Id = $Id";
 
         command.Parameters.Clear();
 
@@ -268,20 +261,18 @@ public class Tseason
         if (await reader.ReadAsync(cancellationToken ?? CancellationToken.None))
             return GetRecord(reader, 
                 idIndex: reader.GetOrdinal("Id"),
-                yearIndex: reader.GetOrdinal("Year"),
                 seasonNumberIndex: reader.GetOrdinal("SeasonNumber"),
                 displayNameIndex: reader.GetOrdinal("DisplayName"));
         return null;
     }
     
-    public static async Task<Tseason?> SingleAsync(ushort year, byte seasonNumber, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public static async Task<Tseason?> SingleAsync(uint seasonNumber, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = sqlSelectScript + Environment.NewLine + "WHERE Year = $Year AND SeasonNumber = $SeasonNumber";
+        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE SeasonNumber = $SeasonNumber";
 
         command.Parameters.Clear();
         
-        command.Parameters.AddWithValue("$Year", year);
         command.Parameters.AddWithValue("$SeasonNumber", seasonNumber);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
@@ -290,7 +281,6 @@ public class Tseason
         if (await reader.ReadAsync(cancellationToken ?? CancellationToken.None))
             return GetRecord(reader, 
                 idIndex: reader.GetOrdinal("Id"),
-                yearIndex: reader.GetOrdinal("Year"),
                 seasonNumberIndex: reader.GetOrdinal("SeasonNumber"),
                 displayNameIndex: reader.GetOrdinal("DisplayName"));
         return null;
@@ -302,7 +292,7 @@ public class Tseason
             return null;
         
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = sqlSelectScript + Environment.NewLine + "WHERE DisplayName = $DisplayName COLLATE NOCASE";
+        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE DisplayName = $DisplayName COLLATE NOCASE";
 
         command.Parameters.Clear();
         
@@ -314,7 +304,6 @@ public class Tseason
         if (await reader.ReadAsync(cancellationToken ?? CancellationToken.None))
             return GetRecord(reader, 
                 idIndex: reader.GetOrdinal("Id"),
-                yearIndex: reader.GetOrdinal("Year"),
                 seasonNumberIndex: reader.GetOrdinal("SeasonNumber"),
                 displayNameIndex: reader.GetOrdinal("DisplayName"));
         return null;
@@ -326,32 +315,27 @@ public class Tseason
 
     public async Task<OperationState<int>> InsertAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
+        if (!DateHelpers.IsSeasonValidated(SeasonNumber))
+            return new OperationState<int>(false, "Le numéro de la saison est invalide");
         if (DisplayName.IsStringNullOrEmptyOrWhiteSpace())
-            return new OperationState<int>(false, "Le nom de la saison ne peut pas être vide");
-        
-        if (Year is < 1900 or > 2100)
-            return new OperationState<int>(false, "L'année doit être comprise entre 1900 et 2100");
-        
-        if (SeasonNumber is < 1 or > 4)
-            return new OperationState<int>(false, "Le numéro de la saison doit être compris entre 1 et 4");
+            DisplayName = DateHelpers.GetSeasonLiteral(SeasonNumber) ?? string.Empty;
         
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
         
-        if (await ExistsAsync(Year, SeasonNumber, cancellationToken, command))
+        if (await ExistsAsync(SeasonNumber, cancellationToken, command))
             return new OperationState<int>(false, "Une saison avec le même nom existe déjà");
         
         command.CommandText = 
             """
             INSERT INTO Tseason
-                (DisplayName, Year, SeasonNumber)
+                (DisplayName, SeasonNumber)
             VALUES
-                ($DisplayName, $Year, $SeasonNumber)
+                ($DisplayName, $SeasonNumber)
             """;
 
         command.Parameters.Clear();
         
         command.Parameters.AddWithValue("$DisplayName", DisplayName.Trim());
-        command.Parameters.AddWithValue("$Year", Year);
         command.Parameters.AddWithValue("$SeasonNumber", SeasonNumber);
         
         try
@@ -379,18 +363,14 @@ public class Tseason
         if (Id <= 0)
             return new OperationState(false, "L'identifiant de la saison est invalide");
         
+        if (!DateHelpers.IsSeasonValidated(SeasonNumber))
+            return new OperationState(false, "Le numéro de la saison est invalide");
         if (DisplayName.IsStringNullOrEmptyOrWhiteSpace())
-            return new OperationState(false, "Le nom de la saison ne peut pas être vide");
-        
-        if (Year is < 1900 or > 2100)
-            return new OperationState(false, "L'année doit être comprise entre 1900 et 2100");
-        
-        if (SeasonNumber is < 1 or > 4)
-            return new OperationState(false, "Le numéro de la saison doit être compris entre 1 et 4");
+            DisplayName = DateHelpers.GetSeasonLiteral(SeasonNumber) ?? string.Empty;
         
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
         
-        var existingId = await GetIdOfAsync(Year, SeasonNumber, cancellationToken, command);
+        var existingId = await GetIdOfAsync(SeasonNumber, cancellationToken, command);
         if (existingId is not null && existingId != Id)
             return new OperationState(false, "Une saison avec le même nom existe déjà");
         
@@ -399,7 +379,6 @@ public class Tseason
             UPDATE Tseason
             SET
                 DisplayName = $DisplayName,
-                Year = $Year,
                 SeasonNumber = $SeasonNumber
             WHERE Id = $Id
             """;
@@ -408,7 +387,6 @@ public class Tseason
         
         command.Parameters.AddWithValue("$Id", Id);
         command.Parameters.AddWithValue("$DisplayName", DisplayName.Trim());
-        command.Parameters.AddWithValue("$Year", Year);
         command.Parameters.AddWithValue("$SeasonNumber", SeasonNumber);
         
         try
@@ -441,8 +419,8 @@ public class Tseason
         command.CommandText = 
             """
             UPDATE Tanime SET IdSeason = NULL WHERE IdSeason = $Id;
-            DELETE FROM Tseason
-            WHERE Id = $Id
+            DELETE FROM TanimeSeasonalPlanning WHERE IdSeason = $Id;
+            DELETE FROM Tseason  WHERE Id = $Id;
             """;
 
         command.Parameters.Clear();
@@ -451,9 +429,8 @@ public class Tseason
         
         try
         {
-            return await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None) <= 0 
-                ? new OperationState(false, "Une erreur est survenue lors de la suppression") 
-                : new OperationState(true, "Suppression réussie");
+            var count = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
+            return new OperationState(true, $"{count} ligne(s) supprimée(s)");
         }
         catch (Exception e)
         {
@@ -462,16 +439,28 @@ public class Tseason
         }
     }
     
+    public static async Task<OperationState> DeleteAsync(uint seasonNumber, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        if (seasonNumber <= 0)
+            return new OperationState(false, "L'identifiant de la saison est invalide");
+        
+        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        var id = await GetIdOfAsync(seasonNumber, cancellationToken, command);
+        if (id is null)
+            return new OperationState(false, "La saison n'existe pas");
+        
+        return await DeleteAsync(id.Value, cancellationToken, command);
+    }
+    
     #endregion
     
-    internal static Tseason GetRecord(SqliteDataReader reader, int idIndex, int yearIndex, int seasonNumberIndex, int displayNameIndex)
+    internal static Tseason GetRecord(SqliteDataReader reader, int idIndex, int seasonNumberIndex, int displayNameIndex)
     {
         return new Tseason()
         {
             Id = reader.GetInt32(idIndex),
             DisplayName = reader.GetString(displayNameIndex),
-            Year = (ushort)reader.GetInt16(yearIndex),
-            SeasonNumber = reader.GetByte(seasonNumberIndex)
+            SeasonNumber = (uint)reader.GetInt32(seasonNumberIndex)
         };
     }
     
@@ -484,19 +473,17 @@ public class Tseason
         {
             yield return GetRecord(reader, 
                 idIndex: reader.GetOrdinal("Id"),
-                yearIndex: reader.GetOrdinal("Year"),
                 seasonNumberIndex: reader.GetOrdinal("SeasonNumber"),
                 displayNameIndex: reader.GetOrdinal("DisplayName"));
         }
     }
 
     
-    private const string sqlSelectScript = 
+    private const string SqlSelectScript = 
         """
         SELECT 
             Id, 
             DisplayName, 
-            Year, 
             SeasonNumber 
         FROM Tseason
         """;

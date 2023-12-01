@@ -475,15 +475,22 @@ public partial class Tanime
         if (seasonNumber == null)
             return null;
 
-        var record = await Tseason.SingleAsync(year.Value, seasonNumber.Value, cancellationToken, cmd);
+        var intSeason = DateHelpers.GetIntSeason(seasonNumber.Value, year.Value);
+        if (intSeason == 0)
+            return null;
+
+        var record = await Tseason.SingleAsync(intSeason, cancellationToken, cmd);
         if (record != null)
             return record;
 
+        var seasonLiteral = DateHelpers.GetSeasonLiteral((FourSeasonsKind)seasonNumber.Value, year.Value);
+        if (seasonLiteral == null)
+            return null;
+
         record = new Tseason
         {
-            Year = year.Value,
             SeasonNumber = seasonNumber.Value,
-            DisplayName = $"{DateHelpers.GetSeasonName(seasonNumber.Value)} {year.Value}"
+            DisplayName = seasonLiteral,
         };
 
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();

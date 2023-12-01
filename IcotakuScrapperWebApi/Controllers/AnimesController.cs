@@ -61,14 +61,5 @@ namespace IcotakuScrapperWebApi.Controllers
                 return new OperationState(false, "L'url n'est pas valide");
             return await Tanime.DeleteAsync(uri);
         }
-
-        [HttpGet("Planning/Range")]
-        public async Task<TanimePlanning[]> SelectAllAsync([FromQuery] string minDate, [FromQuery] string maxDate)
-        {
-            if (!DateOnly.TryParse(minDate, out var min) || !DateOnly.TryParse(maxDate, out var max))
-                return [];
-
-            return await TanimePlanning.GetAnimePlanningAsync(minDate, maxDate);
-        }
     }
 }
