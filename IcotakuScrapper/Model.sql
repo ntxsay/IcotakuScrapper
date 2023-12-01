@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS TsheetIndex
     "SheetId"     INTEGER NOT NULL DEFAULT 0, -- Id de la fiche (anime, manga, etc)
     "Url"         TEXT    NOT NULL UNIQUE,    -- Url de la fiche (anime, manga, etc)
     "Section"     INTEGER NOT NULL,           -- Section de la fiche (ANime, Manga, etc)
-    "ItemName"    TEXT    NOT NULL,               -- Nom de la fiche (anime, manga, etc)
+    "ItemName"    TEXT    NOT NULL,           -- Nom de la fiche (anime, manga, etc)
     "ItemType"    INTEGER NOT NULL,           -- Type de la fiche (anime, manga, character, studios, individual, etc)
     "FoundedPage" INTEGER NOT NULL DEFAULT 0  -- Page de recherche sur laquelle la fiche a été trouvée
 );
@@ -301,3 +301,45 @@ CREATE TABLE IF NOT EXISTS TanimeCharacter
     IdCharacter INTEGER NOT NULL REFERENCES Tcontact (Id) ON DELETE CASCADE,
     IdRole      INTEGER NULL REFERENCES ToeuvreRole (Id) ON DELETE CASCADE
 );
+
+-- endregion
+
+-- region Table TanimeEpisode
+/*
+ Création de la table TanimeEpisode qui permet 
+ d'enregistrer les dates de diffusion des épisodes des animés
+ */
+DROP TABLE IF EXISTS TanimeEpisode;
+CREATE TABLE IF NOT EXISTS TanimeEpisode
+(
+    Id          INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
+    IdAnime     INTEGER NOT NULL REFERENCES Tanime (Id) ON DELETE CASCADE,
+    ReleaseDate TEXT    NOT NULL, -- Date de sortie de l'animé (yyyy-mm-dd)
+    NoEpisode   INTEGER NOT NULL, -- Numéro de l'épisode
+    EpisodeName TEXT    NULL,
+    NoDay       INTEGER NOT NULL, -- Numéro du jour de diffusion
+    Description TEXT    NULL
+);
+-- endregion
+    
+-- region Table TanimePlanning
+/*
+ Création de la table TanimePlanning qui permet 
+ d'enregistrer les dates de diffusion des épisodes des animés
+ */
+DROP TABLE IF EXISTS TanimePlanning;
+CREATE TABLE IF NOT EXISTS TanimePlanning
+(
+    Id          INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
+    IdAnime     INTEGER NULL REFERENCES Tanime (Id) ON DELETE CASCADE,
+    SheetId     INTEGER NOT NULL, -- Id de la fiche (anime, manga, etc)
+    Url         TEXT    NOT NULL, -- Url de la fiche (anime, manga, etc)
+    AnimeName   TEXT    NOT NULL, -- Nom de la fiche (anime, manga, etc)
+    ReleaseDate TEXT    NOT NULL, -- Date de sortie de l'animé (yyyy-mm-dd)
+    NoEpisode   INTEGER NOT NULL, -- Numéro de l'épisode
+    EpisodeName TEXT    NULL,
+    NoDay       INTEGER NOT NULL, -- Numéro du jour de diffusion
+    Description TEXT    NULL
+);
+-- endregion
+    

@@ -63,15 +63,15 @@ public class TanimeWebSite
         return 0;
     }
 
-    public static async Task<int> CountAsync(int id, CountIdKind kind, CancellationToken? cancellationToken = null,
+    public static async Task<int> CountAsync(int id, SelectCountIdIdAnimeKind countIdAnimeKind, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = kind switch
+        command.CommandText = countIdAnimeKind switch
         {
-            CountIdKind.Id => "SELECT COUNT(Id) FROM TanimeWebSite WHERE Id = $Id",
-            CountIdKind.IdAnime => "SELECT COUNT(Id) FROM TanimeWebSite WHERE IdAnime = $Id",
-            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
+            SelectCountIdIdAnimeKind.Id => "SELECT COUNT(Id) FROM TanimeWebSite WHERE Id = $Id",
+            SelectCountIdIdAnimeKind.IdAnime => "SELECT COUNT(Id) FROM TanimeWebSite WHERE IdAnime = $Id",
+            _ => throw new ArgumentOutOfRangeException(nameof(countIdAnimeKind), countIdAnimeKind, null)
         };
 
         command.Parameters.Clear();
@@ -132,9 +132,9 @@ public class TanimeWebSite
     
     #region Exists
     
-    public static async Task<bool> ExistsAsync(int id, CountIdKind kind, CancellationToken? cancellationToken = null,
+    public static async Task<bool> ExistsAsync(int id, SelectCountIdIdAnimeKind countIdAnimeKind, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
-        => await CountAsync(id, kind, cancellationToken, cmd) > 0;
+        => await CountAsync(id, countIdAnimeKind, cancellationToken, cmd) > 0;
     
     public static async Task<bool> ExistsAsync(int idAnime, string title, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)

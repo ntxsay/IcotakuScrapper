@@ -1,6 +1,31 @@
 ﻿namespace IcotakuScrapper
 {
     /// <summary>
+    /// Afin d'éviter de créer plusieurs méthodes de sélection, cette énumération permet de sélectionner la colonne à utiliser pour la sélection.
+    /// </summary>
+    public enum SheetIntColumnSelect
+    {
+        Id,
+        SheetId,
+    }
+    
+    /// <summary>
+    /// Enumération des colonnes d'id permettant de sélectionner ou de compter  des enrehistrements via l'id ou l'idAnime.
+    /// </summary>
+    public enum SelectCountIdIdAnimeKind
+    {
+        Id,
+        IdAnime,
+    }
+    
+    public enum SelectCountIdIdAnimeSheetIdKind
+    {
+        Id,
+        IdAnime,
+        SheetId
+    }
+    
+    /// <summary>
     /// Enuméation des sections du site icotaku.com et exploité par l'API.
     /// </summary>
     public enum IcotakuSection : byte

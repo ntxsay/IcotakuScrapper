@@ -100,7 +100,13 @@ public partial class Tanime
                 }
             }
             
-            return new OperationState<Tanime?>()
+            //Episodes
+            var episodes = TanimeEpisode.GetAnimeEpisode(anime.SheetId).ToArray();
+            if (episodes.Length > 0)
+                foreach (var episode in episodes)
+                    anime.Episodes.Add(episode);
+            
+            return new OperationState<Tanime?>
             {
                 IsSuccess = true,
                 Data = anime,

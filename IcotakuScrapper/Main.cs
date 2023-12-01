@@ -43,8 +43,7 @@ namespace IcotakuScrapper
                 return null;
 
             var sheetId = splitUrl.FirstOrDefault(f =>
-                       !f.Any(a =>
-                                      char.IsLetter(a) || a == '-' || a == '_'));
+                       !f.Any(a => char.IsLetter(a) || a == '-' || a == '_'));
 
             if (sheetId.IsStringNullOrEmptyOrWhiteSpace())
                 return null;
@@ -60,19 +59,36 @@ namespace IcotakuScrapper
         {
             var href = node.GetAttributeValue("href", string.Empty);
             if (href.IsStringNullOrEmptyOrWhiteSpace())
-                return new Uri(IcotakuBaseUrl);
+                return null;
 
             if (href.StartsWith('/'))
                 href = href.TrimStart('/');
 
             href = $"{GetBaseUrl(section)}/{href}";
 
-            if (Uri.TryCreate(href, UriKind.Absolute, out var uri))
+            if (Uri.TryCreate(href, UriKind.Absolute, out var uri) && uri.IsAbsoluteUri)
                 return uri;
 
             return null;
         }
-        
+
+        public static Uri? GetFullHrefFromRelativePath(string relativePath, IcotakuSection section)
+        {
+            if (relativePath.IsStringNullOrEmptyOrWhiteSpace())
+                return null;
+
+            var href = relativePath.ToString();
+            if (href.StartsWith('/'))
+                href = href.TrimStart('/');
+
+            href = $"{GetBaseUrl(section)}/{href}";
+
+            if (Uri.TryCreate(href, UriKind.Absolute, out var uri) && uri.IsAbsoluteUri)
+                return uri;
+
+            return null;
+        }
+
         public static Uri? GetImageFromSrc(IcotakuSection section, string? src)
         {
             if (src == null || src.IsStringNullOrEmptyOrWhiteSpace())

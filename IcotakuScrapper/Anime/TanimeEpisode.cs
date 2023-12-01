@@ -1,27 +1,27 @@
 ﻿using System.Diagnostics;
-using IcotakuScrapper.Common;
 using IcotakuScrapper.Extensions;
+using IcotakuScrapper.Helpers;
 using Microsoft.Data.Sqlite;
 
 namespace IcotakuScrapper.Anime;
 
-public enum AnimePlanningSortBy : byte
+public enum AnimeEpisodeSortBy : byte
 {
     Id,
     IdAnime,
     ReleaseDate,
     EpisodeNumber,
     EpisodeName,
-    Day,
-    AnimeName
+    Day
 }
 
 public partial class TanimeEpisode
 {
+    public const string ReleaseDateFormat = "yyyy-MM-dd";
+
     public int Id { get; set; }
     public int IdAnime { get; set; }
-    public TanimeBase? Anime { get; set; }
-    public DateTime ReleaseDate { get; set; }
+    public DateOnly ReleaseDate { get; set; }
     public ushort EpisodeNumber { get; set; }
     public string? EpisodeName { get; set; }
     public DayOfWeek Day { get; set; }
@@ -42,7 +42,7 @@ public partial class TanimeEpisode
         IdAnime = idAnime;
     }
 
-    public TanimeEpisode(int id, int idAnime, DateTime releaseDate, ushort episodeNumber, string episodeName,
+    public TanimeEpisode(int id, int idAnime, DateOnly releaseDate, ushort episodeNumber, string episodeName,
         DayOfWeek day, string? description)
     {
         Id = id;
@@ -121,7 +121,7 @@ public partial class TanimeEpisode
 
         command.Parameters.Clear();
 
-        command.Parameters.AddWithValue("$ReleaseDate", releaseDate.ToString("yyyy-MM-dd"));
+        command.Parameters.AddWithValue("$ReleaseDate", releaseDate.ToString(ReleaseDateFormat));
 
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
         if (result is long count)
@@ -196,19 +196,18 @@ public partial class TanimeEpisode
 
     #region Select
 
-    public static async Task<TanimeEpisode[]> SelectAsync(AnimePlanningSortBy sortBy, OrderBy orderBy, uint limit = 0,
+    public static async Task<TanimeEpisode[]> SelectAsync(AnimeEpisodeSortBy sortBy, OrderBy orderBy, uint limit = 0,
         uint offset = 0, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
         command.CommandText = SqlSelectScript + Environment.NewLine + sortBy switch
         {
-            AnimePlanningSortBy.Id => $"ORDER BY TanimeEpisode.Id {orderBy}",
-            AnimePlanningSortBy.IdAnime => $"ORDER BY TanimeEpisode.IdAnime {orderBy}",
-            AnimePlanningSortBy.ReleaseDate => $"ORDER BY TanimeEpisode.ReleaseDate {orderBy}",
-            AnimePlanningSortBy.EpisodeNumber => $"ORDER BY TanimeEpisode.NoEpisode {orderBy}",
-            AnimePlanningSortBy.EpisodeName => $"ORDER BY TanimeEpisode.EpisodeName {orderBy}",
-            AnimePlanningSortBy.Day => $"ORDER BY TanimeEpisode.NoDay {orderBy}",
-            AnimePlanningSortBy.AnimeName => $"ORDER BY Tanime.Name {orderBy}",
+            AnimeEpisodeSortBy.Id => $"ORDER BY TanimeEpisode.Id {orderBy}",
+            AnimeEpisodeSortBy.IdAnime => $"ORDER BY TanimeEpisode.IdAnime {orderBy}",
+            AnimeEpisodeSortBy.ReleaseDate => $"ORDER BY TanimeEpisode.ReleaseDate {orderBy}",
+            AnimeEpisodeSortBy.EpisodeNumber => $"ORDER BY TanimeEpisode.NoEpisode {orderBy}",
+            AnimeEpisodeSortBy.EpisodeName => $"ORDER BY TanimeEpisode.EpisodeName {orderBy}",
+            AnimeEpisodeSortBy.Day => $"ORDER BY TanimeEpisode.NoDay {orderBy}",
             _ => throw new ArgumentOutOfRangeException(nameof(sortBy), sortBy, "La valeur spécifiée est invalide")
         };
         command.AddLimitOffset(limit, offset);
@@ -223,20 +222,19 @@ public partial class TanimeEpisode
         return await GetRecords(reader, cancellationToken).ToArrayAsync(cancellationToken ?? CancellationToken.None);
     }
 
-    public static async Task<TanimeEpisode[]> SelectAsync(int idAnime, AnimePlanningSortBy sortBy, OrderBy orderBy,
+    public static async Task<TanimeEpisode[]> SelectAsync(int idAnime, AnimeEpisodeSortBy sortBy, OrderBy orderBy,
         uint limit = 0, uint offset = 0, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
         command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE IdAnime = $IdAnime" + Environment.NewLine +
                               sortBy switch
                               {
-                                  AnimePlanningSortBy.Id => $"ORDER BY TanimeEpisode.Id {orderBy}",
-                                  AnimePlanningSortBy.IdAnime => $"ORDER BY TanimeEpisode.IdAnime {orderBy}",
-                                  AnimePlanningSortBy.ReleaseDate => $"ORDER BY TanimeEpisode.ReleaseDate {orderBy}",
-                                  AnimePlanningSortBy.EpisodeNumber => $"ORDER BY TanimeEpisode.NoEpisode {orderBy}",
-                                  AnimePlanningSortBy.EpisodeName => $"ORDER BY TanimeEpisode.EpisodeName {orderBy}",
-                                  AnimePlanningSortBy.Day => $"ORDER BY TanimeEpisode.NoDay {orderBy}",
-                                  AnimePlanningSortBy.AnimeName => $"ORDER BY Tanime.Name {orderBy}",
+                                  AnimeEpisodeSortBy.Id => $"ORDER BY TanimeEpisode.Id {orderBy}",
+                                  AnimeEpisodeSortBy.IdAnime => $"ORDER BY TanimeEpisode.IdAnime {orderBy}",
+                                  AnimeEpisodeSortBy.ReleaseDate => $"ORDER BY TanimeEpisode.ReleaseDate {orderBy}",
+                                  AnimeEpisodeSortBy.EpisodeNumber => $"ORDER BY TanimeEpisode.NoEpisode {orderBy}",
+                                  AnimeEpisodeSortBy.EpisodeName => $"ORDER BY TanimeEpisode.EpisodeName {orderBy}",
+                                  AnimeEpisodeSortBy.Day => $"ORDER BY TanimeEpisode.NoDay {orderBy}",
                                   _ => throw new ArgumentOutOfRangeException(nameof(sortBy), sortBy,
                                       "La valeur spécifiée est invalide")
                               };
@@ -256,20 +254,19 @@ public partial class TanimeEpisode
     }
 
     public static async Task<TanimeEpisode[]> SelectAsync(DateOnly minDate, DateOnly maxDate,
-        AnimePlanningSortBy sortBy, OrderBy orderBy,
+        AnimeEpisodeSortBy sortBy, OrderBy orderBy,
         uint limit = 0, uint offset = 0, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
         command.CommandText = SqlSelectScript + Environment.NewLine +
                               "WHERE ReleaseDate BETWEEN $MinDate AND $MaxDate" + Environment.NewLine + sortBy switch
                               {
-                                  AnimePlanningSortBy.Id => $"ORDER BY TanimeEpisode.Id {orderBy}",
-                                  AnimePlanningSortBy.IdAnime => $"ORDER BY TanimeEpisode.IdAnime {orderBy}",
-                                  AnimePlanningSortBy.ReleaseDate => $"ORDER BY TanimeEpisode.ReleaseDate {orderBy}",
-                                  AnimePlanningSortBy.EpisodeNumber => $"ORDER BY TanimeEpisode.NoEpisode {orderBy}",
-                                  AnimePlanningSortBy.EpisodeName => $"ORDER BY TanimeEpisode.EpisodeName {orderBy}",
-                                  AnimePlanningSortBy.Day => $"ORDER BY TanimeEpisode.NoDay {orderBy}",
-                                  AnimePlanningSortBy.AnimeName => $"ORDER BY Tanime.Name {orderBy}",
+                                  AnimeEpisodeSortBy.Id => $"ORDER BY TanimeEpisode.Id {orderBy}",
+                                  AnimeEpisodeSortBy.IdAnime => $"ORDER BY TanimeEpisode.IdAnime {orderBy}",
+                                  AnimeEpisodeSortBy.ReleaseDate => $"ORDER BY TanimeEpisode.ReleaseDate {orderBy}",
+                                  AnimeEpisodeSortBy.EpisodeNumber => $"ORDER BY TanimeEpisode.NoEpisode {orderBy}",
+                                  AnimeEpisodeSortBy.EpisodeName => $"ORDER BY TanimeEpisode.EpisodeName {orderBy}",
+                                  AnimeEpisodeSortBy.Day => $"ORDER BY TanimeEpisode.NoDay {orderBy}",
                                   _ => throw new ArgumentOutOfRangeException(nameof(sortBy), sortBy,
                                       "La valeur spécifiée est invalide")
                               };
@@ -279,8 +276,8 @@ public partial class TanimeEpisode
         if (command.Parameters.Count > 0)
             command.Parameters.Clear();
 
-        command.Parameters.AddWithValue("$MinDate", minDate.ToString("yyyy-MM-dd"));
-        command.Parameters.AddWithValue("$MaxDate", maxDate.ToString("yyyy-MM-dd"));
+        command.Parameters.AddWithValue("$MinDate", minDate.ToString(ReleaseDateFormat));
+        command.Parameters.AddWithValue("$MaxDate", maxDate.ToString(ReleaseDateFormat));
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
@@ -365,7 +362,7 @@ public partial class TanimeEpisode
             command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$IdAnime", IdAnime);
-        command.Parameters.AddWithValue("$ReleaseDate", ReleaseDate.ToString("yyyy-MM-dd"));
+        command.Parameters.AddWithValue("$ReleaseDate", ReleaseDate.ToString(ReleaseDateFormat));
         command.Parameters.AddWithValue("$NoEpisode", EpisodeNumber);
         command.Parameters.AddWithValue("$EpisodeName", EpisodeName ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$NoDay", (byte)Day);
@@ -398,8 +395,7 @@ public partial class TanimeEpisode
         if (values.Count == 0)
             return new OperationState(false, "Aucun studio n'a été sélectionné.");
 
-        List<OperationState<int>> results =  []
-        ;
+        List<OperationState<int>> results =  [];
         command.CommandText =
             "INSERT OR REPLACE INTO TanimeEpisode (IdAnime, ReleaseDate, NoEpisode, EpisodeName, NoDay, Description) VALUES";
         command.Parameters.Clear();
@@ -417,7 +413,7 @@ public partial class TanimeEpisode
             command.CommandText += Environment.NewLine +
                                    $"($IdAnime, $ReleaseDate{i}, $NoEpisode{i}, $EpisodeName{i}, $NoDay{i}, $Description{i})";
 
-            command.Parameters.AddWithValue($"$ReleaseDate{i}", episode.ReleaseDate.ToString("yyyy-MM-dd"));
+            command.Parameters.AddWithValue($"$ReleaseDate{i}", episode.ReleaseDate.ToString(ReleaseDateFormat));
             command.Parameters.AddWithValue($"$NoEpisode{i}", episode.EpisodeNumber);
             command.Parameters.AddWithValue($"$EpisodeName{i}", episode.EpisodeName ?? (object)DBNull.Value);
             command.Parameters.AddWithValue($"$NoDay{i}", (byte)episode.Day);
@@ -489,7 +485,7 @@ public partial class TanimeEpisode
             command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$IdAnime", IdAnime);
-        command.Parameters.AddWithValue("$ReleaseDate", ReleaseDate.ToString("yyyy-MM-dd"));
+        command.Parameters.AddWithValue("$ReleaseDate", ReleaseDate.ToString(ReleaseDateFormat));
         command.Parameters.AddWithValue("$NoEpisode", EpisodeNumber);
         command.Parameters.AddWithValue("$EpisodeName", EpisodeName ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$NoDay", (byte)Day);
@@ -555,7 +551,7 @@ public partial class TanimeEpisode
             {
                 Id = reader.GetInt32(reader.GetOrdinal("BaseId")),
                 IdAnime = reader.GetInt32(reader.GetOrdinal("IdAnime")),
-                ReleaseDate = reader.GetDateTime(reader.GetOrdinal("ReleaseDate")),
+                ReleaseDate = DateHelpers.GetDateOnly(reader.GetString(reader.GetOrdinal("ReleaseDate")), ReleaseDateFormat),
                 EpisodeNumber = (ushort)reader.GetInt16(reader.GetOrdinal("NoEpisode")),
                 EpisodeName = reader.IsDBNull(reader.GetOrdinal("EpisodeName"))
                     ? null
@@ -564,21 +560,6 @@ public partial class TanimeEpisode
                 Description = reader.IsDBNull(reader.GetOrdinal("BaseDescription"))
                     ? null
                     : reader.GetString(reader.GetOrdinal("BaseDescription")),
-                Anime = new TanimeBase(reader.GetInt32(reader.GetOrdinal("IdAnime")))
-                {
-                    Name = reader.GetString(reader.GetOrdinal("AnimeName")),
-                    Url = reader.GetString(reader.GetOrdinal("AnimeUrl")),
-                    SheetId = reader.GetInt32(reader.GetOrdinal("AnimeSheetId")),
-                    ThumbnailUrl = reader.IsDBNull(reader.GetOrdinal("AnimeThumbnailUrl"))
-                        ? null
-                        : reader.GetString(reader.GetOrdinal("AnimeThumbnailUrl")),
-                    ThumbnailMiniUrl = reader.IsDBNull(reader.GetOrdinal("AnimeThumbnailMiniUrl"))
-                        ? null
-                        : reader.GetString(reader.GetOrdinal("AnimeThumbnailMiniUrl")),
-                    Description = reader.IsDBNull(reader.GetOrdinal("AnimeDescription"))
-                        ? null
-                        : reader.GetString(reader.GetOrdinal("AnimeDescription")),
-                },
             };
         }
     }
@@ -592,17 +573,9 @@ public partial class TanimeEpisode
             TanimeEpisode.NoEpisode,
             TanimeEpisode.EpisodeName,
             TanimeEpisode.NoDay,
-            TanimeEpisode.Description AS BaseDescription,
-            
-            Tanime.Name AS AnimeName,
-            Tanime.Url AS AnimeUrl,
-            Tanime.SheetId AS AnimeSheetId,
-            Tanime.ThumbnailUrl AS AnimeThumbnailUrl,
-            Tanime.ThumbnailMiniUrl AS AnimeThumbnailMiniUrl,
-            Tanime.Description AS AnimeDescription
+            TanimeEpisode.Description AS BaseDescription
 
         FROM
             TanimeEpisode
-        LEFT JOIN main.Tanime on Tanime.Id = TanimeEpisode.IdAnime
         """;
 }

@@ -22,11 +22,7 @@ public enum AnimeSortBy
 
 public partial class Tanime : TanimeBase
 {
-    public DiffusionStateKind DiffusionState { get; set; }
-    /// <summary>
-    /// Obtient ou définit le nombre d'épisodes de l'anime.
-    /// </summary>
-    public ushort EpisodesCount { get; set; }
+    
 
     /// <summary>
     /// Obtient ou définit la date de sortie de l'anime au format yyyy-MM-dd.
@@ -43,24 +39,6 @@ public partial class Tanime : TanimeBase
     /// </summary>
     public TimeSpan Duration { get; set; } = TimeSpan.Zero;
     
-
-    /// <summary>
-    /// Obtient ou définit le format de l'anime (Série Tv, Oav).
-    /// </summary>
-    public Tformat? Format { get; set; }
-    
-    /// <summary>
-    /// Obtient ou définit le public visé de l'anime.
-    /// </summary>
-    public Ttarget? Target { get; set; }
-    
-    /// <summary>
-    /// Obtient ou définit l'origine de l'anime.
-    /// </summary>
-    public TorigineAdaptation? OrigineAdaptation { get; set; }
-    
-    public Tseason? Season { get; set; }
-    
     /// <summary>
     /// Obtient ou définit la liste des titres alternatifs de l'anime.
     /// </summary>
@@ -72,14 +50,14 @@ public partial class Tanime : TanimeBase
     public HashSet<TanimeWebSite> WebSites { get; } = new();
     
     /// <summary>
-    /// Obtient ou définit la liste des  catégories de l'anime (genre et thèmes).
-    /// </summary>
-    public HashSet<Tcategory> Categories { get; } = new();
-    
-    /// <summary>
     /// Obtient ou définit la liste des studios de l'anime.
     /// </summary>
     public HashSet<Tcontact> Studios { get; } = new();
+    
+    /// <summary>
+    /// Obtient ou définit la liste des épisodes de l'anime.
+    /// </summary>
+    public HashSet<TanimeEpisode> Episodes { get; } = new();
 
 
     /// <summary>
@@ -265,6 +243,22 @@ public partial class Tanime : TanimeBase
         command.Parameters.Clear();
         
         command.Parameters.AddWithValue("$Url", sheetUri.ToString());
+        
+        var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
+        if (result is long count)
+            return (int)count;
+        return null;
+    }
+    
+    public static async Task<int?> GetIdOfAsync(int sheetId, CancellationToken? cancellationToken = null,
+        SqliteCommand? cmd = null)
+    {
+        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        command.CommandText = "SELECT Id FROM Tanime WHERE SheetId = $SheetId";
+
+        command.Parameters.Clear();
+        
+        command.Parameters.AddWithValue("$SheetId", sheetId);
         
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
         if (result is long count)
@@ -472,6 +466,9 @@ public partial class Tanime : TanimeBase
             if (Categories.Count > 0)
                 _ = await TanimeCategory.InsertAsync(Id, Categories.Select(s => s.Id).ToArray(), cancellationToken, command);
 
+            if (Episodes.Count > 0)
+                _ = await TanimeEpisode.InsertAsync(Id, Episodes.Where(w => w.EpisodeNumber >= 0).DistinctBy(d => d.EpisodeNumber).ToArray(), cancellationToken, command);
+
             return new OperationState<int>(true, "L'anime a été ajouté avec succès", Id);
 
         }
@@ -669,7 +666,12 @@ public partial class Tanime : TanimeBase
                             yearIndex: reader.GetOrdinal("SeasonYear"),
                             seasonNumberIndex: reader.GetOrdinal("SeasonNumber")),
                 };
-                
+
+                var episodes = await TanimeEpisode.SelectAsync(animeId, AnimeEpisodeSortBy.EpisodeNumber, OrderBy.Asc);
+                if (episodes.Length > 0)
+                    foreach (var episode in episodes)
+                        anime.Episodes.Add(episode);
+
                 animeList.Add(anime);
             }
             
@@ -736,6 +738,8 @@ public partial class Tanime : TanimeBase
                         anime.Studios.Add(studio);
                 }
             }
+
+            
         }
         
         return animeList.ToArray();

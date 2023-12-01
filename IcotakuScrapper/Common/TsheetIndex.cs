@@ -4,15 +4,6 @@ using Microsoft.Data.Sqlite;
 
 namespace IcotakuScrapper.Common;
 
-/// <summary>
-/// Afin d'éviter de créer plusieurs méthodes de sélection, cette énumération permet de sélectionner la colonne à utiliser pour la sélection.
-/// </summary>
-public enum SheetIntColumnSelect
-{
-    Id,
-    SheetId,
-}
-
 public enum SheetSortBy
 {
     Id,
