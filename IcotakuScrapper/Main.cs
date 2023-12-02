@@ -8,14 +8,14 @@ namespace IcotakuScrapper
     {
         #region Icotaku
         public const string IcotakuBaseUrl = "https://icotaku.com";
-        public static string GetBaseUrl(IcotakuSection section) => section switch
+        public static string? GetBaseUrl(IcotakuSection section) => section switch
         {
             IcotakuSection.Anime => "https://anime.icotaku.com",
             IcotakuSection.Manga => "https://manga.icotaku.com",
             IcotakuSection.LightNovel => "https://novel.icotaku.com",
             IcotakuSection.Drama => "https://drama.icotaku.com",
             IcotakuSection.Community => "https://communaute.icotaku.com",
-            _ => "https://icotaku.com"
+            _ => null
         };
 
         public static IcotakuSection? GetIcotakuSection(Uri sheetUri)

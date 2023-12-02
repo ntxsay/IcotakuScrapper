@@ -1,8 +1,11 @@
 ﻿using HtmlAgilityPack;
 using IcotakuScrapper.Extensions;
+using IcotakuScrapper.Helpers;
 using Microsoft.Data.Sqlite;
+using System;
 using System.Diagnostics;
 using System.Web;
+using System.Xml.Linq;
 
 namespace IcotakuScrapper.Common;
 
@@ -456,19 +459,21 @@ public partial class Tcategory
         }
         catch (Exception e)
         {
-            Debug.WriteLine(e.Message);
+            LogServices.LogDebug(e);
             return new OperationState<int>(false, "Une erreur est survenue lors de l'insertion");
         }
     }
 
-    public static async Task<OperationState> InsertAsync(IReadOnlyCollection<Tcategory> values, CancellationToken? cancellationToken = null,
+    public static async Task<OperationState> InsertOrReplaceAsync(IReadOnlyCollection<Tcategory> values, DbInsertMode insertMode = DbInsertMode.InsertOrReplace, 
+        CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
         if (values.Count == 0)
             return new OperationState(false, "La liste des valeurs ne peut pas être vide");
 
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "INSERT INTO Tcategory (Name, Section, Type, Description, SheetId, Url)";
+        command.StartWithInsertMode(insertMode);
+        command.CommandText += " INTO Tcategory (Name, Section, Type, Description, SheetId, Url)";
 
         command.Parameters.Clear();
 
@@ -478,13 +483,13 @@ public partial class Tcategory
 
             if (value.Name.IsStringNullOrEmptyOrWhiteSpace())
             {
-                Debug.WriteLine($"Le nom de l'item ne peut pas être vide (id: {i}");
+                LogServices.LogDebug($"Le nom de l'item ne peut pas être vide (id: {i}");
                 continue;
             }
 
-            if (value.Url.IsStringNullOrEmptyOrWhiteSpace())
+            if (value.Url.IsStringNullOrEmptyOrWhiteSpace() || !Uri.TryCreate(value.Url, UriKind.Absolute, out var uri) || !uri.IsAbsoluteUri)
             {
-                Debug.WriteLine($"L'url ne peut pas être vide. (name: {values.ElementAt((int)i).Name}, id: {i}");
+                LogServices.LogDebug($"L'url ne peut pas être vide. (name: {values.ElementAt((int)i).Name}, id: {i}");
                 continue;
             }
 
@@ -496,23 +501,53 @@ public partial class Tcategory
             command.Parameters.AddWithValue($"$Type{i}", (byte)value.Type);
             command.Parameters.AddWithValue($"$Description{i}", value.Description ?? (object)DBNull.Value);
             command.Parameters.AddWithValue($"$SheetId{i}", value.SheetId);
-            command.Parameters.AddWithValue($"$Url{i}", value.Url.Trim());
+            command.Parameters.AddWithValue($"$Url{i}", uri.ToString());
 
-            Debug.WriteLine("Ajout de l'item " + value.Name + " à la commande.");
+            LogServices.LogDebug("Ajout de l'item " + value.Name + " à la commande.");
         }
 
         try
         {
             var count = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
-            return count == 0
-                ? new OperationState(false, "Impossible d'insérer l'enregistrement dans la base de données.")
-                : new OperationState(true, $"{count} enregistrement(s) sur {values.Count} ont été insérés avec succès.");
+            return new OperationState(count > 0, $"{count} enregistrement(s) sur {values.Count} ont été insérés avec succès.");
         }
         catch (Exception e)
         {
-            Debug.WriteLine(e.Message);
+            LogServices.LogDebug(e);
             return new OperationState(false, "Une erreur est survenue lors de l'insertion");
         }
+    }
+
+    /// <summary>
+    /// Retourne l'enregistrement de la table Tcategory ayant l'identifiant spécifié ou l'insert si l'enregistrement n'existe pas
+    /// </summary>
+    /// <param name="value"></param>
+    /// <param name="reloadIfExist"></param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
+    public static async Task<Tcategory?> SingleOrCreateAsync(Tcategory value, bool reloadIfExist = false, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        command.Parameters.Clear();
+        if (!reloadIfExist)
+        {
+            var id = await GetIdOfAsync(value.Name, value.Section, value.Type, cancellationToken, command);
+            if (id.HasValue)
+            {
+                value.Id = id.Value;
+                return value;
+            }
+        }
+        else
+        {
+            var record = await SingleAsync(value.Name, value.Section, value.Type, cancellationToken, command);
+            if (record != null)
+                return record;
+        }
+
+        var result = await value.InsertAsync(cancellationToken, command);
+        return !result.IsSuccess ? null : value;
     }
 
     #endregion
@@ -569,7 +604,7 @@ public partial class Tcategory
         }
         catch (Exception e)
         {
-            Debug.WriteLine(e.Message);
+            LogServices.LogDebug(e);
             return new OperationState(false, "Une erreur est survenue lors de la mise à jour");
         }
     }
@@ -613,12 +648,12 @@ public partial class Tcategory
         }
         catch (Exception e)
         {
-            Debug.WriteLine(e.Message);
+            LogServices.LogDebug(e);
             return new OperationState(false, "Une erreur est survenue lors de la suppression");
         }
     }
 
-    public static async Task<OperationState> DeleteAsync(IcotakuSection section, CancellationToken? cancellationToken = null,
+    public static async Task<OperationState> DeleteAllAsync(IcotakuSection section, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
@@ -635,7 +670,7 @@ public partial class Tcategory
         }
         catch (Exception e)
         {
-            Debug.WriteLine(e.Message);
+            LogServices.LogDebug(e);
             return new OperationState(false, "Une erreur est survenue lors de la suppression");
         }
     }
@@ -661,7 +696,7 @@ public partial class Tcategory
         }
         catch (Exception e)
         {
-            Debug.WriteLine(e.Message);
+            LogServices.LogDebug(e);
             return new OperationState(false, "Une erreur est survenue lors de la suppression");
         }
     }

@@ -25,8 +25,9 @@ DROP TABLE IF EXISTS Tformat;
 CREATE TABLE IF NOT EXISTS Tformat
 (
     Id          INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
-    Name        TEXT    NOT NULL UNIQUE, -- Nom du format (tv, oav, etc)
-    Description TEXT    NULL             -- description du format
+    Section     INTEGER NOT NULL, -- Section de la catégorie (ANime, Manga, etc)
+    Name        TEXT    NOT NULL, -- Nom du format (tv, oav, etc)
+    Description TEXT    NULL      -- description du format
 );
 -- endregion
 
@@ -39,8 +40,24 @@ DROP TABLE IF EXISTS Ttarget;
 CREATE TABLE IF NOT EXISTS Ttarget
 (
     Id          INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
+    Section     INTEGER NOT NULL,        -- Section de la catégorie (ANime, Manga, etc)
     Name        TEXT    NOT NULL UNIQUE, -- Nom de la cible ou public visé (shonen, seinen, etc)
     Description TEXT    NULL
+);
+-- endregion
+
+-- region Table TorigineAdaptation
+/*
+ Création de la table TorigineAdaptation qui permet 
+ d'enregistrer les origines d'adaptation des fiches des animés ou autres
+ */
+DROP TABLE IF EXISTS TorigineAdaptation;
+CREATE TABLE IF NOT EXISTS TorigineAdaptation
+(
+    Id          INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
+    Section     INTEGER NOT NULL,        -- Section de la catégorie (ANime, Manga, etc)
+    Name        TEXT    NOT NULL UNIQUE, -- Nom de l'origine
+    Description TEXT    NULL             -- description de l'origine 
 );
 -- endregion
 
@@ -55,20 +72,6 @@ CREATE TABLE IF NOT EXISTS TlicenceType
     Id          INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
     Name        TEXT    NOT NULL UNIQUE, -- Nom du type de licence (VOD, physique, simulcast, streaming, etc)
     Description TEXT    NULL
-);
--- endregion
-
--- region Table TorigineAdaptation
-/*
- Création de la table TorigineAdaptation qui permet 
- d'enregistrer les origines d'adaptation des fiches des animés ou autres
- */
-DROP TABLE IF EXISTS TorigineAdaptation;
-CREATE TABLE IF NOT EXISTS TorigineAdaptation
-(
-    Id          INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
-    Name        TEXT    NOT NULL UNIQUE, -- Nom de l'origine
-    Description TEXT    NULL             -- description de l'origine 
 );
 -- endregion
 
@@ -178,24 +181,26 @@ CREATE TABLE IF NOT EXISTS Tcontact
 DROP TABLE IF EXISTS Tanime;
 CREATE TABLE IF NOT EXISTS Tanime
 (
-    Id               INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
-    IdTarget         INTEGER NULL REFERENCES Ttarget (Id) ON DELETE CASCADE,
-    IdFormat         INTEGER NULL REFERENCES Tformat (Id) ON DELETE CASCADE,
-    IdOrigine        INTEGER NULL REFERENCES TorigineAdaptation (Id) ON DELETE CASCADE,
-    IdSeason         INTEGER NULL REFERENCES Tseason (Id) ON DELETE CASCADE,
-    SheetId          INTEGER NOT NULL DEFAULT 0, -- Id de la fiche (anime, manga, etc)
-    Url              TEXT    NOT NULL UNIQUE,    -- Url de la fiche (anime, manga, etc)
-    Name             TEXT    NOT NULL,           -- Nom de la fiche (anime, manga, etc)
-    EpisodeCount     INTEGER NOT NULL DEFAULT 0, -- Nombre d'épisode
-    EpisodeDuration  REAL    NOT NULL DEFAULT 0, -- Durée d'un épisode (en minute)
-    Season           INTEGER NOT NULL DEFAULT 0, -- Saison de l'animé
-    ReleaseDate      TEXT    NULL,               -- Date de sortie de l'animé (yyyy-mm-dd)
-    EndDate          TEXT    NULL,               -- Date de fin de l'animé (yyyy-mm-dd)
-    DiffusionState   INTEGER NOT NULL DEFAULT 0, -- Etat de diffusion de l'animé
-    Description      TEXT    NULL,               -- Description de l'animé
-    ThumbnailUrl     TEXT    NULL,               -- Url de l'image de l'animé
-    ThumbnailMiniUrl TEXT    NULL,               -- Url de l'image miniature de l'animé
-    Remark           TEXT    NULL                -- Remarque sur l'animé
+    Id                INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
+    IdTarget          INTEGER NULL REFERENCES Ttarget (Id) ON DELETE CASCADE,
+    IdFormat          INTEGER NULL REFERENCES Tformat (Id) ON DELETE CASCADE,
+    IdOrigine         INTEGER NULL REFERENCES TorigineAdaptation (Id) ON DELETE CASCADE,
+    IdSeason          INTEGER NULL REFERENCES Tseason (Id) ON DELETE CASCADE,
+    SheetId           INTEGER NOT NULL DEFAULT 0, -- Id de la fiche (anime, manga, etc)
+    Url               TEXT    NOT NULL UNIQUE,    -- Url de la fiche (anime, manga, etc)
+    Name              TEXT    NOT NULL,           -- Nom de la fiche (anime, manga, etc)
+    IsAdultContent    INTEGER NOT NULL DEFAULT 0, -- Est-ce un anime pour adulte ?
+    IsExplicitContent INTEGER NOT NULL DEFAULT 0, -- Est-ce un anime qui contient des scènes particulièrement violentes ou sexuellement explicites sans pour autant être pornographique ?
+    EpisodeCount      INTEGER NOT NULL DEFAULT 0, -- Nombre d'épisode
+    EpisodeDuration   REAL    NOT NULL DEFAULT 0, -- Durée d'un épisode (en minute)
+    Season            INTEGER NOT NULL DEFAULT 0, -- Saison de l'animé
+    ReleaseDate       TEXT    NULL,               -- Date de sortie de l'animé (yyyy-mm-dd)
+    EndDate           TEXT    NULL,               -- Date de fin de l'animé (yyyy-mm-dd)
+    DiffusionState    INTEGER NOT NULL DEFAULT 0, -- Etat de diffusion de l'animé
+    Description       TEXT    NULL,               -- Description de l'animé
+    ThumbnailUrl      TEXT    NULL,               -- Url de l'image de l'animé
+    ThumbnailMiniUrl  TEXT    NULL,               -- Url de l'image miniature de l'animé
+    Remark            TEXT    NULL                -- Remarque sur l'animé
 );
 -- endregion
 
@@ -320,7 +325,7 @@ CREATE TABLE IF NOT EXISTS TanimeEpisode
     Description TEXT    NULL
 );
 -- endregion
-    
+
 -- region Table TanimeDailyPlanning
 /*
  Création de la table TanimePlanning qui permet 
@@ -329,16 +334,17 @@ CREATE TABLE IF NOT EXISTS TanimeEpisode
 DROP TABLE IF EXISTS TanimeDailyPlanning;
 CREATE TABLE IF NOT EXISTS TanimeDailyPlanning
 (
-    Id          INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
-    IdAnime     INTEGER NULL REFERENCES Tanime (Id) ON DELETE CASCADE,
-    SheetId     INTEGER NOT NULL, -- Id de la fiche (anime, manga, etc)
-    Url         TEXT    NOT NULL, -- Url de la fiche (anime, manga, etc)
-    AnimeName   TEXT    NOT NULL, -- Nom de la fiche (anime, manga, etc)
-    ReleaseDate TEXT    NOT NULL, -- Date de sortie de l'animé (yyyy-mm-dd)
-    NoEpisode   INTEGER NOT NULL, -- Numéro de l'épisode
-    EpisodeName TEXT    NULL,
-    NoDay       INTEGER NOT NULL, -- Numéro du jour de diffusion
-    Description TEXT    NULL
+    Id                INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
+    SheetId           INTEGER NOT NULL,           -- Id de la fiche (anime, manga, etc)
+    Url               TEXT    NOT NULL,           -- Url de la fiche (anime, manga, etc)
+    AnimeName         TEXT    NOT NULL,           -- Nom de la fiche (anime, manga, etc)
+    IsAdultContent    INTEGER NOT NULL DEFAULT 0, -- Est-ce un anime pour adulte ?
+    IsExplicitContent INTEGER NOT NULL DEFAULT 0, -- Est-ce un anime qui contient des scènes particulièrement violentes ou sexuellement explicites sans pour autant être pornographique ?
+    ReleaseDate       TEXT    NOT NULL,           -- Date de sortie de l'animé (yyyy-mm-dd)
+    NoEpisode         INTEGER NOT NULL,           -- Numéro de l'épisode
+    EpisodeName       TEXT    NULL,
+    NoDay             INTEGER NOT NULL,           -- Numéro du jour de diffusion
+    Description       TEXT    NULL
 );
 -- endregion
 
@@ -350,18 +356,20 @@ CREATE TABLE IF NOT EXISTS TanimeDailyPlanning
 DROP TABLE IF EXISTS TanimeSeasonalPlanning;
 CREATE TABLE IF NOT EXISTS TanimeSeasonalPlanning
 (
-    Id          INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
-    IdOrigine   INTEGER NULL REFERENCES TorigineAdaptation (Id) ON DELETE CASCADE,
-    IdSeason    INTEGER NOT NULL REFERENCES Tseason (Id) ON DELETE CASCADE,
-    SheetId     INTEGER NOT NULL, -- Id de la fiche (anime, manga, etc)
-    Url         TEXT    NOT NULL, -- Url de la fiche (anime, manga, etc)
-    GroupName   TEXT    NOT NULL, --  Ex (Séries, OAV / OAD / Format court/Bonus, Films, ONA, Spéciaux)
-    AnimeName   TEXT    NOT NULL, -- Nom de la fiche (anime, manga, etc)
-    Description TEXT    NULL,
-    Studios     TEXT    NULL,     -- Nom des studios (séparé par des virgules)
-    Distributors TEXT    NULL,    -- Nom des distributeurs (séparé par des virgules)
-    ReleaseMonth INTEGER    NOT NULL DEFAULT 0, -- annnéé et mois de sortie (yymm)
-    ThumbnailUrl TEXT    NULL    -- Url de l'image de l'animé
+    Id                INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
+    IdOrigine         INTEGER NULL REFERENCES TorigineAdaptation (Id) ON DELETE CASCADE,
+    IdSeason          INTEGER NOT NULL REFERENCES Tseason (Id) ON DELETE CASCADE,
+    SheetId           INTEGER NOT NULL,           -- Id de la fiche (anime, manga, etc)
+    Url               TEXT    NOT NULL,           -- Url de la fiche (anime, manga, etc)
+    GroupName         TEXT    NOT NULL,           --  Ex (Séries, OAV / OAD / Format court/Bonus, Films, ONA, Spéciaux)
+    AnimeName         TEXT    NOT NULL,           -- Nom de la fiche (anime, manga, etc)
+    IsAdultContent    INTEGER NOT NULL DEFAULT 0, -- Est-ce un anime pour adulte ?
+    IsExplicitContent INTEGER NOT NULL DEFAULT 0, -- Est-ce un anime qui contient des scènes particulièrement violentes ou sexuellement explicites sans pour autant être pornographique ?
+    Description       TEXT    NULL,
+    Studios           TEXT    NULL,               -- Nom des studios (séparé par des virgules)
+    Distributors      TEXT    NULL,               -- Nom des distributeurs (séparé par des virgules)
+    ReleaseMonth      INTEGER NOT NULL DEFAULT 0, -- annnéé et mois de sortie (yymm)
+    ThumbnailUrl      TEXT    NULL                -- Url de l'image de l'animé
 );
 -- endregion
     

@@ -100,44 +100,7 @@ public partial class Tanime : TanimeBase
 
     public override string ToString() => $"{Name} ({Id}/{SheetId})";
 
-
-    /// <summary>
-    /// Récupère l'anime depuis l'url de la fiche icotaku.
-    /// </summary>
-    /// <param name="url"></param>
-    /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
-    /// <returns></returns>
-    public static async Task<OperationState<int>> GetAnimeFromUrl(string url, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
-    {
-        if (url.IsStringNullOrEmptyOrWhiteSpace())
-            return new OperationState<int>(false, "L'url de la fiche de l'anime ne peut pas être vide");
-        
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || !uri.IsAbsoluteUri)
-            return new OperationState<int>(false, "L'url de la fiche de l'anime n'est pas valide");
-        
-        if (!uri.Host.StartsWith("anime.icotaku.com"))
-            return new OperationState<int>(false, "L'url de la fiche de l'anime n'est pas une url icotaku.");
-
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-
-        var animeResult = await GetAnimeAsync(uri, cancellationToken, command);
-
-        if (!animeResult.IsSuccess)
-            return new OperationState<int>(false, animeResult.Message);
-
-        var anime = animeResult.Data;
-        if (anime == null)
-            return new OperationState<int>(false, "Une erreur est survenue lors de la récupération de l'anime");
-
-        if (!anime.Url.IsStringNullOrEmptyOrWhiteSpace())
-        {
-            _ = await CreateIndexAsync(anime.Name, anime.Url, anime.SheetId, cancellationToken, command);
-        }
-        anime.Url = uri.ToString();
-
-        return await anime.InsertAync(cancellationToken, command);
-    }
+    
 
     private static async Task<OperationState<int>> CreateIndexAsync(string animeName, string animeUrl, int animeSheetId, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
         => await TsheetIndex.InsertAsync(IcotakuSection.Anime, SheetType.Anime, animeName, animeUrl, animeSheetId, 0, cancellationToken, cmd);
@@ -146,17 +109,29 @@ public partial class Tanime : TanimeBase
 
     #region Select
 
-    public static async Task<Tanime[]> SelectAsync(AnimeSortBy sortBy, OrderBy orderBy = OrderBy.Asc, uint limit = 0, uint skip = 0, CancellationToken? cancellationToken = null,
+    public static async Task<Tanime[]> SelectAsync(bool? isAdultContent, bool? isExplicitContent, AnimeSortBy sortBy, OrderBy orderBy = OrderBy.Asc, uint limit = 0, uint skip = 0, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = SqlSelectScript + Environment.NewLine;
+        command.CommandText = SqlSelectScript;
+        
+        if (isAdultContent.HasValue)
+            command.CommandText += Environment.NewLine + "AND Tanime.IsAdultContent = $IsAdultContent";
+        
+        if (isExplicitContent.HasValue)
+            command.CommandText += Environment.NewLine + "AND Tanime.IsExplicitContent = $IsExplicitContent";
         
         AddSortOrderBy(command, sortBy, orderBy);
         
         command.AddLimitOffset(limit, skip);
 
         command.Parameters.Clear();
+        
+        if (isAdultContent.HasValue)
+            command.Parameters.AddWithValue("$IsAdultContent", isAdultContent.Value);
+        
+        if (isExplicitContent.HasValue)
+            command.Parameters.AddWithValue("$IsExplicitContent", isExplicitContent.Value);
         
         var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
@@ -252,15 +227,17 @@ public partial class Tanime : TanimeBase
         command.CommandText = 
             """
             INSERT INTO Tanime 
-                (SheetId, Url, Name, DiffusionState, EpisodeCount, EpisodeDuration, ReleaseDate, EndDate, Description, ThumbnailMiniUrl, ThumbnailUrl, IdFormat, IdTarget, IdOrigine, IdSeason) 
+                (SheetId, Url, IsAdultContent, IsExplicitContent, Name, DiffusionState, EpisodeCount, EpisodeDuration, ReleaseDate, EndDate, Description, ThumbnailMiniUrl, ThumbnailUrl, IdFormat, IdTarget, IdOrigine, IdSeason) 
             VALUES 
-                ($SheetId, $Url, $Name, $DiffusionState , $EpisodeCount, $EpisodeDuration, $ReleaseDate, $EndDate, $Description, $ThumbnailMiniUrl, $ThumbnailUrl, $IdFormat, $IdTarget, $IdOrigine, $IdSeason)
+                ($SheetId, $Url, $IsAdultContent, $IsExplicitContent, $Name, $DiffusionState , $EpisodeCount, $EpisodeDuration, $ReleaseDate, $EndDate, $Description, $ThumbnailMiniUrl, $ThumbnailUrl, $IdFormat, $IdTarget, $IdOrigine, $IdSeason)
             """;
         
         command.Parameters.Clear();
         
         command.Parameters.AddWithValue("$SheetId", SheetId);
         command.Parameters.AddWithValue("$Url", Url);
+        command.Parameters.AddWithValue("$IsAdultContent", IsAdultContent);
+        command.Parameters.AddWithValue("$IsExplicitContent", IsExplicitContent);
         command.Parameters.AddWithValue("$Name", Name);
         command.Parameters.AddWithValue("$DiffusionState", (byte)DiffusionState);
         command.Parameters.AddWithValue("$EpisodeCount", EpisodesCount);
@@ -346,6 +323,8 @@ public partial class Tanime : TanimeBase
             UPDATE Tanime SET 
                 SheetId = $SheetId, 
                 Url = $Url, 
+                IsAdultContent = $IsAdultContent,
+                IsExplicitContent = $IsExplicitContent,
                 Name = $Name, 
                 DiffusionState = $DiffusionState,
                 EpisodeCount = $EpisodeCount, 
@@ -366,6 +345,8 @@ public partial class Tanime : TanimeBase
         
         command.Parameters.AddWithValue("$SheetId", SheetId);
         command.Parameters.AddWithValue("$Url", Url);
+        command.Parameters.AddWithValue("$IsAdultContent", IsAdultContent);
+        command.Parameters.AddWithValue("$IsExplicitContent", IsExplicitContent);
         command.Parameters.AddWithValue("$Name", Name);
         command.Parameters.AddWithValue("$DiffusionState", (byte)DiffusionState);
         command.Parameters.AddWithValue("$EpisodeCount", EpisodesCount);
@@ -457,6 +438,8 @@ public partial class Tanime : TanimeBase
                 {
                     Name = reader.GetString(reader.GetOrdinal("AnimeName")),
                     Url = reader.GetString(reader.GetOrdinal("AnimeUrl")),
+                    IsAdultContent = reader.GetBoolean(reader.GetOrdinal("AnimeIsAdultContent")),
+                    IsExplicitContent = reader.GetBoolean(reader.GetOrdinal("AnimeIsExplicitContent")),
                     SheetId = reader.GetInt32(reader.GetOrdinal("AnimeSheetId")),
                     Duration = TimeSpan.FromMinutes(reader.GetInt32(reader.GetOrdinal("EpisodeDuration"))),
                     DiffusionState = (DiffusionStateKind)reader.GetByte( reader.GetOrdinal("DiffusionState")),
@@ -480,18 +463,21 @@ public partial class Tanime : TanimeBase
                         ? null
                         : Tformat.GetRecord(reader,
                             idIndex: reader.GetOrdinal("IdFormat"),
+                            sectionIndex: reader.GetOrdinal("FormatSection"),
                             nameIndex: reader.GetOrdinal("FormatName"),
                             descriptionIndex: reader.GetOrdinal("FormatDescription")),
                     Target = reader.IsDBNull(reader.GetOrdinal("IdTarget"))
                         ? null
                         : Ttarget.GetRecord(reader,
                             idIndex: reader.GetOrdinal("IdTarget"),
+                            sectionIndex: reader.GetOrdinal("TargetSection"),
                             nameIndex: reader.GetOrdinal("TargetName"),
                             descriptionIndex: reader.GetOrdinal("TargetDescription")),
                     OrigineAdaptation = reader.IsDBNull(reader.GetOrdinal("IdOrigine"))
                         ? null
                         : TorigineAdaptation.GetRecord(reader,
                             idIndex: reader.GetOrdinal("IdOrigine"),
+                            sectionIndex: reader.GetOrdinal("OrigineAdaptationSection"),
                             nameIndex: reader.GetOrdinal("OrigineAdaptationName"),
                             descriptionIndex: reader.GetOrdinal("OrigineAdaptationDescription")),
                     Season = reader.IsDBNull(reader.GetOrdinal("IdSeason"))
@@ -609,6 +595,8 @@ public partial class Tanime : TanimeBase
             Tanime.IdSeason,
             Tanime.SheetId AS AnimeSheetId,
             Tanime.Url AS AnimeUrl,
+            Tanime.IsAdultContent AS AnimeIsAdultContent,
+            Tanime.IsExplicitContent AS AnimeIsExplicitContent,
             Tanime.Name AS AnimeName,
             Tanime.EpisodeCount,
             Tanime.EpisodeDuration,
@@ -621,12 +609,15 @@ public partial class Tanime : TanimeBase
             Tanime.Remark,
             
             Tformat.Name as FormatName,
+            Tformat.Section as FormatSection,
             Tformat.Description as FormatDescription,
             
             Ttarget.Name as TargetName,
+            Ttarget.Section as TargetSection,
             Ttarget.Description as TargetDescription,
             
             TorigineAdaptation.Name as OrigineAdaptationName,
+            TorigineAdaptation.Section as OrigineAdaptationSection,
             TorigineAdaptation.Description as OrigineAdaptationDescription,
             
             Tseason.DisplayName as SeasonDisplayName,

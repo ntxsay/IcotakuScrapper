@@ -1,17 +1,66 @@
 ﻿using HtmlAgilityPack;
 using IcotakuScrapper.Common;
+using IcotakuScrapper.Contact;
 using IcotakuScrapper.Extensions;
 using IcotakuScrapper.Helpers;
 using Microsoft.Data.Sqlite;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 using System.Web;
-using IcotakuScrapper.Contact;
 
 namespace IcotakuScrapper.Anime;
 
 public partial class Tanime
 {
+    public static async Task<OperationState<int>> ScrapAnimeFromSheetId(int sheetId,
+        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        
+        var index = await TsheetIndex.SingleAsync(sheetId, IntColumnSelect.SheetId, cancellationToken, cmd);
+        if (index == null)
+            return new OperationState<int>(false, "L'index permettant de récupérer l'url de la fiche de l'anime n'a pas été trouvé dans la base de données.");
+        
+        return await ScrapAnimeFromUrl(index.Url, cancellationToken, cmd);
+    }
+    
+    /// <summary>
+    /// Récupère l'anime depuis l'url de la fiche icotaku.
+    /// </summary>
+    /// <param name="url"></param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
+    public static async Task<OperationState<int>> ScrapAnimeFromUrl(string url, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        if (url.IsStringNullOrEmptyOrWhiteSpace())
+            return new OperationState<int>(false, "L'url de la fiche de l'anime ne peut pas être vide");
+        
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || !uri.IsAbsoluteUri)
+            return new OperationState<int>(false, "L'url de la fiche de l'anime n'est pas valide");
+        
+        if (!uri.Host.StartsWith("anime.icotaku.com"))
+            return new OperationState<int>(false, "L'url de la fiche de l'anime n'est pas une url icotaku.");
+
+        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+
+        var animeResult = await ScrapAnimeAsync(uri, cancellationToken, command);
+
+        if (!animeResult.IsSuccess)
+            return new OperationState<int>(false, animeResult.Message);
+
+        var anime = animeResult.Data;
+        if (anime == null)
+            return new OperationState<int>(false, "Une erreur est survenue lors de la récupération de l'anime");
+
+        if (!anime.Url.IsStringNullOrEmptyOrWhiteSpace())
+        {
+            _ = await CreateIndexAsync(anime.Name, anime.Url, anime.SheetId, cancellationToken, command);
+        }
+        anime.Url = uri.ToString();
+
+        return await anime.InsertAync(cancellationToken, command);
+    }
+    
     /// <summary>
     /// Récupère les informations de la fiche anime à partir de son url
     /// </summary>
@@ -19,7 +68,7 @@ public partial class Tanime
     /// <param name="cancellationToken"></param>
     /// <param name="cmd"></param>
     /// <returns></returns>
-    private static async Task<OperationState<Tanime?>> GetAnimeAsync(Uri uri, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    private static async Task<OperationState<Tanime?>> ScrapAnimeAsync(Uri uri, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         try
         {
@@ -36,8 +85,10 @@ public partial class Tanime
             var anime = new Tanime()
             {
                 Name = mainName,
-                SheetId =  sheetId,
+                SheetId = sheetId,
                 Url = uri.ToString(),
+                IsAdultContent = GetIsAdultContent(htmlDocument.DocumentNode),
+                IsExplicitContent = GetIsExplicitContent(htmlDocument.DocumentNode),
                 DiffusionState = GetDiffusionState(htmlDocument.DocumentNode),
                 EpisodesCount = GetTotalEpisodes(htmlDocument.DocumentNode),
                 Duration = GetDuration(htmlDocument.DocumentNode),
@@ -99,13 +150,13 @@ public partial class Tanime
                         anime.Studios.Add(studio);
                 }
             }
-            
+
             //Episodes
             var episodes = TanimeEpisode.GetAnimeEpisode(anime.SheetId).ToArray();
             if (episodes.Length > 0)
                 foreach (var episode in episodes)
                     anime.Episodes.Add(episode);
-            
+
             return new OperationState<Tanime?>
             {
                 IsSuccess = true,
@@ -196,7 +247,7 @@ public partial class Tanime
                         Url = uri.ToString(),
                         Description = description?.TrimEnd(':')?.Trim(),
                     };
-            }         
+            }
         }
     }
 
@@ -227,43 +278,19 @@ public partial class Tanime
                 continue;
 
             //Récupère l'url de la fiche du thème ou du genre
-            var href = node?.Attributes["href"]?.Value;
-            if (href == null || href.IsStringNullOrEmptyOrWhiteSpace())
+            var uri = Main.GetFullHrefFromHtmlNode(node, IcotakuSection.Anime);
+            if (uri == null)
                 continue;
 
-            //Créer l'url de la fiche du thème ou du genre
-            href = Main.GetBaseUrl(IcotakuSection.Anime) + href;
-            if (!Uri.TryCreate(href, UriKind.Absolute, out var uri) || !uri.IsAbsoluteUri)
+            var category = Tcategory.ScrapCategoryFromSheetPage(uri, IcotakuSection.Anime, categoryType);
+            if (category == null)
                 continue;
 
-            //Récupère l'id de la fiche du thème ou du genre
-            var sheetId = Main.GetSheetId(uri);
-            if (sheetId == null)
+            category = await Tcategory.SingleOrCreateAsync(category, true, cancellationToken, cmd);
+            if (category == null)
                 continue;
 
-            /*
-             * De préférence, créez l'index des catégories (genre et thème) dans la base de données 
-             * via <see cref="Tcategory.CreateIndexAsync(CancellationToken?, SqliteCommand?)"/> 
-             * pour améliorer les performances
-             */
-
-            //Vérifie si la catégorie existe déjà dans la base de données sinon l'ajoute
-
-            await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-            command.Parameters.Clear();
-            var record = await Tcategory.SingleAsync(name, IcotakuSection.Anime, categoryType, cancellationToken, command);
-            if (record != null)
-            {
-                yield return record;
-                continue;
-            }
-
-            record = new Tcategory(IcotakuSection.Anime, categoryType, sheetId.Value, uri, name, null);
-            var result = await record.InsertAsync(cancellationToken, command);
-            if (result.IsSuccess)
-            {
-                yield return record;
-            }
+            yield return category;
         }
     }
 
@@ -319,14 +346,13 @@ public partial class Tanime
         if (text == null || text.IsStringNullOrEmptyOrWhiteSpace())
             return null;
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        var record = await TorigineAdaptation.SingleAsync(text, cancellationToken, command);
-        if (record != null)
-            return record;
+        TorigineAdaptation? record = new()
+        {
+            Name = text,
+            Section = IcotakuSection.Anime,
+        };
 
-        record = new TorigineAdaptation(text, null);
-        var result = await record.InsertAsync(cancellationToken, command);
-        return result.IsSuccess ? record : null;
+        return await TorigineAdaptation.SingleOrCreateAsync(record, true, cancellationToken, cmd);
     }
 
 
@@ -340,18 +366,17 @@ public partial class Tanime
     private static async Task<Tformat?> GetFormatAsync(HtmlNode htmlNode, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         var node = htmlNode.SelectSingleNode("//div[contains(@class, 'info_fiche')]//b[starts-with(text(), 'Catégorie :')]/following-sibling::text()[1]");
-        var text = node?.InnerText?.Trim();
+        var text = HttpUtility.HtmlDecode(node?.InnerText?.Trim());
         if (text == null || text.IsStringNullOrEmptyOrWhiteSpace())
             return null;
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        var record = await Tformat.SingleAsync(text, cancellationToken, command);
-        if (record != null)
-            return record;
+        Tformat? record = new()
+        {
+            Name = text,
+            Section = IcotakuSection.Anime,
+        };
 
-        record = new Tformat(text, null);
-        var result = await record.InsertAsync(cancellationToken, command);
-        return result.IsSuccess ? record : null;
+        return await Tformat.SingleOrCreateAsync(record, true, cancellationToken, cmd);
     }
 
     /// <summary>
@@ -368,14 +393,13 @@ public partial class Tanime
         if (text == null || text.IsStringNullOrEmptyOrWhiteSpace())
             return null;
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        var record = await Ttarget.SingleAsync(text, cancellationToken, command);
-        if (record != null)
-            return record;
+        Ttarget? record = new()
+        {
+            Name = text,
+            Section = IcotakuSection.Anime,
+        };
 
-        record = new Ttarget(text, null);
-        var result = await record.InsertAsync(cancellationToken, command);
-        return result.IsSuccess ? record : null;
+        return await Ttarget.SingleOrCreateAsync(record, true, cancellationToken, cmd);
     }
 
     /// <summary>
@@ -411,12 +435,12 @@ public partial class Tanime
             href = Main.GetBaseUrl(IcotakuSection.Anime) + href;
             if (!Uri.TryCreate(href, UriKind.Absolute, out var uri) || !uri.IsAbsoluteUri)
                 continue;
-            
+
             //Récupère l'id de la fiche du studio
             var sheetId = Main.GetSheetId(uri);
             if (sheetId == null)
                 continue;
-            
+
             await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
             var record = await Tcontact.SingleAsync(uri, cancellationToken, command);
             if (record != null)
@@ -424,7 +448,7 @@ public partial class Tanime
                 yield return record;
                 continue;
             }
-            
+
             record = new Tcontact(sheetId.Value, ContactType.Studio, uri, displayName);
             var result = await record.InsertAync(cancellationToken, command);
             if (!result.IsSuccess)
@@ -568,6 +592,34 @@ public partial class Tanime
         return DateHelpers.GetMonthNumber(monthText);
     }
 
+
+    internal static bool GetIsAdultContent(Uri animeSheetUri)
+    {
+        HtmlWeb web = new();
+        var htmlDocument = web.Load(animeSheetUri.ToString());
+        return GetIsAdultContent(htmlDocument.DocumentNode);
+    }
+
+    internal static bool GetIsAdultContent(HtmlNode htmlNode)
+    {
+        var node = htmlNode.SelectSingleNode("//div[@id='divFicheHentai']");
+        return node != null;
+    }
+
+    internal static bool GetIsExplicitContent(Uri animeSheetUri)
+    {
+        HtmlWeb web = new();
+        var htmlDocument = web.Load(animeSheetUri.ToString());
+        return GetIsExplicitContent(htmlDocument.DocumentNode);
+    }
+
+    internal static bool GetIsExplicitContent(HtmlNode htmlNode)
+    {
+        if (GetIsAdultContent(htmlNode))
+            return true;
+        var node = htmlNode.SelectSingleNode("//div[@id='divFicheError']");
+        return node != null;
+    }
 
     #region Thumbnail
 

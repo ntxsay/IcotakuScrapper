@@ -15,7 +15,7 @@ namespace IcotakuScrapperWebApi.Controllers
         public async Task<OperationState> CreateIndexAsync([FromQuery] IcotakuSection[] sections)
         {
             var distinctSections = sections.Distinct();
-            return await Tcategory.CreateIndexAsync([.. distinctSections]);
+            return await Tcategory.ScrapAsync([.. distinctSections]);
         }
 
         [HttpGet("All")]

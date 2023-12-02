@@ -1,6 +1,8 @@
 ﻿using HtmlAgilityPack;
 using IcotakuScrapper.Extensions;
+using System;
 using System.Web;
+using static System.Collections.Specialized.BitVector32;
 
 namespace IcotakuScrapper.Common
 {
@@ -52,7 +54,9 @@ namespace IcotakuScrapper.Common
         /// <param name="sections"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public static async Task<OperationState> CreateIndexAsync(HashSet<IcotakuSection> sections, CancellationToken? cancellationToken = null)
+        public static async Task<OperationState> ScrapAsync(HashSet<IcotakuSection> sections,
+             DbInsertMode insertMode = DbInsertMode.InsertOrReplace,
+        bool isDeleteSectionRecords = true, CancellationToken? cancellationToken = null)
         {
             if (sections.Count == 0)
                 return new OperationState(false, "Aucune section n'a été spécifiée");
@@ -63,15 +67,18 @@ namespace IcotakuScrapper.Common
 
             foreach (var section in sections)
             {
-                var deleteAllResult = await DeleteAsync(section, cancellationToken, command);
-                if (!deleteAllResult.IsSuccess)
-                    continue;
+                if (isDeleteSectionRecords)
+                {
+                    var deleteResult = await DeleteAllAsync(section, cancellationToken, command);
+                    if (!deleteResult.IsSuccess)
+                        return deleteResult;
+                }
 
-                var categories = GetCategories(section, CategoryType.Theme).ToList();
+                var categories = ScrapFromCategoriesArrayPage(section, CategoryType.Theme).ToList();
                 if (categories.Count > 0)
                     listOfCategories.AddRange(categories);
 
-                categories = GetCategories(section, CategoryType.Genre).ToList();
+                categories = ScrapFromCategoriesArrayPage(section, CategoryType.Genre).ToList();
                 if (categories.Count > 0)
                     listOfCategories.AddRange(categories);
             }
@@ -80,16 +87,16 @@ namespace IcotakuScrapper.Common
                 return new OperationState(false, "Aucune catégorie n'a été trouvée");
 
 
-            return await InsertAsync(listOfCategories, cancellationToken, command);
+            return await InsertOrReplaceAsync(listOfCategories, insertMode, cancellationToken, command);
         }
 
         /// <summary>
-        /// Retourne les catégories en fonction du type de contenu (Anime, Manga, etc) depuis icotaku.com
+        /// Scrape les catégories depuis la page contenant toutes les catégories en fonction du type de contenu (Anime, Manga, etc) depuis icotaku.com
         /// </summary>
         /// <param name="section"></param>
         /// <param name="categoryType"></param>
         /// <returns></returns>
-        private static IEnumerable<Tcategory> GetCategories(IcotakuSection section, CategoryType categoryType)
+        private static IEnumerable<Tcategory> ScrapFromCategoriesArrayPage(IcotakuSection section, CategoryType categoryType)
         {
             var pageUrl = GetCategoriesUrl(section, categoryType);
             HtmlWeb web = new();
@@ -112,51 +119,42 @@ namespace IcotakuScrapper.Common
                 if (uri == null)
                     continue;
 
-                // On récupère l'id de la fiche de la catégorie
-                var sheetId = Main.GetSheetId(uri);
-                if (!sheetId.HasValue)
-                    continue;
-
-                // On vérifie que la section de la fiche est bien celle demandée
-                var checksection = Main.GetIcotakuSection(uri);
-                if (!checksection.HasValue)
-                    continue;
-
-                if (checksection.Value != section)
-                    continue;
-
-                // On vérifie que le type de la catégorie est bien celui demandé
-                var checkCategoryType = GetCategoryType(uri);
-                if (!checkCategoryType.HasValue)
-                    continue;
-
-                if (checkCategoryType.Value != categoryType)
-                    continue;
-
-                Tcategory tcategory = new()
-                {
-                    SheetId = sheetId.Value,
-                    Section = section,
-                    Type = categoryType,
-                    Url = uri.ToString()
-                };
-
-                var result = GetCategory(tcategory);
-                if (result != null)
-                    yield return result;
+                Tcategory? category = ScrapCategoryFromSheetPage(uri, section, categoryType);
+                if (category != null)
+                    yield return category;
             }
         }
 
-
         /// <summary>
-        /// Rempli les propriétés Name et Description de l'objet Tcategory
+        /// Scrape les informations de la catégorie depuis la page contenant la fiche de la catégorie depuis icotaku.com
         /// </summary>
-        /// <param name="tcategory"></param>
+        /// <param name="sheetUri"></param>
         /// <returns></returns>
-        private static Tcategory? GetCategory(Tcategory tcategory)
+        internal static Tcategory? ScrapCategoryFromSheetPage(Uri sheetUri, IcotakuSection? sectionToCheck = null, CategoryType? categoryTypeToCheck = null)
         {
+            // On récupère l'id de la fiche de la catégorie
+            var sheetId = Main.GetSheetId(sheetUri);
+            if (!sheetId.HasValue)
+                return null;
+
+            // On vérifie que la section de la fiche est bien celle demandée
+            var section = Main.GetIcotakuSection(sheetUri);
+            if (!section.HasValue)
+                return null;
+
+            if (sectionToCheck.HasValue && section.Value != sectionToCheck.Value)
+                return null;
+
+            // On vérifie que le type de la catégorie est bien celui demandé
+            var categoryType = GetCategoryType(sheetUri);
+            if (!categoryType.HasValue)
+                return null;
+
+            if (categoryTypeToCheck.HasValue && categoryType.Value != categoryTypeToCheck.Value)
+                return null;
+
             HtmlWeb web = new();
-            var htmlDocument = web.Load(tcategory.Url);
+            var htmlDocument = web.Load(sheetUri.ToString());
 
             var nameNode = htmlDocument.DocumentNode.SelectSingleNode("//div[@id='fiche_entete']//h1/text()");
 
@@ -167,8 +165,15 @@ namespace IcotakuScrapper.Common
             var descriptionNode = htmlDocument.DocumentNode.SelectSingleNode("//div[@id='page']/div[@class='contenu']/p[1]/text()");
             var description = HttpUtility.HtmlDecode(descriptionNode?.InnerText?.Trim())?.Trim();
 
-            tcategory.Name = name;
-            tcategory.Description = description;
+            Tcategory tcategory = new()
+            {
+                SheetId = sheetId.Value,
+                Section = section.Value,
+                Type = categoryType.Value,
+                Url = sheetUri.ToString(),
+                Name = name,
+                Description = description
+            };
 
             return tcategory;
         }

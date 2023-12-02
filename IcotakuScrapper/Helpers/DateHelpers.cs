@@ -10,6 +10,25 @@ namespace IcotakuScrapper.Helpers;
 /// </summary>
 public static class DateHelpers
 {
+    public static string? GetLiteralDay(DayOfWeek? dayOfWeek)
+    {
+
+        if (dayOfWeek == null)
+            return null;
+
+        return dayOfWeek.Value switch
+        {
+            DayOfWeek.Sunday => "Dimanche",
+            DayOfWeek.Monday => "Lundi",
+            DayOfWeek.Tuesday => "Mardi",
+            DayOfWeek.Wednesday => "Mercredi",
+            DayOfWeek.Thursday => "Jeudi",
+            DayOfWeek.Friday => "Vendredi",
+            DayOfWeek.Saturday => "Samedi",
+            _ => null
+        };
+    }
+
     /// <summary>
     /// retourne le numéro du mois en fonction de son nom (en français)
     /// </summary>

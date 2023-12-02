@@ -39,6 +39,15 @@ namespace IcotakuScrapper.Extensions
 
         public static void AddOrderSort(this SqliteCommand command, AnimeSeasonalPlanningSortBy sortBy, OrderBy orderBy) 
             => ExtensionMethods.AddOrderSort(command, sortBy, orderBy);
+        
+        public static void AddOrderSort(this SqliteCommand command, AnimeDailyPlanningSortBy sortBy, OrderBy orderBy)
+            => ExtensionMethods.AddOrderSort(command, sortBy, orderBy);
+        
+        public static void StartWithInsertMode(this SqliteCommand command, DbInsertMode insertMode)
+            => ExtensionMethods.StartWithInsertMode(command, insertMode);
+        
+        public static bool IsIntColumnValidated(this SqliteCommand command, IntColumnSelect currentSelectedColumn, HashSet<IntColumnSelect> acceptedColumns)
+            => ExtensionMethods.IsIntColumnValidated(command, currentSelectedColumn, acceptedColumns);
     }
 
     internal static class ExtensionMethods
@@ -92,6 +101,21 @@ namespace IcotakuScrapper.Extensions
             _ => throw new ArgumentOutOfRangeException(nameof(contactType), contactType, "La valeur spécifiée est invalide")
         };
 
+        public static void StartWithInsertMode(SqliteCommand command, DbInsertMode insertMode)
+        {
+            command.CommandText = insertMode switch
+            {
+                DbInsertMode.Insert => "INSERT ",
+                DbInsertMode.InsertOrAbort => "INSERT OR ABORT ",
+                DbInsertMode.InsertOrFail => "INSERT OR FAIL ",
+                DbInsertMode.InsertOrIgnore => "INSERT OR IGNORE ",
+                DbInsertMode.InsertOrReplace => "INSERT OR REPLACE ",
+                DbInsertMode.InsertOrRollback => "INSERT OR ROLLBACK ",
+                DbInsertMode.Replace => "REPLACE ",
+                _ => throw new ArgumentOutOfRangeException(nameof(insertMode), insertMode, null)
+            };
+        }
+        
         public static void AddOrderSort(SqliteCommand command, AnimeSeasonalPlanningSortBy sortBy, OrderBy orderBy)
         {
             command.CommandText += Environment.NewLine + sortBy switch
@@ -105,6 +129,39 @@ namespace IcotakuScrapper.Extensions
                 AnimeSeasonalPlanningSortBy.GroupName => $"ORDER BY TanimeSeasonalPlanning.GroupName {orderBy}",
                 _ => throw new ArgumentOutOfRangeException(nameof(sortBy), sortBy, "La valeur spécifiée est invalide")
             };
+        }
+        
+        public static void AddOrderSort(SqliteCommand command, AnimeDailyPlanningSortBy sortBy, OrderBy orderBy)
+        {
+            command.CommandText += Environment.NewLine + sortBy switch
+            {
+                AnimeDailyPlanningSortBy.Id => $"ORDER BY TanimeDailyPlanning.Id {orderBy}",
+                AnimeDailyPlanningSortBy.ReleaseDate => $"ORDER BY TanimeDailyPlanning.ReleaseDate {orderBy}",
+                AnimeDailyPlanningSortBy.EpisodeNumber => $"ORDER BY TanimeDailyPlanning.NoEpisode {orderBy}",
+                AnimeDailyPlanningSortBy.EpisodeName => $"ORDER BY TanimeDailyPlanning.EpisodeName {orderBy}",
+                AnimeDailyPlanningSortBy.Day => $"ORDER BY TanimeDailyPlanning.NoDay {orderBy}",
+                AnimeDailyPlanningSortBy.AnimeName => $"ORDER BY TanimeDailyPlanning.AnimeName {orderBy}",
+                AnimeDailyPlanningSortBy.SheetId => $"ORDER BY TanimeDailyPlanning.SheetId {orderBy}",
+                _ => throw new ArgumentOutOfRangeException(nameof(sortBy), sortBy, "La valeur spécifiée est invalide")
+            };
+        }
+        
+        public static bool IsIntColumnValidated(SqliteCommand command, IntColumnSelect currentSelectedColumn, HashSet<IntColumnSelect> acceptedColumns)
+        {
+            if (acceptedColumns.Count == 0)
+            {
+                command.CommandText = string.Empty;
+                return false;
+            }
+
+            var any = acceptedColumns.Any(a => a == currentSelectedColumn);
+            if (!any)
+            {
+                command.CommandText = string.Empty;
+                return false;
+            }
+
+            return true;
         }
     }
 }

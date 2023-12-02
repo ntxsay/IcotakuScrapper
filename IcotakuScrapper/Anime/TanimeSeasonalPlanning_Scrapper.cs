@@ -4,15 +4,15 @@ using IcotakuScrapper.Contact;
 using IcotakuScrapper.Extensions;
 using IcotakuScrapper.Helpers;
 using Microsoft.Data.Sqlite;
+using System;
 using System.Text.RegularExpressions;
-using System.Threading;
 using System.Web;
 
 namespace IcotakuScrapper.Anime;
 
 public partial class TanimeSeasonalPlanning
 {
-    private static string? GetAnimeSeasonalPlanningUrl(FourSeasonsKind season, uint year)
+    private static string? GetAnimeSeasonalPlanningUrl(FourSeasonsKind season, ushort year)
     {
         if (year < DateOnly.MinValue.Year || year > DateOnly.MaxValue.Year)
             return null;
@@ -32,23 +32,26 @@ public partial class TanimeSeasonalPlanning
         return $"https://anime.icotaku.com/planning/planningSaisonnier/saison/{seasonName}/annee/{year}";
     }
 
-    public static async Task<OperationState> GetAndInsertSeasonalPlanningAsync(FourSeasonsKind season, uint year, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public static async Task<OperationState> ScrapAsync(FourSeasonsKind season, ushort year,
+        DbInsertMode insertMode = DbInsertMode.InsertOrReplace,
+        bool isDeleteSectionRecords = true, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         var planning = await GetAnimeSeasonalPlanning(season, year, cancellationToken, cmd).ToArrayAsync();
         if (planning.Length == 0)
             return new OperationState(false, "Le planning est vide");
 
-        return await InsertAsync(planning, cancellationToken, cmd);
+        if (isDeleteSectionRecords)
+        {
+            var deleteAllResult = await DeleteAllAsync(year, season, cancellationToken, cmd);
+            if (!deleteAllResult.IsSuccess)
+                return deleteAllResult;
+        }
+
+        return await InsertAsync(planning,insertMode, cancellationToken, cmd);
     }
 
-    public static async Task<TanimeSeasonalPlanning[]> GetSeasonalPlanningAsync(FourSeasonsKind season, uint year, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
-    {
-        var planning = await GetAnimeSeasonalPlanning(season, year, cancellationToken, cmd).ToArrayAsync();
-        return planning;
-    }
 
-
-    internal static async IAsyncEnumerable<TanimeSeasonalPlanning> GetAnimeSeasonalPlanning(FourSeasonsKind season, uint year, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    internal static async IAsyncEnumerable<TanimeSeasonalPlanning> GetAnimeSeasonalPlanning(FourSeasonsKind season, ushort year, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         if (year < DateOnly.MinValue.Year || year > DateOnly.MaxValue.Year)
             yield break;
@@ -66,7 +69,9 @@ public partial class TanimeSeasonalPlanning
 
         var seasonRecord = await GetSeasonAsync(season, year, cancellationToken, cmd);
         if (seasonRecord is null)
-        yield break;
+            yield break;
+
+        HashSet<(int sheetId, bool isAdultContent, bool isExplicitContent, string? thumbnailUrl)> additionalContentList = [];
 
         foreach (var categoryNode in htmlNodes)
         {
@@ -108,6 +113,8 @@ public partial class TanimeSeasonalPlanning
                     Season = seasonRecord,
                 };
 
+                AddAdditionalInfos(record, animeUri, ref additionalContentList);
+
                 var descriptionNode = tableNode.SelectSingleNode(".//td[contains(@class, 'histoire')]/text()[1]");
                 if (descriptionNode != null)
                 {
@@ -133,7 +140,7 @@ public partial class TanimeSeasonalPlanning
                 {
                     var distributorsName = await GetContact(distributorsNode, ContactType.Distributor, cancellationToken, cmd).ToArrayAsync();
                     if (distributorsName.Length > 0)
-                    foreach (var distributorName in distributorsName)
+                        foreach (var distributorName in distributorsName)
                             record.Distributors.Add(distributorName);
                 }
 
@@ -142,7 +149,7 @@ public partial class TanimeSeasonalPlanning
                 {
                     var studiosName = await GetContact(studiosNode, ContactType.Studio, cancellationToken, cmd).ToArrayAsync();
                     if (studiosName.Length > 0)
-                    foreach (var studioName in studiosName)
+                        foreach (var studioName in studiosName)
                             record.Studios.Add(studioName);
                 }
 
@@ -151,7 +158,29 @@ public partial class TanimeSeasonalPlanning
         }
     }
 
-    private static async Task<Tseason?> GetSeasonAsync(FourSeasonsKind season, uint year, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    private static void AddAdditionalInfos(TanimeSeasonalPlanning planning, Uri animeSheetUri, ref HashSet<(int sheetId, bool isAdultContent, bool isExplicitContent, string? thumbnailUrl)> additionalContentList)
+    {
+        var additionalContent = additionalContentList.FirstOrDefault(w => w.sheetId == planning.SheetId);
+        if (!additionalContent.Equals(default))
+        {
+            planning.IsAdultContent = additionalContent.isAdultContent;
+            planning.IsExplicitContent = additionalContent.isExplicitContent;
+            planning.ThumbnailUrl = additionalContent.thumbnailUrl;
+
+            return;
+        }
+
+        HtmlWeb web = new();
+        var htmlDocument = web.Load(animeSheetUri.ToString());
+
+        planning.IsAdultContent = Tanime.GetIsAdultContent(htmlDocument.DocumentNode);
+        planning.IsExplicitContent = planning.IsAdultContent || Tanime.GetIsExplicitContent(htmlDocument.DocumentNode);
+        planning.ThumbnailUrl = Tanime.GetFullThumbnail(htmlDocument.DocumentNode);
+
+        additionalContentList.Add((planning.SheetId, planning.IsAdultContent, planning.IsExplicitContent, planning.ThumbnailUrl));
+    }
+
+    private static async Task<Tseason?> GetSeasonAsync(FourSeasonsKind season, ushort year, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         var intSeason = DateHelpers.GetIntSeason(season, year);
         if (intSeason == 0)
@@ -178,26 +207,19 @@ public partial class TanimeSeasonalPlanning
         return seasonRecord;
     }
 
-    private static async Task<TorigineAdaptation?> GetOrigineAdaptationAsync(string? value, 
+    private static async Task<TorigineAdaptation?> GetOrigineAdaptationAsync(string? value,
         CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         if (value == null || value.IsStringNullOrEmptyOrWhiteSpace())
             return null;
 
-        var record = await TorigineAdaptation.SingleAsync(value.Trim(), cancellationToken, cmd);
-        if (record != null)
-            return record;
-
-        record = new TorigineAdaptation()
+        TorigineAdaptation? record = new()
         {
             Name = value.Trim(),
+            Section = IcotakuSection.Anime,
         };
 
-        var resultInsert = await record.InsertAsync(cancellationToken, cmd);
-        if (!resultInsert.IsSuccess)
-            return null;
-
-        return record;
+        return await TorigineAdaptation.SingleOrCreateAsync(record, true, cancellationToken, cmd);
     }
 
     private static uint GetBeginDate(string? date)
@@ -209,14 +231,14 @@ public partial class TanimeSeasonalPlanning
         var split = _date.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         if (split.Length == 1)
         {
-            if (!uint.TryParse(split[0], out uint year))
+            if (!ushort.TryParse(split[0], out ushort year))
                 return uint.Parse($"{year}00");
         }
         else if (split.Length == 2)
         {
             var monthNumber = DateHelpers.GetMonthNumber(split[0]);
 
-            if (!uint.TryParse(split[1], out uint year))
+            if (!ushort.TryParse(split[1], out ushort year))
                 return 0;
 
             return uint.Parse($"{year}{monthNumber:00}");
@@ -253,7 +275,7 @@ public partial class TanimeSeasonalPlanning
                     if (!resultInsert.IsSuccess)
                         continue;
                 }
-                
+
                 yield return decodedItem;
             }
         }

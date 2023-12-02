@@ -1,6 +1,5 @@
 ﻿using IcotakuScrapper;
 using IcotakuScrapper.Anime;
-using IcotakuScrapper.Common;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IcotakuScrapperWebApi.Controllers
@@ -10,11 +9,11 @@ namespace IcotakuScrapperWebApi.Controllers
     public class AnimesController : ControllerBase
     {
         [HttpGet("All")]
-        public async Task<Tanime[]> SelectAllAsync([FromQuery] AnimeSortBy sortBy = AnimeSortBy.Name,
+        public async Task<Tanime[]> SelectAllAsync([FromQuery] bool? isAdultContent, [FromQuery] bool? isExplicitContent, [FromQuery] AnimeSortBy sortBy = AnimeSortBy.Name,
                    [FromQuery] OrderBy orderBy = OrderBy.Asc,
                           [FromQuery] uint limit = 0, [FromQuery] uint skip = 0)
         {
-            return await Tanime.SelectAsync(sortBy, orderBy, limit, skip);
+            return await Tanime.SelectAsync(isAdultContent, isExplicitContent, sortBy, orderBy, limit, skip);
         }
 
         [HttpGet("Single/Id/{id}")]
@@ -42,7 +41,7 @@ namespace IcotakuScrapperWebApi.Controllers
         {
             if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
                 return new OperationState<int>(false, "L'url n'est pas valide");
-            return await Tanime.GetAnimeFromUrl(uri.ToString());
+            return await Tanime.ScrapAnimeFromUrl(uri.ToString());
         }
 
 

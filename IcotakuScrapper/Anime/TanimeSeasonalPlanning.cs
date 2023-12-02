@@ -17,6 +17,9 @@ public enum AnimeSeasonalPlanningSortBy : byte
     GroupName
 }
 
+/// <summary>
+/// Représente brièvement les informations d'un animé d'une saison.
+/// </summary>
 public partial class TanimeSeasonalPlanning
 {
     private const string ReleaseDateFormat = "yyyy-MM-dd";
@@ -25,13 +28,22 @@ public partial class TanimeSeasonalPlanning
     public Tseason Season { get; set; } = new();
     public int SheetId { get; set; }
     public string Url { get; set; } = string.Empty;
+    /// <summary>
+    /// Obtient ou définit une valeur indiquant si l'anime est réservé à un public adulte.
+    /// </summary>
+    public bool IsAdultContent { get; set; }
+    
+    /// <summary>
+    /// Obtient ou définit une valeur indiquant si l'anime est réservé à un public averti.
+    /// </summary>
+    public bool IsExplicitContent { get; set; }
     public string AnimeName { get; set; } = string.Empty;
     public TanimeBase? Anime { get; set; }
     public string GroupName { get; set; } = string.Empty;
     public uint ReleaseMonth { get; set; }
     public string? ReleaseMonthLiteral => DateHelpers.GetYearMonthLiteral(ReleaseMonth);
-    public HashSet<string> Studios { get; protected set; } = new();
-    public HashSet<string> Distributors { get; protected set;} = new();
+    public HashSet<string> Studios { get; protected set; } = [];
+    public HashSet<string> Distributors { get; protected set;} = [];
     public string? Description { get; set; }
     
     public string? ThumbnailUrl { get; set; }
@@ -264,16 +276,34 @@ public partial class TanimeSeasonalPlanning
 
     #region Select
 
-    public static async Task<TanimeSeasonalPlanning[]> SelectAsync(AnimeSeasonalPlanningSortBy sortBy, OrderBy orderBy, uint limit = 0,
+    public static async Task<TanimeSeasonalPlanning[]> SelectAsync(bool? isAdultContent, bool? isExplicitContent, AnimeSeasonalPlanningSortBy sortBy, OrderBy orderBy, uint limit = 0,
         uint offset = 0, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
         command.CommandText = SqlSelectScript;
+        
+        if (isAdultContent.HasValue)
+            command.CommandText += Environment.NewLine + "WHERE TanimeSeasonalPlanning.IsAdultContent = $IsAdultContent";
+        
+        if (isExplicitContent.HasValue)
+        {
+            if (isAdultContent.HasValue)
+                command.CommandText += Environment.NewLine + "AND TanimeSeasonalPlanning.IsExplicitContent = $IsExplicitContent";
+            else
+                command.CommandText += Environment.NewLine + "WHERE TanimeSeasonalPlanning.IsExplicitContent = $IsExplicitContent";
+        }
+
         command.AddOrderSort(sortBy, orderBy);
         command.AddLimitOffset(limit, offset);
 
         if (command.Parameters.Count > 0)
             command.Parameters.Clear();
+        
+        if (isAdultContent.HasValue)
+            command.Parameters.AddWithValue("$IsAdultContent", isAdultContent.Value ? 1 : 0);
+        
+        if (isExplicitContent.HasValue)
+            command.Parameters.AddWithValue("$IsExplicitContent", isExplicitContent.Value ? 1 : 0);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
@@ -282,21 +312,28 @@ public partial class TanimeSeasonalPlanning
         return await GetRecords(reader, cancellationToken).ToArrayAsync();
     }
 
-    public static async Task<TanimeSeasonalPlanning[]> SelectAsync(ushort year, FourSeasonsKind season, AnimeSeasonalPlanningSortBy sortBy, OrderBy orderBy,
+    public static async Task<TanimeSeasonalPlanning[]> SelectAsync(ushort year, FourSeasonsKind season, bool? isAdultContent, bool? isExplicitContent, AnimeSeasonalPlanningSortBy sortBy, OrderBy orderBy,
         uint limit = 0, uint offset = 0, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         var intSeason = DateHelpers.GetIntSeason(season, year);
         if (intSeason == 0)
             return [];
 
-        return await SelectAsync(intSeason, sortBy, orderBy, limit, offset, cancellationToken, cmd);
+        return await SelectAsync(intSeason, isAdultContent, isExplicitContent, sortBy, orderBy, limit, offset, cancellationToken, cmd);
     }
 
-    public static async Task<TanimeSeasonalPlanning[]> SelectAsync(uint seasonNumber, AnimeSeasonalPlanningSortBy sortBy, OrderBy orderBy,
+    public static async Task<TanimeSeasonalPlanning[]> SelectAsync(uint seasonNumber, bool? isAdultContent, bool? isExplicitContent, AnimeSeasonalPlanningSortBy sortBy, OrderBy orderBy,
         uint limit = 0, uint offset = 0, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
         command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Tseason.SeasonNumber = $SeasonNumber";
+        
+        if (isAdultContent.HasValue)
+            command.CommandText += Environment.NewLine + "AND TanimeSeasonalPlanning.IsAdultContent = $IsAdultContent";
+        
+        if (isExplicitContent.HasValue)
+            command.CommandText += Environment.NewLine + "AND TanimeSeasonalPlanning.IsExplicitContent = $IsExplicitContent";
+        
         command.AddOrderSort(sortBy, orderBy);
         command.AddLimitOffset(limit, offset);
 
@@ -304,6 +341,12 @@ public partial class TanimeSeasonalPlanning
             command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$SeasonNumber", seasonNumber);
+        
+        if (isAdultContent.HasValue)
+            command.Parameters.AddWithValue("$IsAdultContent", isAdultContent.Value ? 1 : 0);
+        
+        if (isExplicitContent.HasValue)
+            command.Parameters.AddWithValue("$IsExplicitContent", isExplicitContent.Value ? 1 : 0);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
@@ -388,8 +431,7 @@ public partial class TanimeSeasonalPlanning
         return await GetRecords(reader, cancellationToken).FirstOrDefaultAsync();
     }
     #endregion
-
-
+    
     #region Insert
 
     public async Task<OperationState<int>> InsertAsync(CancellationToken? cancellationToken = null,
@@ -414,9 +456,9 @@ public partial class TanimeSeasonalPlanning
         command.CommandText =
             """
             INSERT INTO TanimeSeasonalPlanning
-                (SheetId, Url, IdSeason, IdOrigine, AnimeName, GroupName, Studios, Distributors, ReleaseMonth, Description, ThumbnailUrl)
+                (SheetId, Url, IdSeason, IdOrigine, IsAdultContent, IsExplicitContent, AnimeName, GroupName, Studios, Distributors, ReleaseMonth, Description, ThumbnailUrl)
             VALUES
-                ($SheetId, $Url, $IdSeason, $IdOrigine, $AnimeName, $GroupName, $Studios, $Distributors, $ReleaseMonth, $Description, $ThumbnailUrl)
+                ($SheetId, $Url, $IdSeason, $IdOrigine, $IsAdultContent, $IsExplicitContent, $AnimeName, $GroupName, $Studios, $Distributors, $ReleaseMonth, $Description, $ThumbnailUrl)
             """;
 
         if (command.Parameters.Count > 0)
@@ -450,7 +492,7 @@ public partial class TanimeSeasonalPlanning
         }
     }
 
-    public static async Task<OperationState> InsertAsync(IReadOnlyCollection<TanimeSeasonalPlanning> values,
+    public static async Task<OperationState> InsertAsync(IReadOnlyCollection<TanimeSeasonalPlanning> values, DbInsertMode insertMode = DbInsertMode.InsertOrReplace,
         CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
@@ -459,32 +501,32 @@ public partial class TanimeSeasonalPlanning
 
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
 
-        command.CommandText =
-            "INSERT OR REPLACE INTO TanimeSeasonalPlanning (SheetId, Url, IdSeason, IdOrigine, AnimeName, GroupName, Studios, Distributors, ReleaseMonth, Description, ThumbnailUrl) VALUES";
+        command.StartWithInsertMode(insertMode);
+        command.CommandText += " INTO TanimeSeasonalPlanning (SheetId, Url, IdSeason, IdOrigine, IsAdultContent, IsExplicitContent, AnimeName, GroupName, Studios, Distributors, ReleaseMonth, Description, ThumbnailUrl) VALUES";
         command.Parameters.Clear();
 
-        List<OperationState<int>> results = [];
         for (var i = 0; i < values.Count; i++)
         {
             var planning = values.ElementAt(i);
             if (planning.AnimeName.IsStringNullOrEmptyOrWhiteSpace())
             {
-                results.Add(
-                    new OperationState<int>(false, $"Le nom de l'animé n'est pas valide ({planning})."));
+                LogServices.LogDebug($"Le nom de l'animé n'est pas valide ({planning}).");
                 continue;
             }
+
             if (planning.Url.IsStringNullOrEmptyOrWhiteSpace() || !Uri.TryCreate(planning.Url, UriKind.Absolute, out var uri) || !uri.IsAbsoluteUri)
             {
-                results.Add(
-                    new OperationState<int>(false, $"L'URL de la fiche est invalide ({planning})."));
+                LogServices.LogDebug($"L'URL de la fiche est invalide ({planning}).");
                 continue;
             }
 
             command.CommandText += Environment.NewLine +
-                                   $"($SheetId{i}, $Url{i}, $IdSeason{i}, $IdOrigine{i}, $AnimeName{i}, $GroupName{i}, $Studios{i}, $Distributors{i}, $ReleaseMonth{i}, $Description{i}, $ThumbnailUrl{i})";
+                                   $"($SheetId{i}, $Url{i}, $IdSeason{i}, $IdOrigine{i}, $IsAdultContent{i}, $IsExplicitContent{i}, $AnimeName{i}, $GroupName{i}, $Studios{i}, $Distributors{i}, $ReleaseMonth{i}, $Description{i}, $ThumbnailUrl{i})";
 
             command.Parameters.AddWithValue($"$SheetId{i}", planning.SheetId);
             command.Parameters.AddWithValue($"$Url{i}", uri.ToString());
+            command.Parameters.AddWithValue($"$IsAdultContent{i}", planning.IsAdultContent ? 1 : 0);
+            command.Parameters.AddWithValue($"$IsExplicitContent{i}", planning.IsExplicitContent ? 1 : 0);
             command.Parameters.AddWithValue($"$AnimeName{i}", planning.AnimeName);
             command.Parameters.AddWithValue($"$GroupName{i}", planning.GroupName);
             command.Parameters.AddWithValue($"$IdSeason{i}", planning.Season.Id);
@@ -494,7 +536,6 @@ public partial class TanimeSeasonalPlanning
             command.Parameters.AddWithValue($"$ReleaseMonth{i}", planning.ReleaseMonth);
             command.Parameters.AddWithValue($"$Description{i}", planning.Description ?? (object)DBNull.Value);
             command.Parameters.AddWithValue($"$ThumbnailUrl{i}", planning.ThumbnailUrl ?? (object)DBNull.Value);
-            
 
             if (i == values.Count - 1)
                 command.CommandText += ";";
@@ -507,18 +548,12 @@ public partial class TanimeSeasonalPlanning
 
         try
         {
-            if (await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None) <= 0)
-                return new OperationState(false, "Aucune ligne n'a été insérée");
-
-            if (results.All(a => a.IsSuccess))
-                return new OperationState(true, "Insertion réussie");
-            if (results.All(a => !a.IsSuccess))
-                return new OperationState(false, "Toutes les insertion ont échouées");
-            return new OperationState(true, "Certains animés n'ont pas été insérés");
+            var count = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
+            return new OperationState(count > 0, $"{count} enregistrement(s) sur {values.Count} ont été insérés avec succès.");
         }
         catch (Exception e)
         {
-            Debug.WriteLine(e.Message);
+            LogServices.LogDebug(e);
             return new OperationState(false, "Une erreur est survenue lors de l'insertion");
         }
     }
@@ -552,6 +587,8 @@ public partial class TanimeSeasonalPlanning
             UPDATE TanimeSeasonalPlanning SET
                 SheetId = $SheetId,
                 Url = $Url,
+                IsAdultContent = $IsAdultContent,
+                IsExplicitContent = $IsExplicitContent,
                 AnimeName = $AnimeName,
                 GroupName = $GroupName,
                 IdSeason = $IdSeason,
@@ -569,6 +606,8 @@ public partial class TanimeSeasonalPlanning
 
         command.Parameters.AddWithValue("$SheetId", SheetId);
         command.Parameters.AddWithValue("$Url", uri.ToString());
+        command.Parameters.AddWithValue("$IsAdultContent", IsAdultContent ? 1 : 0);
+        command.Parameters.AddWithValue("$IsExplicitContent", IsExplicitContent ? 1 : 0);
         command.Parameters.AddWithValue("$AnimeName", AnimeName);
         command.Parameters.AddWithValue("$GroupName", GroupName);
         command.Parameters.AddWithValue("$IdSeason", Season.Id);
@@ -628,6 +667,43 @@ public partial class TanimeSeasonalPlanning
         }
     }
 
+    public static async Task<OperationState> DeleteAllAsync(ushort year, FourSeasonsKind season, CancellationToken? cancellationToken = null,
+        SqliteCommand? cmd = null)
+    {
+        var intSeason = DateHelpers.GetIntSeason(season, year);
+        if (intSeason == 0)
+            return new OperationState(false, "La saison est invalide");
+
+        return await DeleteAllAsync(intSeason, cancellationToken, cmd);
+    }
+
+    public static async Task<OperationState> DeleteAllAsync(uint intSeason, CancellationToken? cancellationToken = null,
+        SqliteCommand? cmd = null)
+    {
+        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        var idSeason = await Tseason.GetIdOfAsync(intSeason, cancellationToken, command);
+        if (!idSeason.HasValue || idSeason <= 0)
+            return new OperationState(false, "La saison est invalide");
+
+        command.CommandText = "DELETE FROM TanimeSeasonalPlanning WHERE IdSeason = $IdSeason";
+
+        if (command.Parameters.Count > 0)
+            command.Parameters.Clear();
+
+        command.Parameters.AddWithValue("$IdSeason", idSeason);
+
+        try
+        {
+            var count = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
+            return new OperationState(true, $"{count} ligne(s) ont été supprimée(s)");
+        }
+        catch (Exception e)
+        {
+            Debug.WriteLine(e);
+            return new OperationState(false, "Une erreur est survenue lors de la suppression");
+        }
+    }
+
     #endregion
 
     private static async IAsyncEnumerable<TanimeSeasonalPlanning> GetRecords(SqliteDataReader reader,
@@ -643,13 +719,15 @@ public partial class TanimeSeasonalPlanning
                     SheetId = animeSheetId,
                     Url = reader.GetString(reader.GetOrdinal("BaseUrl")),
                     AnimeName = reader.GetString(reader.GetOrdinal("BaseAnimeName")),
+                    IsAdultContent = reader.GetBoolean(reader.GetOrdinal("IsAdultContent")),
+                    IsExplicitContent = reader.GetBoolean(reader.GetOrdinal("IsExplicitContent")),
                     ReleaseMonth = (uint)reader.GetInt32(reader.GetOrdinal("ReleaseMonth")),
                     GroupName = reader.GetString(reader.GetOrdinal("GroupName")),
                     Studios = reader.IsDBNull(reader.GetOrdinal("Studios"))
-                        ? new HashSet<string>()
+                        ? []
                         : reader.GetString(reader.GetOrdinal("Studios")).Split(',').ToHashSet(),
                     Distributors = reader.IsDBNull(reader.GetOrdinal("Distributors"))
-                        ? new HashSet<string>()
+                        ? []
                         : reader.GetString(reader.GetOrdinal("Distributors")).Split(',').ToHashSet(),
                     Description = reader.IsDBNull(reader.GetOrdinal("BaseDescription"))
                         ? null
@@ -661,6 +739,7 @@ public partial class TanimeSeasonalPlanning
                         ? null
                         : TorigineAdaptation.GetRecord(reader,
                             idIndex: reader.GetOrdinal("IdOrigine"),
+                            sectionIndex: reader.GetOrdinal("OrigineAdaptationSection"),
                             nameIndex: reader.GetOrdinal("OrigineAdaptationName"),
                             descriptionIndex: reader.GetOrdinal("OrigineAdaptationDescription")),
                     Season = Tseason.GetRecord(reader,
@@ -687,6 +766,8 @@ public partial class TanimeSeasonalPlanning
             TanimeSeasonalPlanning.SheetId AS BaseSheetId,
             TanimeSeasonalPlanning.Url AS BaseUrl,
             TanimeSeasonalPlanning.AnimeName AS BaseAnimeName,
+            TanimeSeasonalPlanning.IsAdultContent,
+            TanimeSeasonalPlanning.IsExplicitContent,
             TanimeSeasonalPlanning.ReleaseMonth,
             TanimeSeasonalPlanning.GroupName,
             TanimeSeasonalPlanning.Studios,
@@ -695,6 +776,7 @@ public partial class TanimeSeasonalPlanning
             TanimeSeasonalPlanning.ThumbnailUrl AS BaseThumbnailUrl,
             
             TorigineAdaptation.Name as OrigineAdaptationName,
+            TorigineAdaptation.Section as OrigineAdaptationSection,
             TorigineAdaptation.Description as OrigineAdaptationDescription,
             
             Tseason.DisplayName as SeasonDisplayName,

@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using IcotakuScrapper.Extensions;
+using IcotakuScrapper.Helpers;
 using Microsoft.Data.Sqlite;
 
 namespace IcotakuScrapper.Common;
@@ -396,15 +397,26 @@ public partial class TsheetIndex
     /// <param name="cancellationToken"></param>
     /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<TsheetIndex?> SingleAsync(int id, SheetIntColumnSelect columnSelect,
+    public static async Task<TsheetIndex?> SingleAsync(int id, IntColumnSelect columnSelect,
         CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        var isColumnSelectValid = command.IsIntColumnValidated(columnSelect, new HashSet<IntColumnSelect>()
+        {
+            IntColumnSelect.Id,
+            IntColumnSelect.SheetId,
+        });
+        
+        if (!isColumnSelectValid)
+        {
+            return null;
+        }
+
         command.CommandText = SqlSelectScript + Environment.NewLine + columnSelect switch
         {
-            SheetIntColumnSelect.Id => " WHERE Id = $Id",
-            SheetIntColumnSelect.SheetId => " WHERE SheetId = $Id",
+            IntColumnSelect.Id => " WHERE Id = $Id",
+            IntColumnSelect.SheetId => " WHERE SheetId = $Id",
             _ => throw new ArgumentOutOfRangeException(nameof(columnSelect), columnSelect, null)
         };
 

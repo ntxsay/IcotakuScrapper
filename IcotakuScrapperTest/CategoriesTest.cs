@@ -20,7 +20,7 @@ namespace IcotakuScrapperTest
                 IcotakuSection.Manga,
             };
 
-            var result = await Tcategory.CreateIndexAsync(sections);
+            var result = await Tcategory.ScrapAsync(sections);
             Assert.That(result.IsSuccess, Is.True);
         }
     }

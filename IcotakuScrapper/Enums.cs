@@ -1,13 +1,44 @@
 ﻿namespace IcotakuScrapper
 {
+    /// <summary>
+    /// Enumération des colonnes de type entier permettant de sélectionner ou de compter des enregistrements via celles-ci.
+    /// </summary>
     public enum IntColumnSelect
     {
+        /// <summary>
+        /// Représente la colonne "Id".
+        /// </summary>
         Id,
+        
+        /// <summary>
+        /// Représente la colonne "SheetId".
+        /// </summary>
         SheetId,
+        
+        /// <summary>
+        /// Représente la colonne "IdAnime".
+        /// </summary>
         IdAnime,
+        
+        /// <summary>
+        /// Représente la colonne "IdOrigine".
+        /// </summary>
         IdOrigine,
+        
+        /// <summary>
+        /// Représente la colonne "IdSeason".
+        /// </summary>
         IdSeason,
-        IdTarget
+        
+        /// <summary>
+        /// Représente la colonne "IdTarget".
+        /// </summary>
+        IdTarget,
+        
+        /// <summary>
+        /// Représente la colonne "IdStudio".
+        /// </summary>
+        IdStudio,
     }
 
     /// <summary>
@@ -40,6 +71,10 @@
     /// </summary>
     public enum IcotakuSection : byte
     {
+        /// <summary>
+        /// Représente la section des animés du site d'Icotaku.
+        /// </summary>
+        /// <remarks>Les animés sur Icotaku proviennent presqu'exclusivement du Japon</remarks>
         Anime,
         Manga,
         LightNovel,
@@ -170,5 +205,16 @@
         /// Hiver
         /// </summary>
         Winter = 4,
+    }
+    
+    public enum DbInsertMode
+    {
+        Insert,
+        InsertOrReplace,
+        InsertOrIgnore,
+        InsertOrAbort,
+        InsertOrFail,
+        InsertOrRollback,
+        Replace,
     }
 }
