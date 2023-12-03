@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Globalization;
 using IcotakuScrapper.Common;
 using IcotakuScrapper.Contact;
 using IcotakuScrapper.Extensions;
@@ -28,6 +29,9 @@ public partial class Tanime : TanimeBase
     /// Obtient ou définit la date de sortie de l'anime au format yyyy-MM-dd.
     /// </summary>
     public string? ReleaseDate { get; set; }
+
+    public DateOnly? ReleaseDateAsDateOnly => GetReleaseDate();
+    public string? ReleaseDateAsLiteral => ReleaseDateAsDateOnly?.ToString("dddd dd MMMM yyyy");
 
     /// <summary>
     /// Obtient ou définit la date de fin de l'anime.
@@ -82,7 +86,7 @@ public partial class Tanime : TanimeBase
         if (!ushort.TryParse(date[2], out var day))
             return null;
 
-        if (DateOnly.TryParse($"{year}-{month}-{day}", out var result))
+        if (DateOnly.TryParse($"{year}-{month}-{day}", CultureInfo.DefaultThreadCurrentCulture, out var result))
             return result;
         
         return null;
@@ -227,9 +231,9 @@ public partial class Tanime : TanimeBase
         command.CommandText = 
             """
             INSERT INTO Tanime 
-                (SheetId, Url, IsAdultContent, IsExplicitContent, Name, DiffusionState, EpisodeCount, EpisodeDuration, ReleaseDate, EndDate, Description, ThumbnailMiniUrl, ThumbnailUrl, IdFormat, IdTarget, IdOrigine, IdSeason) 
+                (SheetId, Url, IsAdultContent, IsExplicitContent, Note, VoteCount, Name, DiffusionState, EpisodeCount, EpisodeDuration, ReleaseDate, EndDate, Description, ThumbnailMiniUrl, ThumbnailUrl, IdFormat, IdTarget, IdOrigine, IdSeason) 
             VALUES 
-                ($SheetId, $Url, $IsAdultContent, $IsExplicitContent, $Name, $DiffusionState , $EpisodeCount, $EpisodeDuration, $ReleaseDate, $EndDate, $Description, $ThumbnailMiniUrl, $ThumbnailUrl, $IdFormat, $IdTarget, $IdOrigine, $IdSeason)
+                ($SheetId, $Url, $IsAdultContent, $IsExplicitContent, $Note, $VoteCount, $Name, $DiffusionState , $EpisodeCount, $EpisodeDuration, $ReleaseDate, $EndDate, $Description, $ThumbnailMiniUrl, $ThumbnailUrl, $IdFormat, $IdTarget, $IdOrigine, $IdSeason)
             """;
         
         command.Parameters.Clear();
@@ -238,6 +242,8 @@ public partial class Tanime : TanimeBase
         command.Parameters.AddWithValue("$Url", Url);
         command.Parameters.AddWithValue("$IsAdultContent", IsAdultContent);
         command.Parameters.AddWithValue("$IsExplicitContent", IsExplicitContent);
+        command.Parameters.AddWithValue("$Note", Note ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$VoteCount", VoteCount);
         command.Parameters.AddWithValue("$Name", Name);
         command.Parameters.AddWithValue("$DiffusionState", (byte)DiffusionState);
         command.Parameters.AddWithValue("$EpisodeCount", EpisodesCount);
@@ -280,7 +286,7 @@ public partial class Tanime : TanimeBase
                 _ = await TanimeCategory.InsertAsync(Id, Categories.Select(s => s.Id).ToArray(), cancellationToken, command);
 
             if (Episodes.Count > 0)
-                _ = await TanimeEpisode.InsertAsync(Id, Episodes.Where(w => w.EpisodeNumber >= 0).DistinctBy(d => d.EpisodeNumber).ToArray(), cancellationToken, command);
+                _ = await TanimeEpisode.InsertAsync(Id, Episodes.DistinctBy(d => d.EpisodeNumber).ToArray(), cancellationToken, command);
 
             return new OperationState<int>(true, "L'anime a été ajouté avec succès", Id);
 
@@ -325,6 +331,8 @@ public partial class Tanime : TanimeBase
                 Url = $Url, 
                 IsAdultContent = $IsAdultContent,
                 IsExplicitContent = $IsExplicitContent,
+                Note = $Note,
+                VoteCount = $VoteCount,
                 Name = $Name, 
                 DiffusionState = $DiffusionState,
                 EpisodeCount = $EpisodeCount, 
@@ -347,6 +355,8 @@ public partial class Tanime : TanimeBase
         command.Parameters.AddWithValue("$Url", Url);
         command.Parameters.AddWithValue("$IsAdultContent", IsAdultContent);
         command.Parameters.AddWithValue("$IsExplicitContent", IsExplicitContent);
+        command.Parameters.AddWithValue("$Note", Note ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$VoteCount", VoteCount);
         command.Parameters.AddWithValue("$Name", Name);
         command.Parameters.AddWithValue("$DiffusionState", (byte)DiffusionState);
         command.Parameters.AddWithValue("$EpisodeCount", EpisodesCount);
@@ -440,6 +450,7 @@ public partial class Tanime : TanimeBase
                     Url = reader.GetString(reader.GetOrdinal("AnimeUrl")),
                     IsAdultContent = reader.GetBoolean(reader.GetOrdinal("AnimeIsAdultContent")),
                     IsExplicitContent = reader.GetBoolean(reader.GetOrdinal("AnimeIsExplicitContent")),
+                    VoteCount = (uint)reader.GetInt32(reader.GetOrdinal("AnimeVoteCount")),
                     SheetId = reader.GetInt32(reader.GetOrdinal("AnimeSheetId")),
                     Duration = TimeSpan.FromMinutes(reader.GetInt32(reader.GetOrdinal("EpisodeDuration"))),
                     DiffusionState = (DiffusionStateKind)reader.GetByte( reader.GetOrdinal("DiffusionState")),
@@ -450,6 +461,9 @@ public partial class Tanime : TanimeBase
                         ? null
                         : reader.GetString(reader.GetOrdinal("EndDate")),
                     EpisodesCount = (ushort)reader.GetInt16(reader.GetOrdinal("EpisodeCount")),
+                    Note = reader.IsDBNull(reader.GetOrdinal("AnimeNote"))
+                        ? null
+                        : reader.GetDouble(reader.GetOrdinal("AnimeNote")),
                     Description = reader.IsDBNull(reader.GetOrdinal("AnimeDescription"))
                         ? null
                         : reader.GetString(reader.GetOrdinal("AnimeDescription")),
@@ -597,6 +611,8 @@ public partial class Tanime : TanimeBase
             Tanime.Url AS AnimeUrl,
             Tanime.IsAdultContent AS AnimeIsAdultContent,
             Tanime.IsExplicitContent AS AnimeIsExplicitContent,
+            Tanime.Note AS AnimeNote,
+            Tanime.VoteCount AS AnimeVoteCount,
             Tanime.Name AS AnimeName,
             Tanime.EpisodeCount,
             Tanime.EpisodeDuration,

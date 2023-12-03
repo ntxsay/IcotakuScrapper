@@ -1,6 +1,7 @@
 ﻿using System.Web;
 using HtmlAgilityPack;
 using IcotakuScrapper.Extensions;
+using IcotakuScrapper.Helpers;
 
 namespace IcotakuScrapper.Common;
 
@@ -13,7 +14,7 @@ public partial class Ttarget
     /// <returns></returns>
     public static string? GetTargetsUrl(IcotakuSection section)
     {
-        var baseUrl = Main.GetBaseUrl(section);
+        var baseUrl = IcotakuWebHelpers.GetBaseUrl(section);
         if (baseUrl.IsStringNullOrEmptyOrWhiteSpace())
             return null;
 

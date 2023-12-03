@@ -1,110 +1,55 @@
-﻿using HtmlAgilityPack;
-using IcotakuScrapper.Extensions;
+﻿using IcotakuScrapper.Extensions;
+using IcotakuScrapper.Helpers;
 using Microsoft.Data.Sqlite;
+using System.Globalization;
 
 namespace IcotakuScrapper
 {
     public static class Main
     {
-        #region Icotaku
-        public const string IcotakuBaseUrl = "https://icotaku.com";
-        public static string? GetBaseUrl(IcotakuSection section) => section switch
-        {
-            IcotakuSection.Anime => "https://anime.icotaku.com",
-            IcotakuSection.Manga => "https://manga.icotaku.com",
-            IcotakuSection.LightNovel => "https://novel.icotaku.com",
-            IcotakuSection.Drama => "https://drama.icotaku.com",
-            IcotakuSection.Community => "https://communaute.icotaku.com",
-            _ => null
-        };
+        #region Working Directory Variables/Properties
+        /// <summary>
+        ///     Chemin d'accès du dossier contenant les ressources de l'API
+        /// </summary>
+        internal static string BasePath { get; private set; } =
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ParentFolderName);
 
-        public static IcotakuSection? GetIcotakuSection(Uri sheetUri)
-        {
-            var host = sheetUri.Host;
-            if (host.IsStringNullOrEmptyOrWhiteSpace())
-                return null;
+        /// <summary>
+        ///     Retourne l'objet <see cref="DirectoryInfo" /> représentant le dossier parent-root de l'api.
+        /// </summary>
+        /// <returns></returns>
+        internal static DirectoryInfo BaseDirectoryInfo { get; private set; } =
+            new(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ParentFolderName));
 
-            return host switch
+        /// <summary>
+        ///     Nom du dossier parent contenant tous les autres dossiers nécessaire au bon fontionnement de l'application
+        /// </summary>
+        private const string ParentFolderName = "Resources";
+        #endregion
+
+        #region Culture
+        public static void SetCultureInfo(string name = "fr-GP")
+        {
+            try
             {
-                "anime.icotaku.com" => IcotakuSection.Anime,
-                "manga.icotaku.com" => IcotakuSection.Manga,
-                "novel.icotaku.com" => IcotakuSection.LightNovel,
-                "drama.icotaku.com" => IcotakuSection.Drama,
-                "communaute.icotaku.com" => IcotakuSection.Community,
-                _ => null
-            };
-        }
+                var cultureInfo = new CultureInfo(name);
+                CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
+                CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
 
-
-        public static int? GetSheetId(Uri sheetUri)
-        {
-            var splitUrl = sheetUri.Segments.Select(s => s.Trim('/')).Where(w => !w.IsStringNullOrEmptyOrWhiteSpace()).ToArray();
-            if (splitUrl.Length == 0)
-                return null;
-
-            var sheetId = splitUrl.FirstOrDefault(f =>
-                       !f.Any(a => char.IsLetter(a) || a == '-' || a == '_'));
-
-            if (sheetId.IsStringNullOrEmptyOrWhiteSpace())
-                return null;
-
-            if (!int.TryParse(sheetId, out var sheetIdInt))
-                return null;
-
-            return sheetIdInt;
-        }
-
-
-        public static Uri? GetFullHrefFromHtmlNode(HtmlNode node, IcotakuSection section)
-        {
-            var href = node.GetAttributeValue("href", string.Empty);
-            if (href.IsStringNullOrEmptyOrWhiteSpace())
-                return null;
-
-            if (href.StartsWith('/'))
-                href = href.TrimStart('/');
-
-            href = $"{GetBaseUrl(section)}/{href}";
-
-            if (Uri.TryCreate(href, UriKind.Absolute, out var uri) && uri.IsAbsoluteUri)
-                return uri;
-
-            return null;
-        }
-
-        public static Uri? GetFullHrefFromRelativePath(string relativePath, IcotakuSection section)
-        {
-            if (relativePath.IsStringNullOrEmptyOrWhiteSpace())
-                return null;
-
-            var href = relativePath.ToString();
-            if (href.StartsWith('/'))
-                href = href.TrimStart('/');
-
-            href = $"{GetBaseUrl(section)}/{href}";
-
-            if (Uri.TryCreate(href, UriKind.Absolute, out var uri) && uri.IsAbsoluteUri)
-                return uri;
-
-            return null;
-        }
-
-        public static Uri? GetImageFromSrc(IcotakuSection section, string? src)
-        {
-            if (src == null || src.IsStringNullOrEmptyOrWhiteSpace())
-            {
-                return null;
+                //Thread.CurrentThread.CurrentCulture
+                //    = CultureInfo.CreateSpecificCulture(name);
+                //Thread.CurrentThread.CurrentUICulture
+                //    = CultureInfo.CreateSpecificCulture(name);
             }
+            catch (Exception)
+            {
 
-            var value = src.Replace("/images/..", GetBaseUrl(section));
-
-            //https://anime.icotaku.com/uploads/animes/anime_229/fiche/affiche_umzrcyl4lhodbB8.jpg
-            bool isUri = Uri.TryCreate(value, UriKind.Absolute, out var uri);
-            return isUri && uri != null ? uri : null;
+                throw;
+            }
         }
         #endregion
 
-
+        #region Data Base Variables/Properties
         /// <summary>
         /// Nom par défaut de la base de données SQLite de l'application
         /// </summary>
@@ -121,14 +66,69 @@ namespace IcotakuScrapper
         internal static string DbFile { get; private set; } =
             Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DbFileName);
 
-        #region Sqlite Raw
-
         private static string DefaultConnectionString => $"Data Source={DbFile}";
 
         /// <summary>
         ///     Retourne la chaine de connexion à la base de données SQLite
         /// </summary>
         internal static string ConnexionString { get; private set; } = DefaultConnectionString;
+        #endregion
+
+        #region Manage Working Directory
+        /// <summary>
+        ///     Initialise le dossier de travail de l'application
+        /// </summary>
+        /// <param name="directoryPath">chemin d'accès du dossier à vérifier</param>
+        /// <returns>True si le dossier de travail a été chargé sinon False</returns>
+        public static bool LoadWorkingDirectoryAt(string directoryPath)
+        {
+            if (directoryPath.IsStringNullOrEmptyOrWhiteSpace())
+            {
+                LogServices.LogDebug("Le chemin d'accès du dossier est invalide");
+                return false;
+            }
+
+            if (!Path.IsPathFullyQualified(directoryPath))
+            {
+                LogServices.LogDebug("Le chemin d'accès du dossier est invalide");
+                return false;
+            }
+
+            try
+            {
+                if (!Directory.Exists(directoryPath))
+                    Directory.CreateDirectory(directoryPath);
+
+                BasePath = directoryPath;
+                BaseDirectoryInfo = new DirectoryInfo(directoryPath);
+                return Directory.Exists(directoryPath);
+            }
+            catch (Exception e)
+            {
+                LogServices.LogDebug(e);
+                return false;
+            }
+        }
+        #endregion
+
+        #region Sqlite Raw
+        /// <summary>
+        ///  Sélectionne une base de données SQLite
+        /// </summary>
+        /// <remarks>
+        /// <list type="bullet">Par défaut la base de données se trouve à la racine du projet mais si vous souhaitez changer l'emplacement de la base de données sans altérer le code.</list>
+        /// <list type="bullet">De préférence copiez la base de données vers le nouvel emplacement</list>
+        /// Si la base de données n'existe pas, elle est créée</remarks>
+        /// <param name="databasefile">Chemin d'accès complet du fichier à vérifier</param>
+        public static bool LoadDataBaseAt(string databasefile)
+        {
+            if (databasefile.IsStringNullOrEmptyOrWhiteSpace() || !File.Exists(databasefile))
+                return false;
+
+            DbFile = databasefile;
+            DbFileName = Path.GetFileName(databasefile);
+            return true;
+        }
 
         /// <summary>
         /// Initialise la chaine de connexion à la base de données SQLite
@@ -181,24 +181,6 @@ namespace IcotakuScrapper
             }
 
             return _connection;
-        }
-
-        /// <summary>
-        ///  Sélectionne une base de données SQLite
-        /// </summary>
-        /// <remarks>
-        /// <list type="bullet">Par défaut la base de données se trouve à la racine du projet mais si vous souhaitez changer l'emplacement de la base de données sans altérer le code.</list>
-        /// <list type="bullet">De préférence copiez la base de données vers le nouvel emplacement</list>
-        /// Si la base de données n'existe pas, elle est créée</remarks>
-        /// <param name="databasefile">Chemin d'accès complet du fichier à vérifier</param>
-        public static bool FindSqliteDatabase(string databasefile)
-        {
-            if (databasefile.IsStringNullOrEmptyOrWhiteSpace() || !File.Exists(databasefile)) 
-                return false;
-
-            DbFile = databasefile;
-            DbFileName = Path.GetFileName(databasefile);
-            return true;
         }
         #endregion
 

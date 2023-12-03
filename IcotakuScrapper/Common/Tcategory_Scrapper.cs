@@ -1,5 +1,6 @@
 ﻿using HtmlAgilityPack;
 using IcotakuScrapper.Extensions;
+using IcotakuScrapper.Helpers;
 using System;
 using System.Web;
 using static System.Collections.Specialized.BitVector32;
@@ -21,8 +22,8 @@ namespace IcotakuScrapper.Common
             {
                 IcotakuSection.Anime => categoryType switch
                 {
-                    CategoryType.Theme => Main.GetBaseUrl(section) + "/themes.html",
-                    CategoryType.Genre => Main.GetBaseUrl(section) + "/genres.html",
+                    CategoryType.Theme => IcotakuWebHelpers.GetBaseUrl(section) + "/themes.html",
+                    CategoryType.Genre => IcotakuWebHelpers.GetBaseUrl(section) + "/genres.html",
                     _ => throw new ArgumentOutOfRangeException(nameof(categoryType), categoryType, "Ce type de catégorie n'est pas pris en charge")
                 },
                 _ => throw new ArgumentOutOfRangeException(nameof(section), section, "Ce type de contenu n'est pas pris en charge")
@@ -115,7 +116,7 @@ namespace IcotakuScrapper.Common
             foreach (var node in nodes)
             {
                 // On récupère l'url de la fiche de la catégorie
-                var uri = Main.GetFullHrefFromHtmlNode(node, section);
+                var uri = IcotakuWebHelpers.GetFullHrefFromHtmlNode(node, section);
                 if (uri == null)
                     continue;
 
@@ -133,12 +134,12 @@ namespace IcotakuScrapper.Common
         internal static Tcategory? ScrapCategoryFromSheetPage(Uri sheetUri, IcotakuSection? sectionToCheck = null, CategoryType? categoryTypeToCheck = null)
         {
             // On récupère l'id de la fiche de la catégorie
-            var sheetId = Main.GetSheetId(sheetUri);
+            var sheetId = IcotakuWebHelpers.GetSheetId(sheetUri);
             if (!sheetId.HasValue)
                 return null;
 
             // On vérifie que la section de la fiche est bien celle demandée
-            var section = Main.GetIcotakuSection(sheetUri);
+            var section = IcotakuWebHelpers.GetIcotakuSection(sheetUri);
             if (!section.HasValue)
                 return null;
 

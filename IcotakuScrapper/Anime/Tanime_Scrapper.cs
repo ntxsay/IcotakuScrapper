@@ -15,14 +15,13 @@ public partial class Tanime
     public static async Task<OperationState<int>> ScrapAnimeFromSheetId(int sheetId,
         CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
-        
         var index = await TsheetIndex.SingleAsync(sheetId, IntColumnSelect.SheetId, cancellationToken, cmd);
         if (index == null)
             return new OperationState<int>(false, "L'index permettant de récupérer l'url de la fiche de l'anime n'a pas été trouvé dans la base de données.");
-        
+
         return await ScrapAnimeFromUrl(index.Url, cancellationToken, cmd);
     }
-    
+
     /// <summary>
     /// Récupère l'anime depuis l'url de la fiche icotaku.
     /// </summary>
@@ -34,11 +33,12 @@ public partial class Tanime
     {
         if (url.IsStringNullOrEmptyOrWhiteSpace())
             return new OperationState<int>(false, "L'url de la fiche de l'anime ne peut pas être vide");
-        
+
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || !uri.IsAbsoluteUri)
             return new OperationState<int>(false, "L'url de la fiche de l'anime n'est pas valide");
-        
-        if (!uri.Host.StartsWith("anime.icotaku.com"))
+
+        var hostname = IcotakuWebHelpers.GetHostName(IcotakuSection.Anime);
+        if (hostname == null || !uri.Host.Contains(hostname, StringComparison.OrdinalIgnoreCase))
             return new OperationState<int>(false, "L'url de la fiche de l'anime n'est pas une url icotaku.");
 
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
@@ -60,7 +60,7 @@ public partial class Tanime
 
         return await anime.InsertAync(cancellationToken, command);
     }
-    
+
     /// <summary>
     /// Récupère les informations de la fiche anime à partir de son url
     /// </summary>
@@ -75,11 +75,11 @@ public partial class Tanime
             HtmlWeb web = new();
             var htmlDocument = web.Load(uri.OriginalString);
 
-            var mainName = GetMainName(htmlDocument.DocumentNode);
+            var mainName = ScrapMainName(htmlDocument.DocumentNode);
             if (mainName == null || mainName.IsStringNullOrEmptyOrWhiteSpace())
                 throw new Exception("Le nom de l'anime n'a pas été trouvé");
 
-            var sheetId = Main.GetSheetId(uri) ?? throw new Exception("L'id de la fiche anime n'a pas été trouvé.");
+            var sheetId = IcotakuWebHelpers.GetSheetId(uri) ?? throw new Exception("L'id de la fiche anime n'a pas été trouvé.");
             await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
 
             var anime = new Tanime()
@@ -87,22 +87,24 @@ public partial class Tanime
                 Name = mainName,
                 SheetId = sheetId,
                 Url = uri.ToString(),
-                IsAdultContent = GetIsAdultContent(htmlDocument.DocumentNode),
-                IsExplicitContent = GetIsExplicitContent(htmlDocument.DocumentNode),
-                DiffusionState = GetDiffusionState(htmlDocument.DocumentNode),
-                EpisodesCount = GetTotalEpisodes(htmlDocument.DocumentNode),
-                Duration = GetDuration(htmlDocument.DocumentNode),
-                Target = await GetTargetAsync(htmlDocument.DocumentNode, cancellationToken, command),
-                OrigineAdaptation = await GetOrigineAdaptationAsync(htmlDocument.DocumentNode, cancellationToken, command),
-                Format = await GetFormatAsync(htmlDocument.DocumentNode, cancellationToken, command),
-                Season = await GetSeason(htmlDocument.DocumentNode, cancellationToken, command),
-                ReleaseDate = GetBeginDate(htmlDocument.DocumentNode),
-                Description = GetDescription(htmlDocument.DocumentNode),
-                ThumbnailUrl = GetFullThumbnail(htmlDocument.DocumentNode),
+                IsAdultContent = ScrapIsAdultContent(htmlDocument.DocumentNode),
+                IsExplicitContent = ScrapIsExplicitContent(htmlDocument.DocumentNode),
+                Note = ScrapNote(htmlDocument.DocumentNode),
+                VoteCount = ScrapVoteCount(htmlDocument.DocumentNode),
+                DiffusionState = ScrapDiffusionState(htmlDocument.DocumentNode),
+                EpisodesCount = ScrapTotalEpisodes(htmlDocument.DocumentNode),
+                Duration = ScrapDuration(htmlDocument.DocumentNode),
+                Target = await ScrapTargetAsync(htmlDocument.DocumentNode, cancellationToken, command),
+                OrigineAdaptation = await ScrapOrigineAdaptationAsync(htmlDocument.DocumentNode, cancellationToken, command),
+                Format = await ScrapFormatAsync(htmlDocument.DocumentNode, cancellationToken, command),
+                Season = await ScrapSeason(htmlDocument.DocumentNode, cancellationToken, command),
+                ReleaseDate = ScrapBeginDate(htmlDocument.DocumentNode),
+                Description = ScrapDescription(htmlDocument.DocumentNode),
+                ThumbnailUrl = SCrapFullThumbnail(htmlDocument.DocumentNode),
             };
 
             //Titres alternatifs
-            var alternativeNames = GetAlternativeTitles(htmlDocument.DocumentNode).ToArray();
+            var alternativeNames = ScrapAlternativeTitles(htmlDocument.DocumentNode).ToArray();
             if (alternativeNames.Length > 0)
             {
                 foreach (var title in alternativeNames)
@@ -115,7 +117,7 @@ public partial class Tanime
             }
 
             //Websites
-            var websites = GetWebsites(htmlDocument.DocumentNode).ToArray();
+            var websites = ScrapWebsites(htmlDocument.DocumentNode).ToArray();
             if (websites.Length > 0)
             {
                 foreach (var url in websites)
@@ -141,7 +143,7 @@ public partial class Tanime
             }
 
             //Studios
-            var studios = await GetStudioAsync(htmlDocument.DocumentNode, cancellationToken, command).ToArrayAsync();
+            var studios = await ScrapStudioAsync(htmlDocument.DocumentNode, cancellationToken, command).ToArrayAsync();
             if (studios.Length > 0)
             {
                 foreach (var studio in studios)
@@ -154,8 +156,12 @@ public partial class Tanime
             //Episodes
             var episodes = TanimeEpisode.GetAnimeEpisode(anime.SheetId).ToArray();
             if (episodes.Length > 0)
+            {
                 foreach (var episode in episodes)
                     anime.Episodes.Add(episode);
+
+                anime.ReleaseDate = episodes.Min(m => m.ReleaseDate).ToString("yyyy-MM-dd");
+            }
 
             return new OperationState<Tanime?>
             {
@@ -170,12 +176,13 @@ public partial class Tanime
         }
     }
 
+    #region General
     /// <summary>
     /// Obtient le nom principal de l'animé
     /// </summary>
     /// <param name="htmlNode"></param>
     /// <returns></returns>
-    private static string? GetMainName(HtmlNode htmlNode)
+    private static string? ScrapMainName(HtmlNode htmlNode)
     {
         var node = htmlNode.SelectSingleNode("//div[@id='fiche_entete']//h1/text()");
         var text = node?.InnerText?.Trim();
@@ -191,7 +198,7 @@ public partial class Tanime
     /// </summary>
     /// <param name="htmlNode">Noeud à partir duquel commencer la recherche</param>
     /// <returns></returns>
-    private static string? GetDescription(HtmlNode htmlNode)
+    private static string? ScrapDescription(HtmlNode htmlNode)
     {
         var node = htmlNode.SelectSingleNode("//div[contains(@class, 'informations')]/h2[contains(text(), 'Histoire')]/parent::div/p");
         return HttpUtility.HtmlDecode(node?.InnerText?.Trim());
@@ -200,20 +207,35 @@ public partial class Tanime
     /// <summary>
     /// Retourne les titres alternatifs de l'animé
     /// </summary>
-    /// <param name="htmlNode"></param>
+    /// <param name="documentNode"></param>
     /// <returns></returns>
-    private static TanimeAlternativeTitle[] GetAlternativeTitles(HtmlNode htmlNode)
+    private static IEnumerable<TanimeAlternativeTitle> ScrapAlternativeTitles(HtmlNode documentNode)
     {
-        var nodes = htmlNode.SelectNodes("//div[contains(@class, 'info_fiche')]/div/b[starts-with(text(), 'Titre ')]")?.ToArray();
+        var nodes = documentNode.SelectNodes("//div[contains(@class, 'info_fiche')]/div/b[starts-with(text(), 'Titre ')]")?.ToArray();
 
         if (nodes == null || nodes.Length == 0)
-            return [];
+            yield break;
 
-        return nodes.Select(s => new TanimeAlternativeTitle()
+        foreach (var node in nodes)
         {
-            Title = HttpUtility.HtmlDecode(s.NextSibling.InnerText.Trim()),
-            Description = HttpUtility.HtmlDecode(s.InnerText.Trim()?.TrimEnd(':')?.Trim()),
-        }).Where(w => !w.Title.IsStringNullOrEmptyOrWhiteSpace()).ToArray();
+            var description = HttpUtility.HtmlDecode(node.InnerText.Trim()?.TrimEnd(':')?.Trim());
+            var title = HttpUtility.HtmlDecode(node.NextSibling.InnerText.Trim());
+            if (title == null || title.IsStringNullOrEmptyOrWhiteSpace())
+                continue;
+
+            var splitTitle = title.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (splitTitle.Length == 0)
+                continue;
+
+            foreach (var splittedTitle in splitTitle)
+            {
+                yield return new TanimeAlternativeTitle()
+                {
+                    Title = splittedTitle,
+                    Description = description,
+                };
+            }
+        }
     }
 
 
@@ -222,7 +244,7 @@ public partial class Tanime
     /// </summary>
     /// <param name="htmlNode"></param>
     /// <returns></returns>
-    private static IEnumerable<TanimeWebSite> GetWebsites(HtmlNode htmlNode)
+    private static IEnumerable<TanimeWebSite> ScrapWebsites(HtmlNode htmlNode)
     {
         var nodes = htmlNode.SelectNodes("//div[contains(@class, 'info_fiche')]/div/b[starts-with(text(), 'Site ')]")?.ToArray();
         if (nodes == null || nodes.Length == 0)
@@ -251,55 +273,56 @@ public partial class Tanime
         }
     }
 
-    /// <summary>
-    /// Retourne les catégories de l'animé
-    /// </summary>
-    /// <param name="htmlNode"></param>
-    /// <param name="categoryType"></param>
-    /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
-    /// <returns></returns>
-    private static async IAsyncEnumerable<Tcategory> GetCategoriesAsync(HtmlNode htmlNode, CategoryType categoryType, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    private static double? ScrapNote(HtmlNode documentNode)
     {
-        HtmlNode[]? nodes = categoryType switch
-        {
-            CategoryType.Genre => htmlNode.SelectNodes("//span[@id='id_genre']/a[contains(@href, '/genre/')]")?.ToArray(),
-            CategoryType.Theme => htmlNode.SelectNodes("//span[@id='id_theme']/a[contains(@href, '/theme/')]")?.ToArray(),
-            _ => null
-        };
+        var htmlNode = documentNode.SelectSingleNode("//div[contains(@class, 'contenu')]/div[contains(@class, 'complements')]/p[contains(@class, 'note')]/text()[1]");
+        if (htmlNode == null)
+            return null;
 
-        if (nodes == null || nodes.Length == 0)
-            yield break;
+        var text = htmlNode.InnerText?.Trim();
+        if (text == null || text.IsStringNullOrEmptyOrWhiteSpace())
+            return null;
+        text = text.Replace("/10", string.Empty).Trim();
+        if (!double.TryParse(text, out var result))
+            return null;
 
-        foreach (var node in nodes)
-        {
-            var name = HttpUtility.HtmlDecode(node.InnerText?.Trim())?.Trim();
-            if (name == null || name.IsStringNullOrEmptyOrWhiteSpace())
-                continue;
-
-            //Récupère l'url de la fiche du thème ou du genre
-            var uri = Main.GetFullHrefFromHtmlNode(node, IcotakuSection.Anime);
-            if (uri == null)
-                continue;
-
-            var category = Tcategory.ScrapCategoryFromSheetPage(uri, IcotakuSection.Anime, categoryType);
-            if (category == null)
-                continue;
-
-            category = await Tcategory.SingleOrCreateAsync(category, true, cancellationToken, cmd);
-            if (category == null)
-                continue;
-
-            yield return category;
-        }
+        return result;
     }
 
+    private static uint ScrapVoteCount(HtmlNode documentNode)
+    {
+        var htmlNode = documentNode.SelectSingleNode("//div[contains(@class, 'contenu')]/div[contains(@class, 'complements')]/p[contains(@class, 'note')]/span[contains(@class, 'note_par')]/text()");
+        if (htmlNode == null)
+            return 0;
+
+        var text = htmlNode.InnerText?.Trim();
+        if (text == null || text.IsStringNullOrEmptyOrWhiteSpace())
+            return 0;
+
+        var match = GetVoteCountRegex().Match(text);
+        if (!match.Success)
+            return 0;
+
+        var value = match.Groups[1].Value;
+        if (value.IsStringNullOrEmptyOrWhiteSpace())
+            return 0;
+
+        if (!uint.TryParse(value, out var result))
+            return 0;
+
+        return result;
+
+    }
+
+    #endregion
+
+    #region Format
     /// <summary>
     /// Retourne le nombre total d'épisodes de l'animé
     /// </summary>
     /// <param name="htmlNode"></param>
     /// <returns></returns>
-    private static ushort GetTotalEpisodes(HtmlNode htmlNode)
+    private static ushort ScrapTotalEpisodes(HtmlNode htmlNode)
     {
         var node = htmlNode.SelectSingleNode("//div[contains(@class, 'info_fiche')]//b[starts-with(text(), 'Nombre d')]/following-sibling::text()[1]");
         var text = node?.InnerText?.Trim();
@@ -317,7 +340,7 @@ public partial class Tanime
     /// </summary>
     /// <param name="htmlNode"></param>
     /// <returns></returns>
-    private static TimeSpan GetDuration(HtmlNode htmlNode)
+    private static TimeSpan ScrapDuration(HtmlNode htmlNode)
     {
         var node = htmlNode.SelectSingleNode("//div[contains(@class, 'info_fiche')]//b[starts-with(text(), 'Durée d')]/following-sibling::text()[1]");
 
@@ -339,7 +362,7 @@ public partial class Tanime
     /// <param name="cancellationToken"></param>
     /// <param name="cmd"></param>
     /// <returns></returns>
-    private static async Task<TorigineAdaptation?> GetOrigineAdaptationAsync(HtmlNode htmlNode, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    private static async Task<TorigineAdaptation?> ScrapOrigineAdaptationAsync(HtmlNode htmlNode, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         var node = htmlNode.SelectSingleNode("//div[contains(@class, 'info_fiche')]//b[starts-with(text(), 'Origine :')]/following-sibling::text()[1]");
         var text = node?.InnerText?.Trim();
@@ -363,7 +386,7 @@ public partial class Tanime
     /// <param name="cancellationToken"></param>
     /// <param name="cmd"></param>
     /// <returns></returns>
-    private static async Task<Tformat?> GetFormatAsync(HtmlNode htmlNode, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    private static async Task<Tformat?> ScrapFormatAsync(HtmlNode htmlNode, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         var node = htmlNode.SelectSingleNode("//div[contains(@class, 'info_fiche')]//b[starts-with(text(), 'Catégorie :')]/following-sibling::text()[1]");
         var text = HttpUtility.HtmlDecode(node?.InnerText?.Trim());
@@ -378,92 +401,15 @@ public partial class Tanime
 
         return await Tformat.SingleOrCreateAsync(record, true, cancellationToken, cmd);
     }
+    #endregion
 
-    /// <summary>
-    /// Retourne le public visé de l'animé
-    /// </summary>
-    /// <param name="htmlNode"></param>
-    /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
-    /// <returns></returns>
-    private static async Task<Ttarget?> GetTargetAsync(HtmlNode htmlNode, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
-    {
-        var node = htmlNode.SelectSingleNode("//div[contains(@class, 'info_fiche')]//b[starts-with(text(), 'Public visé :')]/following-sibling::text()[1]");
-        var text = node?.InnerText?.Trim();
-        if (text == null || text.IsStringNullOrEmptyOrWhiteSpace())
-            return null;
-
-        Ttarget? record = new()
-        {
-            Name = text,
-            Section = IcotakuSection.Anime,
-        };
-
-        return await Ttarget.SingleOrCreateAsync(record, true, cancellationToken, cmd);
-    }
-
-    /// <summary>
-    /// Retourne les studios d'aimation de l'animé
-    /// </summary>
-    /// <param name="htmlNode"></param>
-    /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
-    /// <returns></returns>
-    private static async IAsyncEnumerable<Tcontact> GetStudioAsync(HtmlNode htmlNode, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
-    {
-        var _node = htmlNode.SelectSingleNode("//div[contains(@class, 'info_fiche')]//b[starts-with(text(), 'Studio')]");
-        if (_node == null)
-            yield break;
-
-        var nodes = _node.ParentNode?.SelectNodes("./a")?.ToArray();
-        if (nodes == null || nodes.Length == 0)
-            yield break;
-
-        foreach (var node in nodes)
-        {
-            //Récupère le nom d'affichage du studio
-            var displayName = node?.InnerText?.Trim();
-            if (displayName == null || displayName.IsStringNullOrEmptyOrWhiteSpace())
-                continue;
-
-            //Récupère l'url de la fiche du studio
-            var href = node?.Attributes["href"]?.Value;
-            if (href == null || href.IsStringNullOrEmptyOrWhiteSpace())
-                continue;
-
-            //Créer l'url de la fiche du studio
-            href = Main.GetBaseUrl(IcotakuSection.Anime) + href;
-            if (!Uri.TryCreate(href, UriKind.Absolute, out var uri) || !uri.IsAbsoluteUri)
-                continue;
-
-            //Récupère l'id de la fiche du studio
-            var sheetId = Main.GetSheetId(uri);
-            if (sheetId == null)
-                continue;
-
-            await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-            var record = await Tcontact.SingleAsync(uri, cancellationToken, command);
-            if (record != null)
-            {
-                yield return record;
-                continue;
-            }
-
-            record = new Tcontact(sheetId.Value, ContactType.Studio, uri, displayName);
-            var result = await record.InsertAync(cancellationToken, command);
-            if (!result.IsSuccess)
-                continue;
-
-            yield return record;
-        }
-    }
-
+    #region Diffusion
     /// <summary>
     /// Retourne l'état de diffusion de l'animé
     /// </summary>
     /// <param name="htmlNode"></param>
     /// <returns></returns>
-    private static DiffusionStateKind GetDiffusionState(HtmlNode htmlNode)
+    private static DiffusionStateKind ScrapDiffusionState(HtmlNode htmlNode)
     {
         var node = htmlNode.SelectSingleNode("//div[contains(@class, 'info_fiche')]//b[starts-with(text(), 'Diffusion :')]/following-sibling::text()[1]");
 
@@ -489,13 +435,13 @@ public partial class Tanime
     /// <param name="cancellationToken"></param>
     /// <param name="cmd"></param>
     /// <returns></returns>
-    private static async Task<Tseason?> GetSeason(HtmlNode htmlNode, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    private static async Task<Tseason?> ScrapSeason(HtmlNode htmlNode, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
-        var year = GetYearDiffusion(htmlNode);
+        var year = ScrapYearDiffusion(htmlNode);
         if (year == null)
             return null;
 
-        var seasonNumber = GetSeasonNumber(htmlNode);
+        var seasonNumber = ScrapSeasonNumber(htmlNode);
         if (seasonNumber == null)
             return null;
 
@@ -527,9 +473,9 @@ public partial class Tanime
     /// </summary>
     /// <param name="htmlNode"></param>
     /// <returns></returns>
-    private static byte? GetSeasonNumber(HtmlNode htmlNode)
+    private static byte? ScrapSeasonNumber(HtmlNode htmlNode)
     {
-        var year = GetYearDiffusion(htmlNode);
+        var year = ScrapYearDiffusion(htmlNode);
         if (year == null)
             return null;
 
@@ -549,13 +495,13 @@ public partial class Tanime
     /// </summary>
     /// <param name="htmlNode"></param>
     /// <returns></returns>
-    private static string? GetBeginDate(HtmlNode htmlNode)
+    private static string? ScrapBeginDate(HtmlNode htmlNode)
     {
-        var year = GetYearDiffusion(htmlNode);
+        var year = ScrapYearDiffusion(htmlNode);
         if (year == null)
             return null;
 
-        var month = GetMonthDiffusion(htmlNode);
+        var month = ScrapMonthDiffusion(htmlNode);
         if (month == null)
             return $"{year.Value}-00-00";
 
@@ -567,7 +513,7 @@ public partial class Tanime
     /// </summary>
     /// <param name="htmlNode"></param>
     /// <returns></returns>
-    private static ushort? GetYearDiffusion(HtmlNode htmlNode)
+    private static ushort? ScrapYearDiffusion(HtmlNode htmlNode)
     {
         var yearNode = htmlNode.SelectSingleNode("//div[contains(@class, 'info_fiche')]//b[starts-with(text(), 'Année de diffusion :')]/following-sibling::text()[1]");
         if (yearNode == null || yearNode.InnerText.IsStringNullOrEmptyOrWhiteSpace())
@@ -581,7 +527,7 @@ public partial class Tanime
     /// </summary>
     /// <param name="htmlNode"></param>
     /// <returns></returns>
-    private static byte? GetMonthDiffusion(HtmlNode htmlNode)
+    private static byte? ScrapMonthDiffusion(HtmlNode htmlNode)
     {
         var monthNode = htmlNode.SelectSingleNode("//div[contains(@class, 'info_fiche')]//b[starts-with(text(), 'Mois de début de diffusion :')]/following-sibling::text()[1]");
         if (monthNode == null || monthNode.InnerText.IsStringNullOrEmptyOrWhiteSpace())
@@ -592,34 +538,164 @@ public partial class Tanime
         return DateHelpers.GetMonthNumber(monthText);
     }
 
+    #endregion
 
-    internal static bool GetIsAdultContent(Uri animeSheetUri)
+    #region Classification
+    /// <summary>
+    /// Retourne le public visé de l'animé
+    /// </summary>
+    /// <param name="htmlNode"></param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
+    private static async Task<Ttarget?> ScrapTargetAsync(HtmlNode htmlNode, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        var node = htmlNode.SelectSingleNode("//div[contains(@class, 'info_fiche')]//b[starts-with(text(), 'Public visé :')]/following-sibling::text()[1]");
+        var text = node?.InnerText?.Trim();
+        if (text == null || text.IsStringNullOrEmptyOrWhiteSpace())
+            return null;
+
+        Ttarget? record = new()
+        {
+            Name = text,
+            Section = IcotakuSection.Anime,
+        };
+
+        return await Ttarget.SingleOrCreateAsync(record, true, cancellationToken, cmd);
+    }
+
+    internal static bool ScrapIsAdultContent(Uri animeSheetUri)
     {
         HtmlWeb web = new();
         var htmlDocument = web.Load(animeSheetUri.ToString());
-        return GetIsAdultContent(htmlDocument.DocumentNode);
+        return ScrapIsAdultContent(htmlDocument.DocumentNode);
     }
 
-    internal static bool GetIsAdultContent(HtmlNode htmlNode)
+    internal static bool ScrapIsAdultContent(HtmlNode htmlNode)
     {
         var node = htmlNode.SelectSingleNode("//div[@id='divFicheHentai']");
         return node != null;
     }
 
-    internal static bool GetIsExplicitContent(Uri animeSheetUri)
+    internal static bool ScrapIsExplicitContent(Uri animeSheetUri)
     {
         HtmlWeb web = new();
         var htmlDocument = web.Load(animeSheetUri.ToString());
-        return GetIsExplicitContent(htmlDocument.DocumentNode);
+        return ScrapIsExplicitContent(htmlDocument.DocumentNode);
     }
 
-    internal static bool GetIsExplicitContent(HtmlNode htmlNode)
+    internal static bool ScrapIsExplicitContent(HtmlNode htmlNode)
     {
-        if (GetIsAdultContent(htmlNode))
+        if (ScrapIsAdultContent(htmlNode))
             return true;
         var node = htmlNode.SelectSingleNode("//div[@id='divFicheError']");
         return node != null;
     }
+    #endregion
+
+    #region Categories
+    /// <summary>
+    /// Retourne les catégories de l'animé
+    /// </summary>
+    /// <param name="htmlNode"></param>
+    /// <param name="categoryType"></param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
+    private static async IAsyncEnumerable<Tcategory> GetCategoriesAsync(HtmlNode htmlNode, CategoryType categoryType, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        HtmlNode[]? nodes = categoryType switch
+        {
+            CategoryType.Genre => htmlNode.SelectNodes("//span[@id='id_genre']/a[contains(@href, '/genre/')]")?.ToArray(),
+            CategoryType.Theme => htmlNode.SelectNodes("//span[@id='id_theme']/a[contains(@href, '/theme/')]")?.ToArray(),
+            _ => null
+        };
+
+        if (nodes == null || nodes.Length == 0)
+            yield break;
+
+        foreach (var node in nodes)
+        {
+            var name = HttpUtility.HtmlDecode(node.InnerText?.Trim())?.Trim();
+            if (name == null || name.IsStringNullOrEmptyOrWhiteSpace())
+                continue;
+
+            //Récupère l'url de la fiche du thème ou du genre
+            var uri = IcotakuWebHelpers.GetFullHrefFromHtmlNode(node, IcotakuSection.Anime);
+            if (uri == null)
+                continue;
+
+            var category = Tcategory.ScrapCategoryFromSheetPage(uri, IcotakuSection.Anime, categoryType);
+            if (category == null)
+                continue;
+
+            category = await Tcategory.SingleOrCreateAsync(category, true, cancellationToken, cmd);
+            if (category == null)
+                continue;
+
+            yield return category;
+        }
+    }
+    #endregion
+
+    #region Studios
+    /// <summary>
+    /// Retourne les studios d'aimation de l'animé
+    /// </summary>
+    /// <param name="htmlNode"></param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
+    private static async IAsyncEnumerable<Tcontact> ScrapStudioAsync(HtmlNode htmlNode, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        var _node = htmlNode.SelectSingleNode("//div[contains(@class, 'info_fiche')]//b[starts-with(text(), 'Studio')]");
+        if (_node == null)
+            yield break;
+
+        var nodes = _node.ParentNode?.SelectNodes("./a")?.ToArray();
+        if (nodes == null || nodes.Length == 0)
+            yield break;
+
+        foreach (var node in nodes)
+        {
+            //Récupère le nom d'affichage du studio
+            var displayName = node?.InnerText?.Trim();
+            if (displayName == null || displayName.IsStringNullOrEmptyOrWhiteSpace())
+                continue;
+
+            //Récupère l'url de la fiche du studio
+            var href = node?.Attributes["href"]?.Value;
+            if (href == null || href.IsStringNullOrEmptyOrWhiteSpace())
+                continue;
+
+            //Créer l'url de la fiche du studio
+            href = IcotakuWebHelpers.GetBaseUrl(IcotakuSection.Anime) + href;
+            if (!Uri.TryCreate(href, UriKind.Absolute, out var uri) || !uri.IsAbsoluteUri)
+                continue;
+
+            //Récupère l'id de la fiche du studio
+            var sheetId = IcotakuWebHelpers.GetSheetId(uri);
+            if (sheetId == null)
+                continue;
+
+            await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+            var record = await Tcontact.SingleAsync(uri, cancellationToken, command);
+            if (record != null)
+            {
+                yield return record;
+                continue;
+            }
+
+            record = new Tcontact(sheetId.Value, ContactType.Studio, uri, displayName);
+            var result = await record.InsertAync(cancellationToken, command);
+            if (!result.IsSuccess)
+                continue;
+
+            yield return record;
+        }
+    } 
+    #endregion
+
 
     #region Thumbnail
 
@@ -634,10 +710,10 @@ public partial class Tanime
         HtmlWeb web = new();
         var htmlDocument = web.Load(ficheAnimeUri.OriginalString);
 
-        return GetFullThumbnail(htmlDocument.DocumentNode);
+        return SCrapFullThumbnail(htmlDocument.DocumentNode);
     }
 
-    public static string? GetFullThumbnail(HtmlNode htmlNode)
+    public static string? SCrapFullThumbnail(HtmlNode htmlNode)
     {
 
         //Récupère le noeud de l'image de la vignette
@@ -653,9 +729,15 @@ public partial class Tanime
             return null;
 
         //Sinon on retourne null
-        var uri = Main.GetImageFromSrc(IcotakuSection.Anime, src);
-        return uri == null ? null : uri.ToString();
+        var uri = IcotakuWebHelpers.GetImageFromSrc(IcotakuSection.Anime, src);
+        return uri?.ToString();
     }
+
+    [GeneratedRegex(@"\d+(\.\d+)?(?=/10)")]
+    private static partial Regex GetNoteRegex();
+
+    [GeneratedRegex(@"(\d+)")]
+    private static partial Regex GetVoteCountRegex();
 
     #endregion
 }

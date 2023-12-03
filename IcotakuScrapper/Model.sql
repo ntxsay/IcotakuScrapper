@@ -189,6 +189,8 @@ CREATE TABLE IF NOT EXISTS Tanime
     SheetId           INTEGER NOT NULL DEFAULT 0, -- Id de la fiche (anime, manga, etc)
     Url               TEXT    NOT NULL UNIQUE,    -- Url de la fiche (anime, manga, etc)
     Name              TEXT    NOT NULL,           -- Nom de la fiche (anime, manga, etc)
+    Note              REAL    NULL,               -- Note de l'animé
+    VoteCount         INTEGER NOT NULL DEFAULT 0, -- Nombre de vote
     IsAdultContent    INTEGER NOT NULL DEFAULT 0, -- Est-ce un anime pour adulte ?
     IsExplicitContent INTEGER NOT NULL DEFAULT 0, -- Est-ce un anime qui contient des scènes particulièrement violentes ou sexuellement explicites sans pour autant être pornographique ?
     EpisodeCount      INTEGER NOT NULL DEFAULT 0, -- Nombre d'épisode
@@ -344,7 +346,8 @@ CREATE TABLE IF NOT EXISTS TanimeDailyPlanning
     NoEpisode         INTEGER NOT NULL,           -- Numéro de l'épisode
     EpisodeName       TEXT    NULL,
     NoDay             INTEGER NOT NULL,           -- Numéro du jour de diffusion
-    Description       TEXT    NULL
+    Description       TEXT    NULL,
+    ThumbnailUrl      TEXT    NULL                -- Url de l'image de l'animé
 );
 -- endregion
 

@@ -1,5 +1,6 @@
 ﻿using HtmlAgilityPack;
 using IcotakuScrapper.Extensions;
+using IcotakuScrapper.Helpers;
 using Microsoft.Data.Sqlite;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
@@ -60,7 +61,7 @@ public partial class TanimeDailyPlanning
         if (dates is null || dates.Count == 0)
             yield break;
 
-        HashSet<(int sheetId, bool isAdultContent, bool isExplicitContent)> additionalContentList = [];
+        HashSet<(int sheetId, bool isAdultContent, bool isExplicitContent, string? thumbnailUrl)> additionalContentList = [];
         foreach (var date in dates)
         {
             foreach (var animePlanning in ScrapPlanningFromIcotaku(date, date, additionalContentList, cancellationToken, cmd))
@@ -82,7 +83,7 @@ public partial class TanimeDailyPlanning
 
     internal static IEnumerable<TanimeDailyPlanning> GetAnimeMonthRangePlanning(DateOnly minDate, DateOnly maxDate, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
-        HashSet<(int sheetId, bool isAdultContent, bool isExplicitContent)> additionalContentList = [];
+        HashSet<(int sheetId, bool isAdultContent, bool isExplicitContent, string? thumbnailUrl)> additionalContentList = [];
 
         int value = DateTime.Compare(minDate.ToDateTime(default), maxDate.ToDateTime(default));
         if (value == 0) //minDate == maxDate
@@ -103,7 +104,7 @@ public partial class TanimeDailyPlanning
         }
     }
 
-    private static IEnumerable<TanimeDailyPlanning> ScrapPlanningFromIcotaku(DateOnly minDate, DateOnly maxDate, HashSet<(int sheetId, bool isAdultContent, bool isExplicitContent)> additionalContentList, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    private static IEnumerable<TanimeDailyPlanning> ScrapPlanningFromIcotaku(DateOnly minDate, DateOnly maxDate, HashSet<(int sheetId, bool isAdultContent, bool isExplicitContent, string? thumbnailUrl)> additionalContentList, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         int value = DateTime.Compare(minDate.ToDateTime(default), maxDate.ToDateTime(default));
         if (value > 0)
@@ -161,11 +162,11 @@ public partial class TanimeDailyPlanning
                 if (animeSheetUrl == null || animeSheetUrl.IsStringNullOrEmptyOrWhiteSpace())
                     continue;
 
-                var animeSheetUri = Main.GetFullHrefFromRelativePath(animeSheetUrl, IcotakuSection.Anime);
+                var animeSheetUri = IcotakuWebHelpers.GetFullHrefFromRelativePath(animeSheetUrl, IcotakuSection.Anime);
                 if (animeSheetUri is null)
                     continue;
 
-                var animeSheetId = Main.GetSheetId(animeSheetUri);
+                var animeSheetId = IcotakuWebHelpers.GetSheetId(animeSheetUri);
                 if (animeSheetId is null)
                     continue;
 
@@ -207,23 +208,25 @@ public partial class TanimeDailyPlanning
 
     }
 
-    private static void AddAdditionalInfos(TanimeDailyPlanning planning, Uri animeSheetUri, ref HashSet<(int sheetId, bool isAdultContent, bool isExplicitContent)> additionalContentList)
+    private static void AddAdditionalInfos(TanimeDailyPlanning planning, Uri animeSheetUri, ref HashSet<(int sheetId, bool isAdultContent, bool isExplicitContent, string? thumbnailUrl)> additionalContentList)
     {
         var additionalContent = additionalContentList.FirstOrDefault(w => w.sheetId == planning.SheetId);
         if (!additionalContent.Equals(default))
         {
             planning.IsAdultContent = additionalContent.isAdultContent;
             planning.IsExplicitContent = additionalContent.isExplicitContent;
+            planning.ThumbnailUrl = additionalContent.thumbnailUrl;
             return;
         }
 
         HtmlWeb web = new();
         var htmlDocument = web.Load(animeSheetUri.ToString());
 
-        planning.IsAdultContent = Tanime.GetIsAdultContent(htmlDocument.DocumentNode);
-        planning.IsExplicitContent = planning.IsAdultContent || Tanime.GetIsExplicitContent(htmlDocument.DocumentNode);
+        planning.IsAdultContent = Tanime.ScrapIsAdultContent(htmlDocument.DocumentNode);
+        planning.IsExplicitContent = planning.IsAdultContent || Tanime.ScrapIsExplicitContent(htmlDocument.DocumentNode);
+        planning.ThumbnailUrl = Tanime.SCrapFullThumbnail(htmlDocument.DocumentNode);
 
-        additionalContentList.Add((planning.SheetId, planning.IsAdultContent, planning.IsExplicitContent));
+        additionalContentList.Add((planning.SheetId, planning.IsAdultContent, planning.IsExplicitContent, planning.ThumbnailUrl));
     }
 
     [GeneratedRegex("(\\d+)")]

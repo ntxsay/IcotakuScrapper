@@ -15,6 +15,16 @@ public class TanimeBase
     /// Obtient ou définit l'id de la fiche Icotaku de l'anime.
     /// </summary>
     public int SheetId { get; set; }
+    
+    /// <summary>
+    /// Obtient ou définit la note de l'anime sur 10.
+    /// </summary>
+    public double? Note { get; set; }
+    
+    /// <summary>
+    /// Obtient ou définit le nombre de votes de l'anime.
+    /// </summary>
+    public uint VoteCount { get; set; }
 
     /// <summary>
     /// Obtient ou définit une valeur indiquant si l'anime est réservé à un public adulte.
@@ -346,9 +356,13 @@ public class TanimeBase
                     Url = reader.GetString(reader.GetOrdinal("AnimeUrl")),
                     IsAdultContent = reader.GetBoolean(reader.GetOrdinal("AnimeIsAdultContent")),
                     IsExplicitContent = reader.GetBoolean(reader.GetOrdinal("AnimeIsExplicitContent")),
+                    VoteCount = (uint)reader.GetInt32(reader.GetOrdinal("AnimeVoteCount")),
                     SheetId = reader.GetInt32(reader.GetOrdinal("AnimeSheetId")),
                     DiffusionState = (DiffusionStateKind)reader.GetByte(reader.GetOrdinal("DiffusionState")),
                     EpisodesCount = (ushort)reader.GetInt16(reader.GetOrdinal("EpisodeCount")),
+                    Note = reader.IsDBNull(reader.GetOrdinal("AnimeNote"))
+                        ? null
+                        : reader.GetDouble(reader.GetOrdinal("AnimeNote")),
                     ThumbnailUrl = reader.IsDBNull(reader.GetOrdinal("AnimeThumbnailUrl"))
                         ? null
                         : reader.GetString(reader.GetOrdinal("AnimeThumbnailUrl")),
@@ -417,6 +431,8 @@ public class TanimeBase
             Tanime.Name AS AnimeName,
             Tanime.IsAdultContent AS AnimeIsAdultContent,
             Tanime.IsExplicitContent AS AnimeIsExplicitContent,
+            Tanime.Note AS AnimeNote,
+            Tanime.VoteCount AS AnimeVoteCount,
             Tanime.Url AS AnimeUrl,
             Tanime.SheetId AS AnimeSheetId,
             Tanime.DiffusionState,

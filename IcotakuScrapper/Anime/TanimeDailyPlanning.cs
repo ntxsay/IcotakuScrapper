@@ -16,6 +16,9 @@ public enum AnimeDailyPlanningSortBy : byte
     SheetId,
 }
 
+/// <summary>
+/// Représente un épisode d'un anime dans le planning quotidien.
+/// </summary>
 public partial class TanimeDailyPlanning
 {
     private const string ReleaseDateFormat = "yyyy-MM-dd";
@@ -40,6 +43,11 @@ public partial class TanimeDailyPlanning
     public DayOfWeek Day { get; set; }
     public string? LiteralDay => DateHelpers.GetLiteralDay(Day);
     public string? Description { get; set; }
+    
+    /// <summary>
+    /// Obtient ou définit l'url de l'image de l'anime.
+    /// </summary>
+    public string? ThumbnailUrl { get; set; }
 
     public TanimeDailyPlanning()
     {
@@ -488,9 +496,9 @@ public partial class TanimeDailyPlanning
         command.CommandText =
             """
             INSERT INTO TanimeDailyPlanning
-                (SheetId, Url, IsAdultContent, IsExplicitContent, AnimeName, ReleaseDate, NoEpisode, EpisodeName, NoDay, Description)
+                (SheetId, Url, IsAdultContent, IsExplicitContent, AnimeName, ReleaseDate, NoEpisode, EpisodeName, NoDay, Description, ThumbnailUrl)
             VALUES
-                ($SheetId, $Url, $IsAdultContent, $IsExplicitContent, $AnimeName, $ReleaseDate, $NoEpisode, $EpisodeName, $NoDay, $Description)
+                ($SheetId, $Url, $IsAdultContent, $IsExplicitContent, $AnimeName, $ReleaseDate, $NoEpisode, $EpisodeName, $NoDay, $Description, $ThumbnailUrl)
             """;
 
         if (command.Parameters.Count > 0)
@@ -506,6 +514,7 @@ public partial class TanimeDailyPlanning
         command.Parameters.AddWithValue("$EpisodeName", EpisodeName ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$NoDay", (byte)Day);
         command.Parameters.AddWithValue("$Description", Description ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$ThumbnailUrl", ThumbnailUrl ?? (object)DBNull.Value);
 
         try
         {
@@ -533,7 +542,7 @@ public partial class TanimeDailyPlanning
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
 
         command.StartWithInsertMode(insertMode);
-        command.CommandText += " INTO TanimeDailyPlanning (SheetId, Url, IsAdultContent, IsExplicitContent, AnimeName, ReleaseDate, NoEpisode, EpisodeName, NoDay, Description) VALUES";
+        command.CommandText += " INTO TanimeDailyPlanning (SheetId, Url, IsAdultContent, IsExplicitContent, AnimeName, ReleaseDate, NoEpisode, EpisodeName, NoDay, Description, ThumbnailUrl) VALUES";
         command.Parameters.Clear();
 
         for (var i = 0; i < values.Count; i++)
@@ -541,7 +550,7 @@ public partial class TanimeDailyPlanning
             var planning = values.ElementAt(i);
             
             command.CommandText += Environment.NewLine +
-                                   $"($SheetId{i}, $Url{i}, $IsAdultContent{i}, $IsExplicitContent{i}, $AnimeName{i}, $ReleaseDate{i}, $NoEpisode{i}, $EpisodeName{i}, $NoDay{i}, $Description{i})";
+                                   $"($SheetId{i}, $Url{i}, $IsAdultContent{i}, $IsExplicitContent{i}, $AnimeName{i}, $ReleaseDate{i}, $NoEpisode{i}, $EpisodeName{i}, $NoDay{i}, $Description{i}, $ThumbnailUrl{i})";
 
             command.Parameters.AddWithValue($"$SheetId{i}", planning.SheetId);
             command.Parameters.AddWithValue($"$Url{i}", planning.Url);
@@ -553,6 +562,7 @@ public partial class TanimeDailyPlanning
             command.Parameters.AddWithValue($"$EpisodeName{i}", planning.EpisodeName ?? (object)DBNull.Value);
             command.Parameters.AddWithValue($"$NoDay{i}", (byte)planning.Day);
             command.Parameters.AddWithValue($"$Description{i}", planning.Description ?? (object)DBNull.Value);
+            command.Parameters.AddWithValue($"$ThumbnailUrl{i}", planning.ThumbnailUrl ?? (object)DBNull.Value);
 
             if (i == values.Count - 1)
                 command.CommandText += ";";
@@ -600,7 +610,8 @@ public partial class TanimeDailyPlanning
                 NoEpisode = $NoEpisode,
                 EpisodeName = $EpisodeName,
                 NoDay = $NoDay,
-                Description = $Description
+                Description = $Description,
+                ThumbnailUrl = $ThumbnailUrl
             WHERE Id = $Id
             """;
 
@@ -617,6 +628,7 @@ public partial class TanimeDailyPlanning
         command.Parameters.AddWithValue("$EpisodeName", EpisodeName ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$NoDay", (byte)Day);
         command.Parameters.AddWithValue("$Description", Description ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$ThumbnailUrl", ThumbnailUrl ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$Id", Id);
 
         try
@@ -743,6 +755,9 @@ public partial class TanimeDailyPlanning
                 Description = reader.IsDBNull(reader.GetOrdinal("BaseDescription"))
                         ? null
                         : reader.GetString(reader.GetOrdinal("BaseDescription")),
+                ThumbnailUrl = reader.IsDBNull(reader.GetOrdinal("BaseThumbnailUrl"))
+                        ? null
+                        : reader.GetString(reader.GetOrdinal("BaseThumbnailUrl"))
             };
 
             var animeBase = await TanimeBase.SingleAsync(animeSheetId, SheetIntColumnSelect.SheetId, cancellationToken);
@@ -766,7 +781,8 @@ public partial class TanimeDailyPlanning
             TanimeDailyPlanning.NoEpisode,
             TanimeDailyPlanning.EpisodeName,
             TanimeDailyPlanning.NoDay,
-            TanimeDailyPlanning.Description AS BaseDescription
+            TanimeDailyPlanning.Description AS BaseDescription,
+            TanimeDailyPlanning.ThumbnailUrl AS BaseThumbnailUrl
         FROM
             TanimeDailyPlanning
         """;

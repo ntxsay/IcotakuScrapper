@@ -16,6 +16,16 @@ namespace IcotakuScrapper.Helpers
             _ => null
         };
 
+        public static string? GetHostName(IcotakuSection section) => section switch
+        {
+            IcotakuSection.Anime => "anime.icotaku.com",
+            IcotakuSection.Manga => "manga.icotaku.com",
+            IcotakuSection.LightNovel => "novel.icotaku.com",
+            IcotakuSection.Drama => "drama.icotaku.com",
+            IcotakuSection.Community => "communaute.icotaku.com",
+            _ => null
+        };
+
         public static IcotakuSection? GetIcotakuSection(Uri sheetUri)
         {
             var host = sheetUri.Host;

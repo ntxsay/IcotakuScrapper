@@ -96,11 +96,11 @@ public partial class TanimeSeasonalPlanning
                 if (aNode.Attributes["href"]?.Value == null || aNode.Attributes["href"].Value.IsStringNullOrEmptyOrWhiteSpace())
                     continue;
 
-                var animeUri = Main.GetFullHrefFromRelativePath(aNode.Attributes["href"].Value, IcotakuSection.Anime);
+                var animeUri = IcotakuWebHelpers.GetFullHrefFromRelativePath(aNode.Attributes["href"].Value, IcotakuSection.Anime);
                 if (animeUri is null)
                     continue;
 
-                var animeSheetId = Main.GetSheetId(animeUri);
+                var animeSheetId = IcotakuWebHelpers.GetSheetId(animeUri);
                 if (animeSheetId is null)
                     continue;
 
@@ -173,9 +173,9 @@ public partial class TanimeSeasonalPlanning
         HtmlWeb web = new();
         var htmlDocument = web.Load(animeSheetUri.ToString());
 
-        planning.IsAdultContent = Tanime.GetIsAdultContent(htmlDocument.DocumentNode);
-        planning.IsExplicitContent = planning.IsAdultContent || Tanime.GetIsExplicitContent(htmlDocument.DocumentNode);
-        planning.ThumbnailUrl = Tanime.GetFullThumbnail(htmlDocument.DocumentNode);
+        planning.IsAdultContent = Tanime.ScrapIsAdultContent(htmlDocument.DocumentNode);
+        planning.IsExplicitContent = planning.IsAdultContent || Tanime.ScrapIsExplicitContent(htmlDocument.DocumentNode);
+        planning.ThumbnailUrl = Tanime.SCrapFullThumbnail(htmlDocument.DocumentNode);
 
         additionalContentList.Add((planning.SheetId, planning.IsAdultContent, planning.IsExplicitContent, planning.ThumbnailUrl));
     }
