@@ -222,7 +222,7 @@ public class TanimeAlternativeTitle
             return new OperationState<int>(false, "Le titre est invalide.");
         
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        if (IdAnime <= 0 || !await Tanime.ExistsAsync(IdAnime, SheetIntColumnSelect.Id, cancellationToken, command))
+        if (IdAnime <= 0 || !await Tanime.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken, command))
             return new OperationState<int>(false, "L'anime n'existe pas.");
         
         if (await ExistsAsync(IdAnime, Title, cancellationToken, command))
@@ -270,7 +270,7 @@ public class TanimeAlternativeTitle
             return new OperationState(false, "Le titre est invalide.");
         
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        if (IdAnime <= 0 || !await Tanime.ExistsAsync(IdAnime, SheetIntColumnSelect.Id, cancellationToken, command))
+        if (IdAnime <= 0 || !await Tanime.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken, command))
             return new OperationState(false, "L'anime n'existe pas.");
         
         var existingId = await GetIdOfAsync(IdAnime, Title, cancellationToken, command);

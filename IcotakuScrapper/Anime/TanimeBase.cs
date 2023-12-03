@@ -1,5 +1,6 @@
 ﻿using IcotakuScrapper.Common;
 using IcotakuScrapper.Extensions;
+using IcotakuScrapper.Helpers;
 using Microsoft.Data.Sqlite;
 
 namespace IcotakuScrapper.Anime;
@@ -15,12 +16,12 @@ public class TanimeBase
     /// Obtient ou définit l'id de la fiche Icotaku de l'anime.
     /// </summary>
     public int SheetId { get; set; }
-    
+
     /// <summary>
     /// Obtient ou définit la note de l'anime sur 10.
     /// </summary>
     public double? Note { get; set; }
-    
+
     /// <summary>
     /// Obtient ou définit le nombre de votes de l'anime.
     /// </summary>
@@ -120,15 +121,25 @@ public class TanimeBase
         return 0;
     }
 
-    public static async Task<int> CountAsync(int id, SheetIntColumnSelect columnSelect,
+    public static async Task<int> CountAsync(int id, IntColumnSelect columnSelect,
         CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        var isColumnSelectValid = command.IsIntColumnValidated(columnSelect, new HashSet<IntColumnSelect>()
+        {
+            IntColumnSelect.Id,
+            IntColumnSelect.SheetId,
+        });
+
+        if (!isColumnSelectValid)
+        {
+            return 0;
+        }
         command.CommandText = columnSelect switch
         {
-            SheetIntColumnSelect.Id => "SELECT COUNT(Id) FROM Tanime WHERE Id = $Id",
-            SheetIntColumnSelect.SheetId => "SELECT COUNT(Id) FROM Tanime WHERE SheetId = $Id",
+            IntColumnSelect.Id => "SELECT COUNT(Id) FROM Tanime WHERE Id = $Id",
+            IntColumnSelect.SheetId => "SELECT COUNT(Id) FROM Tanime WHERE SheetId = $Id",
             _ => throw new ArgumentOutOfRangeException(nameof(columnSelect), columnSelect, null)
         };
 
@@ -258,7 +269,7 @@ public class TanimeBase
 
     #region Exists
 
-    public static async Task<bool> ExistsAsync(int id, SheetIntColumnSelect columnSelect,
+    public static async Task<bool> ExistsAsync(int id, IntColumnSelect columnSelect,
         CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
         => await CountAsync(id, columnSelect, cancellationToken, cmd) > 0;
@@ -280,17 +291,27 @@ public class TanimeBase
 
     #region Single
 
-    public static async Task<TanimeBase?> SingleAsync(int id, SheetIntColumnSelect columnSelect,
+    public static async Task<TanimeBase?> SingleAsync(int id, IntColumnSelect columnSelect,
         CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        var isColumnSelectValid = command.IsIntColumnValidated(columnSelect, new HashSet<IntColumnSelect>()
+        {
+            IntColumnSelect.Id,
+            IntColumnSelect.SheetId,
+        });
+
+        if (!isColumnSelectValid)
+        {
+            return null;
+        }
         command.CommandText = SqlSelectScript + Environment.NewLine;
 
         command.CommandText += columnSelect switch
         {
-            SheetIntColumnSelect.Id => "WHERE Tanime.Id = $Id",
-            SheetIntColumnSelect.SheetId => "WHERE Tanime.SheetId = $Id",
+            IntColumnSelect.Id => "WHERE Tanime.Id = $Id",
+            IntColumnSelect.SheetId => "WHERE Tanime.SheetId = $Id",
             _ => throw new ArgumentOutOfRangeException(nameof(columnSelect), columnSelect, null)
         };
 
@@ -335,6 +356,55 @@ public class TanimeBase
 
         var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         return !reader.HasRows ? null : (await GetRecords(reader, cancellationToken)).FirstOrDefault();
+    }
+
+    #endregion
+
+    #region Delete
+    public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        => await DeleteAsync(Id, SheetIntColumnSelect.Id, cancellationToken, cmd);
+
+    public static async Task<OperationState> DeleteAsync(int id, SheetIntColumnSelect columnSelect, CancellationToken? cancellationToken = null,
+        SqliteCommand? cmd = null)
+    {
+        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        command.CommandText =
+            """
+            DELETE FROM TanimeAlternativeTitle WHERE IdAnime = $Id;
+            DELETE FROM TanimeWebSite WHERE IdAnime = $Id;
+            DELETE FROM TanimeStudio WHERE IdAnime = $Id;
+            DELETE FROM TanimeLicense WHERE IdAnime = $Id;
+            DELETE FROM TanimeStaff WHERE IdAnime = $Id;
+            DELETE FROM TanimeCharacter WHERE IdAnime = $Id;
+            DELETE FROM Tanime WHERE Id = $Id;
+            """;
+
+        command.Parameters.Clear();
+
+        command.Parameters.AddWithValue("$Id", id);
+
+        try
+        {
+            var count = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
+            return new OperationState(true, $"{count} lignes supprimées");
+        }
+        catch (Exception e)
+        {
+            LogServices.LogDebug(e);
+            return new OperationState(false, "Une erreur est survenue lors de la suppression de l'anime");
+        }
+    }
+
+    public static async Task<OperationState> DeleteAsync(Uri uri, CancellationToken? cancellationToken = null,
+        SqliteCommand? cmd = null)
+    {
+        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+
+        var id = await GetIdOfAsync(uri, cancellationToken, command);
+        if (!id.HasValue)
+            return new OperationState(false, "L'anime n'a pas été trouvé");
+
+        return await DeleteAsync(id.Value, SheetIntColumnSelect.Id, cancellationToken, command);
     }
 
     #endregion

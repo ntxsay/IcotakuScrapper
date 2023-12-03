@@ -82,14 +82,25 @@ public partial class Tcategory
     /// <param name="cancellationToken"></param>
     /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<int> CountAsync(int id, SheetIntColumnSelect columnSelect, CancellationToken? cancellationToken = null,
+    public static async Task<int> CountAsync(int id, IntColumnSelect columnSelect, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        var isColumnSelectValid = command.IsIntColumnValidated(columnSelect,
+        [
+            IntColumnSelect.Id,
+            IntColumnSelect.SheetId,
+        ]);
+
+        if (!isColumnSelectValid)
+        {
+            return 0;
+        }
+
         command.CommandText = columnSelect switch
         {
-            SheetIntColumnSelect.Id => "SELECT COUNT(Id) FROM Tcategory WHERE Id = $Id",
-            SheetIntColumnSelect.SheetId => "SELECT COUNT(Id) FROM Tcategory WHERE SheetId = $Id",
+            IntColumnSelect.Id => "SELECT COUNT(Id) FROM Tcategory WHERE Id = $Id",
+            IntColumnSelect.SheetId => "SELECT COUNT(Id) FROM Tcategory WHERE SheetId = $Id",
             _ => throw new ArgumentOutOfRangeException(nameof(columnSelect), columnSelect, null)
         };
 
@@ -219,7 +230,7 @@ public partial class Tcategory
 
     #region Exists
 
-    public static async Task<bool> ExistsAsync(int id, SheetIntColumnSelect columnSelect, CancellationToken? cancellationToken = null,
+    public static async Task<bool> ExistsAsync(int id, IntColumnSelect columnSelect, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
         => await CountAsync(id, columnSelect, cancellationToken, cmd) > 0;
 
@@ -634,7 +645,11 @@ public partial class Tcategory
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "DELETE FROM Tcategory WHERE Id = $Id";
+        command.CommandText = 
+            """
+            DELETE FROM TanimeCategory WHERE IdCategory = $Id;
+            DELETE FROM Tcategory WHERE Id = $Id
+            """;
 
         command.Parameters.Clear();
 

@@ -61,15 +61,16 @@ CREATE TABLE IF NOT EXISTS TorigineAdaptation
 );
 -- endregion
 
--- region Table TlicenceType
+-- region Table TlicenseType
 /*
- Création de la table TlicenceType qui permet 
+ Création de la table TlicenseType qui permet 
  d'enregistrer le type de licence des fiches des animés ou autres
  */
-DROP TABLE IF EXISTS TlicenceType;
-CREATE TABLE IF NOT EXISTS TlicenceType
+DROP TABLE IF EXISTS TlicenseType;
+CREATE TABLE IF NOT EXISTS TlicenseType
 (
     Id          INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
+    Section     INTEGER NOT NULL,        -- Section de la catégorie (ANime, Manga, etc)
     Name        TEXT    NOT NULL UNIQUE, -- Nom du type de licence (VOD, physique, simulcast, streaming, etc)
     Description TEXT    NULL
 );
@@ -169,7 +170,8 @@ CREATE TABLE IF NOT EXISTS Tcontact
     OriginalName TEXT    NULL,
     Age          INTEGER NULL,
     BirthDate    TEXT    NULL,
-    Presentation TEXT    NULL
+    Presentation TEXT    NULL,
+    ThumbnailUrl      TEXT    NULL              -- Url de l'image du personnage
 );
 -- endregion
 
@@ -269,13 +271,13 @@ CREATE TABLE IF NOT EXISTS TanimeStudio
  Création de la table tanimeStudio qui permet 
  de lier les distributeurs aux fiches anime
  */
-DROP TABLE IF EXISTS TanimeLicence;
-CREATE TABLE IF NOT EXISTS TanimeLicence
+DROP TABLE IF EXISTS TanimeLicense;
+CREATE TABLE IF NOT EXISTS TanimeLicense
 (
     Id            INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
     IdAnime       INTEGER NOT NULL REFERENCES Tanime (Id) ON DELETE CASCADE,
     IdDistributor INTEGER NOT NULL REFERENCES Tcontact (Id) ON DELETE CASCADE,
-    IdLicenceType INTEGER NULL REFERENCES TlicenceType (Id) ON DELETE CASCADE
+    IdLicenseType INTEGER NOT NULL REFERENCES TlicenseType (Id) ON DELETE CASCADE
 );
 -- endregion
 

@@ -56,12 +56,14 @@ public partial class Tanime : TanimeBase
     /// <summary>
     /// Obtient ou définit la liste des studios de l'anime.
     /// </summary>
-    public HashSet<Tcontact> Studios { get; } = new();
+    public HashSet<TcontactBase> Studios { get; } = new();
     
     /// <summary>
     /// Obtient ou définit la liste des épisodes de l'anime.
     /// </summary>
     public HashSet<TanimeEpisode> Episodes { get; } = new();
+    
+    public HashSet<TanimeLicense> Licenses { get; } = new();
 
 
     /// <summary>
@@ -148,7 +150,7 @@ public partial class Tanime : TanimeBase
 
     #region Single
 
-    public new static async Task<Tanime?> SingleAsync(int id, SheetIntColumnSelect columnSelect, CancellationToken? cancellationToken = null,
+    public static async Task<Tanime?> SingleAsync(int id, SheetIntColumnSelect columnSelect, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
@@ -280,7 +282,7 @@ public partial class Tanime : TanimeBase
                 }
             
             if (Studios.Count > 0)
-                _ = await TanimeStudio.InsertAsync(Id, Studios.Select(s => s.Id).ToArray(), cancellationToken, command);
+                _ = await TanimeStudio.InsertAsync(Id, Studios.Select(s => s.Id).ToArray(), DbInsertMode.InsertOrReplace, cancellationToken, command);
 
             if (Categories.Count > 0)
                 _ = await TanimeCategory.InsertAsync(Id, Categories.Select(s => s.Id).ToArray(), cancellationToken, command);
@@ -288,6 +290,9 @@ public partial class Tanime : TanimeBase
             if (Episodes.Count > 0)
                 _ = await TanimeEpisode.InsertAsync(Id, Episodes.DistinctBy(d => d.EpisodeNumber).ToArray(), cancellationToken, command);
 
+            if (Licenses.Count > 0)
+                _ = await TanimeLicense.InsertAsync(Id, Licenses.ToArray(), DbInsertMode.InsertOrReplace, cancellationToken, command);
+            
             return new OperationState<int>(true, "L'anime a été ajouté avec succès", Id);
 
         }
@@ -317,7 +322,7 @@ public partial class Tanime : TanimeBase
             return new OperationState(false, "L'url de la fiche de l'anime n'est pas valide");
 
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        if (Id <= 0 || !await ExistsAsync(Id, SheetIntColumnSelect.Id, cancellationToken, command))
+        if (Id <= 0 || !await ExistsAsync(Id, IntColumnSelect.Id, cancellationToken, command))
             return new OperationState(false, "L'id de l'anime ne peut pas être inférieur ou égal à 0");
         
         var existingId = await GetIdOfAsync(Name, SheetId, uri, cancellationToken, command);
@@ -387,53 +392,7 @@ public partial class Tanime : TanimeBase
     }
 
     #endregion
-
-    #region Delete
-    public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
-        => await DeleteAsync(Id, SheetIntColumnSelect.Id, cancellationToken, cmd);
-
-    public static async Task<OperationState> DeleteAsync(int id, SheetIntColumnSelect columnSelect, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-    {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "DELETE FROM TanimeAlternativeTitle WHERE IdAnime = $Id;";
-        command.CommandText += Environment.NewLine + "DELETE FROM tanimeWebSite WHERE IdAnime = $Id;";
-        command.CommandText += Environment.NewLine + "DELETE FROM tanimeStudio WHERE IdAnime = $Id;";
-        command.CommandText += Environment.NewLine + "DELETE FROM tanimeLicence WHERE IdAnime = $Id;";
-        command.CommandText += Environment.NewLine + "DELETE FROM tanimeStaff WHERE IdAnime = $Id;";
-        command.CommandText += Environment.NewLine + "DELETE FROM tanimeCharacter WHERE IdAnime = $Id;";
-        command.CommandText += Environment.NewLine + "DELETE FROM Tanime WHERE Id = $Id;";
-        
-        command.Parameters.Clear();
-        
-        command.Parameters.AddWithValue("$Id", id);
-        
-        try
-        {
-            var countAffectedRows = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
-            return new OperationState(true, $"{countAffectedRows} lignes affectées");
-        }
-        catch (Exception e)
-        {
-            Debug.WriteLine(e.Message);
-            return new OperationState(false, "Une erreur est survenue lors de la suppression de l'anime");
-        }
-    }
-
-    public static async Task<OperationState> DeleteAsync(Uri uri, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-    {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-
-        var id = await GetIdOfAsync(uri, cancellationToken, command);
-        if (!id.HasValue)
-            return new OperationState(false, "L'anime n'a pas été trouvé");
-
-        return await DeleteAsync(id.Value, SheetIntColumnSelect.Id, cancellationToken, command);
-    }
-
-    #endregion
-
+    
     private static async Task<Tanime[]> GetRecords(SqliteDataReader reader,
         CancellationToken? cancellationToken = null)
     {
@@ -568,9 +527,21 @@ public partial class Tanime : TanimeBase
                 var studio = anime.Studios.FirstOrDefault(x => x.Id == studioId);
                 if (studio == null)
                 {
-                    studio = await Tcontact.SingleAsync(studioId, SheetIntColumnSelect.Id, cancellationToken);
+                    studio = await TcontactBase.SingleAsync(studioId, IntColumnSelect.Id, cancellationToken);
                     if (studio != null)
                         anime.Studios.Add(studio);
+                }
+            }
+            
+            if (!reader.IsDBNull(reader.GetOrdinal("LicenseId")))
+            {
+                var licenseId = reader.GetInt32(reader.GetOrdinal("LicenseId"));
+                var license = anime.Licenses.FirstOrDefault(x => x.Id == licenseId);
+                if (license == null)
+                {
+                    license = await TanimeLicense.SingleAsync(licenseId, cancellationToken);
+                    if (license != null)
+                        anime.Licenses.Add(license);
                 }
             }
 
@@ -648,6 +619,7 @@ public partial class Tanime : TanimeBase
             TanimeWebSite.Description AS WebSiteDescription,
             
             TanimeStudio.IdStudio AS StudioId,
+            TanimeLicense.IdLicenseType AS LicenseId,
             
             TanimeCategory.IdCategory AS CategoryId,
             Tcategory.SheetId AS CategorySheetId,
@@ -667,5 +639,6 @@ public partial class Tanime : TanimeBase
         LEFT JOIN main.TanimeCategory on Tanime.Id = TanimeCategory.IdAnime
         LEFT JOIN main.Tcategory on Tcategory.Id = TanimeCategory.IdCategory
         LEFT JOIN main.TanimeStudio on Tanime.Id = TanimeStudio.IdAnime
+        LEFT JOIN main.TanimeLicense on Tanime.Id = TanimeLicense.IdAnime
         """;
 }

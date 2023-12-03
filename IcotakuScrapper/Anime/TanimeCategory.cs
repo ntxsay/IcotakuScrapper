@@ -1,8 +1,7 @@
-﻿using System.Diagnostics;
-using IcotakuScrapper.Common;
-using IcotakuScrapper.Contact;
+﻿using IcotakuScrapper.Common;
 using IcotakuScrapper.Extensions;
 using Microsoft.Data.Sqlite;
+using System.Diagnostics;
 
 namespace IcotakuScrapper.Anime;
 
@@ -193,12 +192,12 @@ public class TanimeCategory
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        if (IdAnime <= 0 || !await Tanime.ExistsAsync(IdAnime, SheetIntColumnSelect.Id, cancellationToken, command))
+        if (IdAnime <= 0 || !await Tanime.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken, command))
             return new OperationState<int>(false, "L'anime n'existe pas.", 0);
 
 
         if (Category.Id <= 0 ||
-            !await Tcontact.ExistsAsync(Category.Id, SheetIntColumnSelect.Id, cancellationToken, command))
+            !await Tcategory.ExistsAsync(Category.Id, IntColumnSelect.Id, cancellationToken, command))
             return new OperationState<int>(false, "Le studio n'existe pas.", 0);
 
         if (await ExistsAsync(IdAnime, Category.Id, cancellationToken, command))
@@ -231,7 +230,7 @@ public class TanimeCategory
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        if (idAnime <= 0 || !await Tanime.ExistsAsync(idAnime, SheetIntColumnSelect.Id, cancellationToken, command))
+        if (idAnime <= 0 || !await Tanime.ExistsAsync(idAnime, IntColumnSelect.Id, cancellationToken, command))
             return new OperationState(false, "L'anime n'existe pas.");
 
         if (idCategoryValues.Count == 0)
@@ -291,11 +290,11 @@ public class TanimeCategory
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
 
-        if (IdAnime <= 0 || !await Tanime.ExistsAsync(IdAnime, SheetIntColumnSelect.Id, cancellationToken, command))
+        if (IdAnime <= 0 || !await TanimeBase.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken, command))
             return new OperationState(false, "L'anime n'existe pas.");
 
         if (Category.Id <= 0 ||
-            !await Tcontact.ExistsAsync(Category.Id, SheetIntColumnSelect.Id, cancellationToken, command))
+            !await Tcategory.ExistsAsync(Category.Id, IntColumnSelect.Id, cancellationToken, command))
             return new OperationState(false, "Le studio n'existe pas.");
 
         var existingId = await GetIdOfAsync(IdAnime, Category.Id, cancellationToken, command);

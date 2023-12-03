@@ -39,6 +39,16 @@
         /// Représente la colonne "IdStudio".
         /// </summary>
         IdStudio,
+        
+        /// <summary>
+        /// Représente la colonne "IdDistributor".
+        /// </summary>
+        IdDistributor,
+        
+        /// <summary>
+        /// Représente la colonne "IdLicenseType".
+        /// </summary>
+        IdLicenseType,
     }
 
     /// <summary>

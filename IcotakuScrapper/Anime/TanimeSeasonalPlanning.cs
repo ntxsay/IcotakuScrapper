@@ -749,7 +749,7 @@ public partial class TanimeSeasonalPlanning
                     
                 };
                 
-                var animeBase = await TanimeBase.SingleAsync(animeSheetId, SheetIntColumnSelect.SheetId, cancellationToken);
+                var animeBase = await TanimeBase.SingleAsync(animeSheetId, IntColumnSelect.SheetId, cancellationToken);
                 if (animeBase is not null)
                     record.Anime = animeBase;
 
