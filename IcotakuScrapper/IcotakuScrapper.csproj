@@ -4,7 +4,25 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <Title>IcotakuScrapper</Title>
+    <PackageProjectUrl>https://github.com/ntxsay/IcotakuScrapper</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/ntxsay/IcotakuScrapper</RepositoryUrl>
+    <PackageTags>anime;scraping;icotaku;manga;animé;japanimation</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <Description>IcotakuScrapper vous permet l'obtention et le stockage local d’informations détaillées sur les animés depuis le site web d’Icotaku.com vers une base de données SQLite.</Description>
+    <Authors>ntxsay</Authors>
+    <Version>1.0.0-alpha</Version>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="HtmlAgilityPack" Version="1.11.54" />

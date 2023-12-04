@@ -4,7 +4,6 @@ using IcotakuScrapper.Contact;
 using IcotakuScrapper.Extensions;
 using IcotakuScrapper.Helpers;
 using Microsoft.Data.Sqlite;
-using System.Diagnostics;
 using System.Text.RegularExpressions;
 using System.Web;
 
@@ -173,6 +172,11 @@ public partial class Tanime
                     anime.Episodes.Add(episode);
 
                 anime.ReleaseDate = episodes.Min(m => m.ReleaseDate).ToString("yyyy-MM-dd");
+                if (anime.EpisodesCount == episodes.Length)
+                {
+                    var endDate = episodes.Max(m => m.ReleaseDate);
+                    anime.EndDate = endDate.ToString("yyyy-MM-dd");
+                }
             }
 
             return new OperationState<Tanime?>
@@ -465,7 +469,7 @@ public partial class Tanime
         if (record != null)
             return record;
 
-        var seasonLiteral = DateHelpers.GetSeasonLiteral((FourSeasonsKind)seasonNumber.Value, year.Value);
+        var seasonLiteral = DateHelpers.GetSeasonLiteral((WeatherSeasonKind)seasonNumber.Value, year.Value);
         if (seasonLiteral == null)
             return null;
 
@@ -671,7 +675,7 @@ public partial class Tanime
         foreach (var node in nodes)
         {
             //Récupère le nom d'affichage du studio
-            var displayName = node?.InnerText?.Trim();
+            var displayName = HttpUtility.HtmlDecode(node?.InnerText?.Trim());
             if (displayName == null || displayName.IsStringNullOrEmptyOrWhiteSpace())
                 continue;
 
@@ -761,7 +765,7 @@ public partial class Tanime
         foreach (var node in distributorNodes)
         {
             //Récupère le nom d'affichage du studio
-            var displayName = node?.InnerText?.Trim();
+            var displayName = HttpUtility.HtmlDecode(node?.InnerText?.Trim());
             if (displayName == null || displayName.IsStringNullOrEmptyOrWhiteSpace())
                 continue;
 

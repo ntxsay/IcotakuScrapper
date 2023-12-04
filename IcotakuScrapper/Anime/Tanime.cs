@@ -232,7 +232,7 @@ public partial class Tanime : TanimeBase
         
         command.CommandText = 
             """
-            INSERT INTO Tanime 
+            INSERT OR REPLACE INTO Tanime 
                 (SheetId, Url, IsAdultContent, IsExplicitContent, Note, VoteCount, Name, DiffusionState, EpisodeCount, EpisodeDuration, ReleaseDate, EndDate, Description, ThumbnailMiniUrl, ThumbnailUrl, IdFormat, IdTarget, IdOrigine, IdSeason) 
             VALUES 
                 ($SheetId, $Url, $IsAdultContent, $IsExplicitContent, $Note, $VoteCount, $Name, $DiffusionState , $EpisodeCount, $EpisodeDuration, $ReleaseDate, $EndDate, $Description, $ThumbnailMiniUrl, $ThumbnailUrl, $IdFormat, $IdTarget, $IdOrigine, $IdSeason)
@@ -267,12 +267,7 @@ public partial class Tanime : TanimeBase
                 return new OperationState<int>(false, "Une erreur est survenue lors de l'ajout de l'anime");
             Id = await command.GetLastInsertRowIdAsync();
             
-            if (AlternativeTitles.Count > 0)
-                foreach (var title in AlternativeTitles)
-                {
-                    title.IdAnime = Id;
-                    _ = await title.InsertAsync(cancellationToken, command);
-                }
+            await this.AddAlternativeTitlesAsync(cancellationToken, command);
             
             if (WebSites.Count > 0)
                 foreach (var webSite in WebSites)
@@ -380,6 +375,8 @@ public partial class Tanime : TanimeBase
         try
         {
             var result = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
+
+            await this.AddOrUpdateRangeAsync(AlternativeTitles, cancellationToken, command);
             return result > 0 
                 ? new OperationState(true, "L'anime a été modifié avec succès") 
                 : new OperationState(false, "Une erreur est survenue lors de la modification de l'anime");

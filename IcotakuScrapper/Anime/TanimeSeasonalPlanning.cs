@@ -173,6 +173,17 @@ public partial class TanimeSeasonalPlanning
             return (int)count;
         return 0;
     }
+
+    public static async Task<int> CountAsync(WeatherSeason season,
+        CancellationToken? cancellationToken = null,
+        SqliteCommand? cmd = null)
+    {
+        var intSeason = season.ToIntSeason();
+        if (intSeason == 0)
+            return 0;
+
+        return await CountAsync((int)intSeason, IntColumnSelect.IdSeason, cancellationToken, cmd);
+    }
     
     public static async Task<int?> GetIdOfAsync(Uri sheetUri,
         CancellationToken? cancellationToken = null,
@@ -271,6 +282,11 @@ public partial class TanimeSeasonalPlanning
         CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
         => await CountAsync(idSeason, sheetId, cancellationToken, cmd) > 0;
+    
+    public static async Task<bool> ExistsAsync(WeatherSeason season,
+        CancellationToken? cancellationToken = null,
+        SqliteCommand? cmd = null)
+        => await CountAsync(season, cancellationToken, cmd) > 0;
 
     #endregion
 
@@ -312,10 +328,10 @@ public partial class TanimeSeasonalPlanning
         return await GetRecords(reader, cancellationToken).ToArrayAsync();
     }
 
-    public static async Task<TanimeSeasonalPlanning[]> SelectAsync(ushort year, FourSeasonsKind season, bool? isAdultContent, bool? isExplicitContent, AnimeSeasonalPlanningSortBy sortBy, OrderBy orderBy,
+    public static async Task<TanimeSeasonalPlanning[]> SelectAsync(WeatherSeason season, bool? isAdultContent, bool? isExplicitContent, AnimeSeasonalPlanningSortBy sortBy, OrderBy orderBy,
         uint limit = 0, uint offset = 0, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
-        var intSeason = DateHelpers.GetIntSeason(season, year);
+        var intSeason = season.ToIntSeason();
         if (intSeason == 0)
             return [];
 
@@ -667,10 +683,10 @@ public partial class TanimeSeasonalPlanning
         }
     }
 
-    public static async Task<OperationState> DeleteAllAsync(ushort year, FourSeasonsKind season, CancellationToken? cancellationToken = null,
+    public static async Task<OperationState> DeleteAllAsync(WeatherSeason season, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
-        var intSeason = DateHelpers.GetIntSeason(season, year);
+        var intSeason = season.ToIntSeason();
         if (intSeason == 0)
             return new OperationState(false, "La saison est invalide");
 

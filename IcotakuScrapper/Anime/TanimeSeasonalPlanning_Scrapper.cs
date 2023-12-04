@@ -12,31 +12,28 @@ namespace IcotakuScrapper.Anime;
 
 public partial class TanimeSeasonalPlanning
 {
-    private static string? GetAnimeSeasonalPlanningUrl(FourSeasonsKind season, ushort year)
+    private static string? GetAnimeSeasonalPlanningUrl(WeatherSeason season)
     {
-        if (year < DateOnly.MinValue.Year || year > DateOnly.MaxValue.Year)
-            return null;
-
-        var seasonName = season switch
+        var seasonName = season.Season switch
         {
-            FourSeasonsKind.Spring => "printemps",
-            FourSeasonsKind.Summer => "ete",
-            FourSeasonsKind.Fall => "automne",
-            FourSeasonsKind.Winter => "hiver",
+            WeatherSeasonKind.Spring => "printemps",
+            WeatherSeasonKind.Summer => "ete",
+            WeatherSeasonKind.Fall => "automne",
+            WeatherSeasonKind.Winter => "hiver",
             _ => null,
         };
 
         if (seasonName is null)
             return null;
 
-        return $"https://anime.icotaku.com/planning/planningSaisonnier/saison/{seasonName}/annee/{year}";
+        return $"https://anime.icotaku.com/planning/planningSaisonnier/saison/{seasonName}/annee/{season.Year}";
     }
 
-    public static async Task<OperationState> ScrapAsync(FourSeasonsKind season, ushort year,
+    public static async Task<OperationState> ScrapAsync(WeatherSeason season,
         DbInsertMode insertMode = DbInsertMode.InsertOrReplace,
         bool isDeleteSectionRecords = true, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
-        var planning = await GetAnimeSeasonalPlanning(season, year, cancellationToken, cmd).ToArrayAsync();
+        var planning = await GetAnimeSeasonalPlanning(season, cancellationToken, cmd).ToArrayAsync();
         if (planning.Length == 0)
             return new OperationState(false, "Le planning est vide");
 
@@ -51,12 +48,9 @@ public partial class TanimeSeasonalPlanning
     }
 
 
-    internal static async IAsyncEnumerable<TanimeSeasonalPlanning> GetAnimeSeasonalPlanning(FourSeasonsKind season, ushort year, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    internal static async IAsyncEnumerable<TanimeSeasonalPlanning> GetAnimeSeasonalPlanning(WeatherSeason season, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
-        if (year < DateOnly.MinValue.Year || year > DateOnly.MaxValue.Year)
-            yield break;
-
-        var url = GetAnimeSeasonalPlanningUrl(season, year);
+        var url = GetAnimeSeasonalPlanningUrl(season);
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || !uri.IsAbsoluteUri)
             yield break;
 
@@ -180,7 +174,7 @@ public partial class TanimeSeasonalPlanning
         additionalContentList.Add((planning.SheetId, planning.IsAdultContent, planning.IsExplicitContent, planning.ThumbnailUrl));
     }
 
-    private static async Task<Tseason?> GetSeasonAsync(FourSeasonsKind season, ushort year, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    private static async Task<Tseason?> GetSeasonAsync(WeatherSeasonKind season, ushort year, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         var intSeason = DateHelpers.GetIntSeason(season, year);
         if (intSeason == 0)

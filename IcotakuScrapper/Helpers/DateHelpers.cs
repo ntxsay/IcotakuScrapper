@@ -163,18 +163,18 @@ public static class DateHelpers
     /// </summary>
     /// <param name="saisonName"></param>
     /// <returns></returns>
-    public static FourSeasonsKind GetSeasonKind(string saisonName)
+    public static WeatherSeasonKind GetSeasonKind(string saisonName)
     {
         if (saisonName.IsStringNullOrEmptyOrWhiteSpace())
             return 0;
 
         return saisonName.Trim().ToLower() switch
         {
-            "printemps" => FourSeasonsKind.Spring,
-            "ete" or "été" or "éte" or "eté" => FourSeasonsKind.Summer,
-            "automne" => FourSeasonsKind.Fall,
-            "hivers" or "hiver" => FourSeasonsKind.Winter,
-            _ => FourSeasonsKind.Unknown
+            "printemps" => WeatherSeasonKind.Spring,
+            "ete" or "été" or "éte" or "eté" => WeatherSeasonKind.Summer,
+            "automne" => WeatherSeasonKind.Fall,
+            "hivers" or "hiver" => WeatherSeasonKind.Winter,
+            _ => WeatherSeasonKind.Unknown
         };
     }
 
@@ -200,14 +200,14 @@ public static class DateHelpers
     /// </summary>
     /// <param name="season"></param>
     /// <returns></returns>
-    public static string? GetSeasonName(FourSeasonsKind season)
+    public static string? GetSeasonName(WeatherSeasonKind season)
     {
         return season switch
         {
-            FourSeasonsKind.Spring => "Printemps",
-            FourSeasonsKind.Summer => "Été",
-            FourSeasonsKind.Fall => "Automne",
-            FourSeasonsKind.Winter => "Hiver",
+            WeatherSeasonKind.Spring => "Printemps",
+            WeatherSeasonKind.Summer => "Été",
+            WeatherSeasonKind.Fall => "Automne",
+            WeatherSeasonKind.Winter => "Hiver",
             _ => null
         };
     }
@@ -228,10 +228,10 @@ public static class DateHelpers
         if (!byte.TryParse(seasonNumberString, out var seasonNumber) || seasonNumber is < 1 or > 4)
             return null;
         
-        return GetSeasonLiteral((FourSeasonsKind)seasonNumber, year);
+        return GetSeasonLiteral((WeatherSeasonKind)seasonNumber, year);
     }
 
-    public static string? GetSeasonLiteral(FourSeasonsKind season, uint year)
+    public static string? GetSeasonLiteral(WeatherSeasonKind season, uint year)
     {
         if (year < DateOnly.MinValue.Year || year > DateOnly.MaxValue.Year)
             return null;
@@ -240,7 +240,7 @@ public static class DateHelpers
         return seasonName == null ? null : $"{seasonName} {year}";
     }
 
-    public static uint GetIntSeason(FourSeasonsKind season, uint year)
+    public static uint GetIntSeason(WeatherSeasonKind season, uint year)
     {
         if (year < DateOnly.MinValue.Year || year > DateOnly.MaxValue.Year)
             return 0;

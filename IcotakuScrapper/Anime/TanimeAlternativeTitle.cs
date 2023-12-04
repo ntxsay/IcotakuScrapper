@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using IcotakuScrapper.Common;
 using IcotakuScrapper.Extensions;
+using IcotakuScrapper.Helpers;
 using Microsoft.Data.Sqlite;
 
 namespace IcotakuScrapper.Anime;
@@ -256,11 +257,62 @@ public class TanimeAlternativeTitle
             return new OperationState<int>(false, "Une erreur inconnue est survenue.");
         }
     }
-    
+
+    public static async Task<OperationState> InsertAsync(int idAnime, IReadOnlyCollection<TanimeAlternativeTitle> values,
+        DbInsertMode insertMode = DbInsertMode.InsertOrReplace, CancellationToken? cancellationToken = null,
+        SqliteCommand? cmd = null)
+    {
+        if (values.Count == 0)
+            return new OperationState(false, "Il n'existe aucune valeur à insérer.");
+
+        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        if (idAnime <= 0 || !await TanimeBase.ExistsAsync(idAnime, IntColumnSelect.Id, cancellationToken, command))
+            return new OperationState(false, "L'anime n'existe pas.");
+
+        command.StartWithInsertMode(insertMode);
+        command.CommandText += " INTO TanimeAlternativeTitle (IdAnime, Name, Description) VALUES";
+        command.Parameters.Clear();
+
+        for (var i = 0; i < values.Count; i++)
+        {
+            var value = values.ElementAt(i);
+            if (value.Title.IsStringNullOrEmptyOrWhiteSpace())
+            {
+                LogServices.LogDebug($"Le nom du titre ne doit pas être vide ou ne contenir que des espaces blancs.");
+                continue;
+            }
+
+            command.CommandText += Environment.NewLine + $"($IdAnime, $Name{i}, $Description{i})";
+            command.Parameters.AddWithValue($"$Name{i}", value.Title);
+            command.Parameters.AddWithValue($"$Description{i}", value.Description ?? (object)DBNull.Value);
+
+            if (i == values.Count - 1)
+                command.CommandText += ";";
+            else
+                command.CommandText += ",";
+        }
+
+        if (command.Parameters.Count == 0)
+            return new OperationState(false, "Il n'existe aucune valeur à insérer.");
+
+        command.Parameters.AddWithValue("$IdAnime", idAnime);
+
+        try
+        {
+            var count = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
+            return new OperationState(count > 0, $"{count} enregistrement(s) sur {values.Count} ont été insérés avec succès.");
+        }
+        catch (Exception e)
+        {
+            LogServices.LogDebug(e);
+            return new OperationState(false, "Une erreur est survenue lors de l'insertion");
+        }
+    }
     #endregion
-    
+
+
     #region Update
-    
+
     public async Task<OperationState> UpdateAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         if (Id <= 0)
@@ -270,7 +322,7 @@ public class TanimeAlternativeTitle
             return new OperationState(false, "Le titre est invalide.");
         
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        if (IdAnime <= 0 || !await Tanime.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken, command))
+        if (IdAnime <= 0 || !await TanimeBase.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken, command))
             return new OperationState(false, "L'anime n'existe pas.");
         
         var existingId = await GetIdOfAsync(IdAnime, Title, cancellationToken, command);

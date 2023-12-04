@@ -1,4 +1,5 @@
-﻿namespace IcotakuScrapper
+﻿using IcotakuScrapper.Helpers;
+namespace IcotakuScrapper
 {
     /// <summary>
     /// Enumération des colonnes de type entier permettant de sélectionner ou de compter des enregistrements via celles-ci.
@@ -68,17 +69,17 @@
         Id,
         IdAnime,
     }
-    
-    public enum SelectCountIdIdAnimeSheetIdKind
-    {
-        Id,
-        IdAnime,
-        SheetId
-    }
-    
+
     /// <summary>
-    /// Enuméation des sections du site icotaku.com et exploité par l'API.
+    /// Enumération des sections du site icotaku.com et exploité par l'API.
+    /// <para>
+    /// Les sections sont utilisées aussi pour sélectionner la bonne base Url du site lors d'un scraping :
+    /// <list type="bullet">La base url de la section "<see cref="IcotakuSection.Anime"/>" sera "<see cref="IcotakuWebHelpers.IcotakuAnimeUrl"/>"</list>
+    /// <list type="bullet">La base url de la section "<see cref="IcotakuSection.Manga"/>" sera "<see cref="IcotakuWebHelpers.IcotakuMangaUrl"/>"</list>
+    /// </para>
     /// </summary>
+    /// <example>
+    /// </example>
     public enum IcotakuSection : byte
     {
         /// <summary>
@@ -196,7 +197,7 @@
     /// <summary>
     /// Enumération des saisons.
     /// </summary>
-    public enum FourSeasonsKind : byte
+    public enum WeatherSeasonKind : byte
     {
         Unknown = 0,
         /// <summary>
