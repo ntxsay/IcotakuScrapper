@@ -2,7 +2,7 @@
 using IcotakuScrapper.Extensions;
 using Microsoft.Data.Sqlite;
 
-namespace IcotakuScrapper.Helpers
+namespace IcotakuScrapper.Services
 {
     /// <summary>
     /// Classe statique contenant des méthodes permettant de faciliter manipuler la base de données.

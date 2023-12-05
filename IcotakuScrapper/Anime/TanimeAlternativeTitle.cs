@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using IcotakuScrapper.Common;
 using IcotakuScrapper.Extensions;
-using IcotakuScrapper.Helpers;
+
 using Microsoft.Data.Sqlite;
 
 namespace IcotakuScrapper.Anime;

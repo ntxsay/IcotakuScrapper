@@ -1,7 +1,6 @@
 ﻿using IcotakuScrapper.Common;
 using IcotakuScrapper.Contact;
 using IcotakuScrapper.Extensions;
-using IcotakuScrapper.Helpers;
 using Microsoft.Data.Sqlite;
 
 namespace IcotakuScrapper.Anime;
@@ -398,7 +397,7 @@ public class TanimeLicense
             {
                 Id = reader.GetInt32(reader.GetOrdinal("BaseId")),
                 IdAnime = reader.GetInt32(reader.GetOrdinal("IdAnime")),
-                Distributor = new TcontactBase(reader.GetOrdinal("IdDistributor"))
+                Distributor = new TcontactBase(reader.GetOrdinal("IdDistributor"), reader.GetGuid(reader.GetOrdinal("Guid")))
                 {
                     SheetId = reader.GetInt32(reader.GetOrdinal("SheetId")),
                     Type = (ContactType)reader.GetByte(reader.GetOrdinal("Type")),
@@ -432,6 +431,7 @@ public class TanimeLicense
             TlicenseType.Section AS LicenceTypeSection,
             
             Tcontact.SheetId,
+            Tcontact.Guid,
             Tcontact.Type,
             Tcontact.DisplayName,
             Tcontact.Presentation,

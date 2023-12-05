@@ -1,6 +1,6 @@
 ﻿using IcotakuScrapper.Contact;
 using IcotakuScrapper.Extensions;
-using IcotakuScrapper.Helpers;
+
 using Microsoft.Data.Sqlite;
 
 namespace IcotakuScrapper.Anime;
@@ -349,7 +349,7 @@ public class TanimeStudio
             {
                 Id = reader.GetInt32(reader.GetOrdinal("BaseId")),
                 IdAnime = reader.GetInt32(reader.GetOrdinal("IdAnime")),
-                Studio = new TcontactBase(reader.GetInt32(reader.GetOrdinal("SheetId")))
+                Studio = new TcontactBase(reader.GetInt32(reader.GetOrdinal("SheetId")), reader.GetGuid(reader.GetOrdinal("Guid")))
                 {
                     Type = (ContactType)reader.GetInt32(reader.GetOrdinal("Type")),
                     DisplayName = reader.GetString(reader.GetOrdinal("DisplayName")),
@@ -373,6 +373,7 @@ public class TanimeStudio
             TanimeStudio.IdStudio,
             
             Tcontact.SheetId,
+            Tcontact.Guid,
             Tcontact.Type,
             Tcontact.DisplayName,
             Tcontact.Presentation,

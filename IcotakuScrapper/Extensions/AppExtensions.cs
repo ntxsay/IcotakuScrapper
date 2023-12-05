@@ -19,6 +19,7 @@
         public static ContactType ConvertTo(this SheetType sheetType) => ExtensionMethods.ConvertTo(sheetType);
         public static SheetType ConvertTo(this ContactType contactType) => ExtensionMethods.ConvertTo(contactType);
 
+
     }
 
     internal static class ExtensionMethods
@@ -53,5 +54,19 @@
             ContactType.Distributor => SheetType.Distributor,
             _ => throw new ArgumentOutOfRangeException(nameof(contactType), contactType, "La valeur spécifiée est invalide")
         };
+
+        internal static int CountPage(int countItems, int maxContentByPage = 20)
+        {
+            try
+            {
+                if (countItems == 0)
+                    return 10;
+                return maxContentByPage <= 0 ? 10 : (int)Math.Ceiling((double)countItems / maxContentByPage);
+            }
+            catch (Exception)
+            {
+                return 1;
+            }
+        }
     }
 }

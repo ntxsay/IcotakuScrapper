@@ -1,12 +1,14 @@
 ﻿using HtmlAgilityPack;
 using IcotakuScrapper.Extensions;
+using IcotakuScrapper.Services.IOS;
+using Microsoft.Data.Sqlite;
 
-namespace IcotakuScrapper.Helpers
+namespace IcotakuScrapper.Services
 {
     /// <summary>
     /// Classe contenant des méthodes permettant de récupérer des informations à partir du site icotaku.com
     /// </summary>
-    internal static class IcotakuWebHelpers
+    public static class IcotakuWebHelpers
     {
         public const string IcotakuBaseUrl = "https://icotaku.com";
         public const string IcotakuAnimeUrl = "https://anime.icotaku.com";
@@ -14,6 +16,8 @@ namespace IcotakuScrapper.Helpers
         public const string IcotakuLightNovelUrl = "https://novel.icotaku.com";
         public const string IcotakuDramaUrl = "https://drama.icotaku.com";
         public const string IcotakuCommunityUrl = "https://communaute.icotaku.com";
+        public const string IcotakuDownloadBaseUrl = "https://communaute.icotaku.com/uploads";
+
 
         public const string IcotakuBaseHostName = "icotaku.com";
         public const string IcotakuAnimeHostName = "anime.icotaku.com";
@@ -157,5 +161,81 @@ namespace IcotakuScrapper.Helpers
 
             return null;
         }
+
+
+        /// <summary>
+        /// Retourne l'url absolue du dossier de téléchargement à partir de la section et de l'id de la fiche
+        /// </summary>
+        /// <param name="section"></param>
+        /// <param name="sheetId"></param>
+        /// <returns></returns>
+        public static string? GetDownloadFolderUrl(IcotakuDownloadSection section, int sheetId)
+        {
+            var url = IcotakuDownloadBaseUrl + section switch
+            {
+                IcotakuDownloadSection.Anime => "/animes",
+                IcotakuDownloadSection.Manga => "/mangas",
+                IcotakuDownloadSection.LightNovel => "/novels",
+                IcotakuDownloadSection.Drama => "/dramas",
+                IcotakuDownloadSection.Character => "/personnages",
+                IcotakuDownloadSection.Person => "/individus",
+                _ => null
+            };
+
+            url += section switch
+            {
+                IcotakuDownloadSection.Anime => $"/anime_{sheetId}",
+                IcotakuDownloadSection.Manga => $"/manga_{sheetId}",
+                IcotakuDownloadSection.LightNovel => $"/novel_{sheetId}",
+                IcotakuDownloadSection.Drama => $"/drama_{sheetId}",
+                IcotakuDownloadSection.Character => $"/personnage_{sheetId}",
+                IcotakuDownloadSection.Person => $"/individu_{sheetId}",
+                _ => null
+            };
+
+            if (Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.IsAbsoluteUri)
+                return uri.ToString();
+
+            return null;
+        }
+
+        public static string? GetDownloadFolderUrl(IcotakuDownloadSection section, int sheetId, string fileName)
+        {
+            var url = GetDownloadFolderUrl(section, sheetId);
+            if (url == null)
+                return null;
+
+            url += $"/{fileName}";
+
+            if (Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.IsAbsoluteUri)
+                return uri.ToString();
+
+            return null;
+        }
+
+        public static string? GetDownloadFolderUrl(IcotakuDownloadSection section, int sheetId, IcotakuDownloadType type, int episodeNumber = 0)
+        {
+            var url = GetDownloadFolderUrl(section, sheetId);
+            if (url == null)
+                return null;
+
+            url += type switch
+            {
+                IcotakuDownloadType.Episod => $"/episodes/episode_{episodeNumber}",
+                IcotakuDownloadType.Tome => $"/tomes/tome_{episodeNumber}",
+                IcotakuDownloadType.Sheet => $"/fiche",
+                IcotakuDownloadType.None => string.Empty,
+                _ => null
+            };
+
+            if (Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.IsAbsoluteUri)
+                return uri.ToString();
+
+            return null;
+        }
     }
+
+    
+
+
 }

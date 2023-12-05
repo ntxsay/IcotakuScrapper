@@ -3,7 +3,7 @@ using System.Globalization;
 using IcotakuScrapper.Common;
 using IcotakuScrapper.Extensions;
 
-namespace IcotakuScrapper.Helpers;
+namespace IcotakuScrapper.Services;
 
 /// <summary>
 /// Fournit des méthodes d'assistance pour les dates

@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
-namespace IcotakuScrapper.Helpers;
+namespace IcotakuScrapper.Services;
 
 internal static class LogServices
 {

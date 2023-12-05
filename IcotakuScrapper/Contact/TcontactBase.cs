@@ -1,5 +1,5 @@
 ﻿using IcotakuScrapper.Extensions;
-using IcotakuScrapper.Helpers;
+
 using Microsoft.Data.Sqlite;
 
 namespace IcotakuScrapper.Contact;
@@ -13,6 +13,11 @@ public class TcontactBase
     /// Obtient ou définit l'id du contact.
     /// </summary>
     public int Id { get; protected set; }
+    
+    /// <summary>
+    /// Obtient ou définit le guid du contact.
+    /// </summary>
+    public Guid Guid { get; protected set; } = Guid.Empty;
     
     /// <summary>
     /// Obtient ou définit l'id de la fiche Icotaku du contact.
@@ -51,6 +56,12 @@ public class TcontactBase
     public TcontactBase(int id)
     {
         Id = id;
+    }
+    
+    public TcontactBase(int id, Guid guid)
+    {
+        Id = id;
+        Guid = guid;
     }
     
         #region Count
@@ -328,6 +339,7 @@ public class TcontactBase
             yield return new TcontactBase()
             {
                 Id = reader.GetInt32(reader.GetOrdinal("BaseId")),
+                Guid = reader.GetGuid(reader.GetOrdinal("BaseGuid")),
                 SheetId = reader.GetInt32(reader.GetOrdinal("SheetId")),
                 Type = (ContactType)reader.GetInt32(reader.GetOrdinal("Type")),
                 DisplayName = reader.GetString(reader.GetOrdinal("DisplayName")),
@@ -346,6 +358,7 @@ public class TcontactBase
         """
         SELECT
             Tcontact.Id AS BaseId,
+            Tcontact.Guid AS BaseGuid,
             Tcontact.SheetId,
             Tcontact.Type,
             Tcontact.DisplayName,

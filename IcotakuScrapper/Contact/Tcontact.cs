@@ -331,6 +331,7 @@ public class Tcontact : TcontactBase
         var record = new Tcontact()
         {
             Id = reader.GetInt32(idIndex),
+            Guid = reader.GetGuid(reader.GetOrdinal("BaseGuid")),
             SheetId = reader.GetInt32(sheetIdIndex),
             DisplayName = reader.GetString(displayNameIndex),
             Presentation = reader.IsDBNull(presentationIndex)
@@ -371,6 +372,7 @@ public class Tcontact : TcontactBase
         """
         SELECT
             Tcontact.Id AS BaseId,
+            Tcontact.Guid AS BaseGuid,
             Tcontact.SheetId,
             Tcontact.IdGenre,
             Tcontact.Type,

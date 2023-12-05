@@ -1,5 +1,5 @@
 ﻿using IcotakuScrapper.Anime;
-using IcotakuScrapper.Helpers;
+
 using Microsoft.Data.Sqlite;
 
 namespace IcotakuScrapper.Extensions
@@ -13,6 +13,9 @@ namespace IcotakuScrapper.Extensions
         /// <returns></returns>
         internal static async Task<int> GetLastInsertRowIdAsync(this SqliteCommand command) => await DbHelpers.GetLastInsertRowIdAsync(command);
 
+        internal static void AddPagination(this SqliteCommand command, uint currentPage = 1, uint maxContentByPage = 20)
+            => DbHelpers.AddPagination(command, currentPage, maxContentByPage);
+
         /// <summary>
         ///Ajoute les clauses LIMIT et OFFSET à la commande SQL.
         /// </summary>
@@ -21,7 +24,7 @@ namespace IcotakuScrapper.Extensions
         /// <param name="offset"></param>
         internal static void AddLimitOffset(this SqliteCommand command, uint limit, uint offset) => DbHelpers.AddLimitOffset(command, limit, offset);
 
-        public static void AddOrderSort(this SqliteCommand command, AnimeSeasonalPlanningSortBy sortBy, OrderBy orderBy)
+        public static void AddOrderSort(this SqliteCommand command, SeasonalAnimePlanningSortBy sortBy, OrderBy orderBy)
             => DbHelpers.AddOrderSort(command, sortBy, orderBy);
 
         public static void AddOrderSort(this SqliteCommand command, AnimeDailyPlanningSortBy sortBy, OrderBy orderBy)

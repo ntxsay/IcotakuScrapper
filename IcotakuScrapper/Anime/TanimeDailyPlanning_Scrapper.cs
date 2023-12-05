@@ -1,6 +1,6 @@
 ﻿using HtmlAgilityPack;
 using IcotakuScrapper.Extensions;
-using IcotakuScrapper.Helpers;
+
 using Microsoft.Data.Sqlite;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;

@@ -2,7 +2,7 @@
 using IcotakuScrapper.Common;
 using IcotakuScrapper.Contact;
 using IcotakuScrapper.Extensions;
-using IcotakuScrapper.Helpers;
+
 using Microsoft.Data.Sqlite;
 using System;
 using System.Text.RegularExpressions;
@@ -39,7 +39,7 @@ public partial class TanimeSeasonalPlanning
 
         if (isDeleteSectionRecords)
         {
-            var deleteAllResult = await DeleteAllAsync(year, season, cancellationToken, cmd);
+            var deleteAllResult = await DeleteAllAsync(season, cancellationToken, cmd);
             if (!deleteAllResult.IsSuccess)
                 return deleteAllResult;
         }
@@ -61,7 +61,7 @@ public partial class TanimeSeasonalPlanning
         if (htmlNodes == null || htmlNodes.Length == 0)
             yield break;
 
-        var seasonRecord = await GetSeasonAsync(season, year, cancellationToken, cmd);
+        var seasonRecord = await GetSeasonAsync(season, cancellationToken, cmd);
         if (seasonRecord is null)
             yield break;
 
@@ -174,16 +174,16 @@ public partial class TanimeSeasonalPlanning
         additionalContentList.Add((planning.SheetId, planning.IsAdultContent, planning.IsExplicitContent, planning.ThumbnailUrl));
     }
 
-    private static async Task<Tseason?> GetSeasonAsync(WeatherSeasonKind season, ushort year, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    private static async Task<Tseason?> GetSeasonAsync(WeatherSeason season, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
-        var intSeason = DateHelpers.GetIntSeason(season, year);
+        var intSeason = season.ToIntSeason();
         if (intSeason == 0)
             return null;
 
         var seasonRecord = await Tseason.SingleAsync(intSeason, cancellationToken, cmd);
         if (seasonRecord is null)
         {
-            var seasonliteral = DateHelpers.GetSeasonLiteral(season, year);
+            var seasonliteral = DateHelpers.GetSeasonLiteral(season);
             if (seasonliteral == null || seasonliteral.IsStringNullOrEmptyOrWhiteSpace())
                 return null;
 

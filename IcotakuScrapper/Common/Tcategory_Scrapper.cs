@@ -1,6 +1,6 @@
 ﻿using HtmlAgilityPack;
 using IcotakuScrapper.Extensions;
-using IcotakuScrapper.Helpers;
+
 using System;
 using System.Web;
 using static System.Collections.Specialized.BitVector32;

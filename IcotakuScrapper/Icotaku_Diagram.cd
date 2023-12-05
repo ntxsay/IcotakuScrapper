@@ -1,0 +1,36 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="IcotakuScrapper.Anime.TanimeDailyPlanning">
+    <Position X="9" Y="2.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AEAAAAAAAAABAgAEAAAAAAAAACQAEAAAAAAEIABAAAA=</HashCode>
+      <FileName>Anime\TanimeDailyPlanning_Scrapper.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="IcotakuScrapper.Anime.TanimeSeasonalPlanning">
+    <Position X="12.25" Y="5.75" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAQIAAEAAAAAAAAACAAAAAggAAGIAgAAAA=</HashCode>
+      <FileName>Anime\TanimeSeasonalPlanning_Scrapper.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="System.Object">
+    <Position X="12.75" Y="2.75" Width="1.5" />
+    <TypeIdentifier />
+  </Class>
+  <Enum Name="IcotakuScrapper.Anime.AnimeDailyPlanningSortBy">
+    <Position X="5.5" Y="3.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAACAAAAMAAIAAAAAAAAAAAAAAAAAgEAAAAAAAAAgAA=</HashCode>
+      <FileName>Anime\TanimeDailyPlanning.cs</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Enum Name="IcotakuScrapper.Anime.AnimeSeasonalPlanningSortBy">
+    <Position X="7" Y="7.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAACAAAAEQAIAAAAAAABAAAAAAAAAgAAAAAAAAAAAAE=</HashCode>
+      <FileName>Anime\TanimeSeasonalPlanning.cs</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>

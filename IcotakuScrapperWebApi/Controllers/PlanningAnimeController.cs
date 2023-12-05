@@ -1,5 +1,6 @@
 ﻿using IcotakuScrapper;
 using IcotakuScrapper.Anime;
+using IcotakuScrapper.Common;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IcotakuScrapperWebApi.Controllers
@@ -9,27 +10,24 @@ namespace IcotakuScrapperWebApi.Controllers
     public class PlanningAnimeController : ControllerBase
     {
         [HttpGet("Seasonal/All")]
-        public async Task<TanimeSeasonalPlanning[]> SelectAllSeasonalPlanningAsync([FromQuery] bool? isAdultContent, [FromQuery] bool? isExplicitContent, [FromQuery] AnimeSeasonalPlanningSortBy sortBy, [FromQuery] OrderBy orderBy = OrderBy.Asc,
+        public async Task<TanimeSeasonalPlanning[]> SelectAllSeasonalPlanningAsync([FromQuery] bool? isAdultContent, [FromQuery] bool? isExplicitContent, [FromQuery] SeasonalAnimePlanningSortBy sortBy, [FromQuery] OrderBy orderBy = OrderBy.Asc,
             [FromQuery] uint limit = 0, [FromQuery] uint skip = 0)
             => await TanimeSeasonalPlanning.SelectAsync(isAdultContent, isExplicitContent, sortBy, orderBy, limit, skip);
 
         [HttpGet("Seasonal/Many")]
-        public async Task<TanimeSeasonalPlanning[]> SelectAllSeasonalPlanningAsync([FromQuery] uint seasonNumber, [FromQuery] bool? isAdultContent, [FromQuery] bool? isExplicitContent, [FromQuery] AnimeSeasonalPlanningSortBy sortBy, [FromQuery] OrderBy orderBy = OrderBy.Asc,
+        public async Task<TanimeSeasonalPlanning[]> SelectAllSeasonalPlanningAsync([FromQuery] uint seasonNumber, [FromQuery] bool? isAdultContent, [FromQuery] bool? isExplicitContent, [FromQuery] SeasonalAnimePlanningSortBy sortBy, [FromQuery] OrderBy orderBy = OrderBy.Asc,
             [FromQuery] uint limit = 0, [FromQuery] uint skip = 0)
             => await TanimeSeasonalPlanning.SelectAsync(seasonNumber, isAdultContent, isExplicitContent, sortBy, orderBy, limit, skip);
 
         [HttpGet("Seasonal/Many/MultiQueries")]
-        public async Task<TanimeSeasonalPlanning[]> SelectAllSeasonalPlanningAsync([FromQuery] ushort year, [FromQuery] WeatherSeasonKind season, [FromQuery] bool? isAdultContent, [FromQuery] bool? isExplicitContent, [FromQuery] AnimeSeasonalPlanningSortBy sortBy, [FromQuery] OrderBy orderBy = OrderBy.Asc,
+        public async Task<TanimeSeasonalPlanning[]> SelectAllSeasonalPlanningAsync([FromQuery] WeatherSeason season, [FromQuery] bool? isAdultContent, [FromQuery] bool? isExplicitContent, [FromQuery] SeasonalAnimePlanningSortBy sortBy, [FromQuery] OrderBy orderBy = OrderBy.Asc,
             [FromQuery] uint limit = 0, [FromQuery] uint skip = 0)
-            => await TanimeSeasonalPlanning.SelectAsync(year, season, isAdultContent, isExplicitContent, sortBy, orderBy, limit, skip);
+            => await TanimeSeasonalPlanning.SelectAsync(season, isAdultContent, isExplicitContent, sortBy, orderBy, limit, skip);
 
         [HttpPost("Seasonal/Scrap")]
-        public async Task<OperationState> SaveDailyPlanningsync([FromQuery] ushort year, [FromQuery] WeatherSeasonKind season)
+        public async Task<OperationState> SaveDailyPlanningsync([FromQuery] WeatherSeason season)
         {
-            if (year < DateOnly.MinValue.Year || year > DateOnly.MaxValue.Year || season == WeatherSeasonKind.Unknown)
-                return new OperationState(false, "La saison ou l'année n'est pas valide");
-
-            return await TanimeSeasonalPlanning.ScrapAsync(season, year);
+            return await TanimeSeasonalPlanning.ScrapAsync(season);
         }
 
         //[HttpGet("Daily/String/Range")]

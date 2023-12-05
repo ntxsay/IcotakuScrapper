@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 using System.Web;
 using HtmlAgilityPack;
 using IcotakuScrapper.Extensions;
-using IcotakuScrapper.Helpers;
+
 
 namespace IcotakuScrapper.Anime;
 

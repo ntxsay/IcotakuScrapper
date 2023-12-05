@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 using IcotakuScrapper.Extensions;
-using IcotakuScrapper.Helpers;
+
 using Microsoft.Data.Sqlite;
 
 namespace IcotakuScrapper.Common;
@@ -49,9 +49,7 @@ public class Tseason
     
     
     public override string ToString()
-    {
-        return $"{DisplayName} ({SeasonNumber})";
-    }
+        => DateHelpers.GetSeasonLiteral(SeasonNumber) ?? $"{DisplayName} ({SeasonNumber})";
 
     #region Count
 

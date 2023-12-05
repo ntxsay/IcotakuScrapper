@@ -1,6 +1,5 @@
 ﻿using IcotakuScrapper.Common;
 using IcotakuScrapper.Extensions;
-using IcotakuScrapper.Helpers;
 using Microsoft.Data.Sqlite;
 
 namespace IcotakuScrapper.Anime;
@@ -11,6 +10,11 @@ public class TanimeBase
     /// Obtient ou définit l'id de l'anime.
     /// </summary>
     public int Id { get; protected set; }
+    
+    /// <summary>
+    /// Obtient ou définit le guid de l'anime.
+    /// </summary>
+    public Guid Guid { get; protected set; } = Guid.Empty;
 
     /// <summary>
     /// Obtient ou définit l'id de la fiche Icotaku de l'anime.
@@ -78,12 +82,7 @@ public class TanimeBase
     /// Obtient ou définit l'url de la fiche de l'anime.
     /// </summary>
     public string Url { get; set; } = null!;
-
-    /// <summary>
-    /// Obtient ou définit l'url de l'image miniature de l'anime.
-    /// </summary>
-    public string? ThumbnailMiniUrl { get; set; }
-
+    
     /// <summary>
     /// Obtient ou définit l'url de l'image de l'anime.
     /// </summary>
@@ -101,6 +100,12 @@ public class TanimeBase
     public TanimeBase(int id)
     {
         Id = id;
+    }
+    
+    public TanimeBase(int id, Guid guid)
+    {
+        Id = id;
+        Guid = guid;
     }
 
     public override string ToString() => $"{Name} ({Id}/{SheetId})";
@@ -422,6 +427,7 @@ public class TanimeBase
             {
                 record = new TanimeBase(reader.GetInt32(reader.GetOrdinal("IdAnime")))
                 {
+                    Guid = reader.GetGuid(reader.GetOrdinal("AnimeGuid")),
                     Name = reader.GetString(reader.GetOrdinal("AnimeName")),
                     Url = reader.GetString(reader.GetOrdinal("AnimeUrl")),
                     IsAdultContent = reader.GetBoolean(reader.GetOrdinal("AnimeIsAdultContent")),
@@ -498,6 +504,7 @@ public class TanimeBase
         """
         SELECT
             Tanime.Id AS BaseId,
+            Tanime.Guid AS AnimeGuid,
             Tanime.Name AS AnimeName,
             Tanime.IsAdultContent AS AnimeIsAdultContent,
             Tanime.IsExplicitContent AS AnimeIsExplicitContent,

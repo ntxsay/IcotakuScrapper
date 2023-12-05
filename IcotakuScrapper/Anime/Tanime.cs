@@ -3,6 +3,7 @@ using System.Globalization;
 using IcotakuScrapper.Common;
 using IcotakuScrapper.Contact;
 using IcotakuScrapper.Extensions;
+
 using Microsoft.Data.Sqlite;
 
 namespace IcotakuScrapper.Anime;
@@ -233,9 +234,9 @@ public partial class Tanime : TanimeBase
         command.CommandText = 
             """
             INSERT OR REPLACE INTO Tanime 
-                (SheetId, Url, IsAdultContent, IsExplicitContent, Note, VoteCount, Name, DiffusionState, EpisodeCount, EpisodeDuration, ReleaseDate, EndDate, Description, ThumbnailMiniUrl, ThumbnailUrl, IdFormat, IdTarget, IdOrigine, IdSeason) 
+                (SheetId, Url, IsAdultContent, IsExplicitContent, Note, VoteCount, Name, DiffusionState, EpisodeCount, EpisodeDuration, ReleaseDate, EndDate, Description, ThumbnailUrl, IdFormat, IdTarget, IdOrigine, IdSeason) 
             VALUES 
-                ($SheetId, $Url, $IsAdultContent, $IsExplicitContent, $Note, $VoteCount, $Name, $DiffusionState , $EpisodeCount, $EpisodeDuration, $ReleaseDate, $EndDate, $Description, $ThumbnailMiniUrl, $ThumbnailUrl, $IdFormat, $IdTarget, $IdOrigine, $IdSeason)
+                ($SheetId, $Url, $IsAdultContent, $IsExplicitContent, $Note, $VoteCount, $Name, $DiffusionState , $EpisodeCount, $EpisodeDuration, $ReleaseDate, $EndDate, $Description, $ThumbnailUrl, $IdFormat, $IdTarget, $IdOrigine, $IdSeason)
             """;
         
         command.Parameters.Clear();
@@ -253,7 +254,6 @@ public partial class Tanime : TanimeBase
         command.Parameters.AddWithValue("$ReleaseDate", ReleaseDate ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$EndDate", EndDate ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$Description", Description ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("$ThumbnailMiniUrl", ThumbnailMiniUrl ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$ThumbnailUrl", ThumbnailUrl ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$IdFormat", Format?.Id ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$IdTarget", Target?.Id ?? (object)DBNull.Value);
@@ -340,7 +340,6 @@ public partial class Tanime : TanimeBase
                 ReleaseDate = $ReleaseDate, 
                 EndDate = $EndDate, 
                 Description = $Description, 
-                ThumbnailMiniUrl = $ThumbnailMiniUrl, 
                 ThumbnailUrl = $ThumbnailUrl, 
                 IdFormat = $IdFormat, 
                 IdTarget = $IdTarget, 
@@ -364,7 +363,6 @@ public partial class Tanime : TanimeBase
         command.Parameters.AddWithValue("$ReleaseDate", ReleaseDate ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$EndDate", EndDate ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$Description", Description ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("$ThumbnailMiniUrl", ThumbnailMiniUrl ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$ThumbnailUrl", ThumbnailUrl ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$IdFormat", Format?.Id ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$IdTarget", Target?.Id ?? (object)DBNull.Value);
@@ -402,6 +400,7 @@ public partial class Tanime : TanimeBase
             {
                 anime = new Tanime(animeId)
                 {
+                    Guid = DbHelpers.ConvertStringSqliteToGuid(reader.GetString(reader.GetOrdinal("AnimeGuid"))),
                     Name = reader.GetString(reader.GetOrdinal("AnimeName")),
                     Url = reader.GetString(reader.GetOrdinal("AnimeUrl")),
                     IsAdultContent = reader.GetBoolean(reader.GetOrdinal("AnimeIsAdultContent")),
@@ -423,9 +422,6 @@ public partial class Tanime : TanimeBase
                     Description = reader.IsDBNull(reader.GetOrdinal("AnimeDescription"))
                         ? null
                         : reader.GetString(reader.GetOrdinal("AnimeDescription")),
-                    ThumbnailMiniUrl = reader.IsDBNull(reader.GetOrdinal("ThumbnailMiniUrl"))
-                        ? null
-                        : reader.GetString(reader.GetOrdinal("ThumbnailMiniUrl")),
                     ThumbnailUrl = reader.IsDBNull(reader.GetOrdinal("ThumbnailUrl"))
                         ? null
                         : reader.GetString(reader.GetOrdinal("ThumbnailUrl")),
@@ -571,6 +567,7 @@ public partial class Tanime : TanimeBase
         """
         SELECT
             Tanime.Id AS AnimeId,
+            Tanime.Guid AS AnimeGuid,
             Tanime.IdTarget,
             Tanime.IdFormat,
             Tanime.IdOrigine,
@@ -588,7 +585,6 @@ public partial class Tanime : TanimeBase
             Tanime.EndDate,
             Tanime.DiffusionState,
             Tanime.Description AS AnimeDescription,
-            Tanime.ThumbnailMiniUrl,
             Tanime.ThumbnailUrl,
             Tanime.Remark,
             

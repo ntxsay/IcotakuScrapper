@@ -2,7 +2,6 @@
 using IcotakuScrapper.Common;
 using IcotakuScrapper.Contact;
 using IcotakuScrapper.Extensions;
-using IcotakuScrapper.Helpers;
 using Microsoft.Data.Sqlite;
 using System.Text.RegularExpressions;
 using System.Web;

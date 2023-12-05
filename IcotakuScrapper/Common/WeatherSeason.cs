@@ -1,4 +1,4 @@
-﻿using IcotakuScrapper.Helpers;
+﻿
 
 namespace IcotakuScrapper.Common;
 
@@ -21,4 +21,7 @@ public readonly struct WeatherSeason
     
     public uint ToIntSeason()
         => DateHelpers.GetIntSeason(Season, Year);
+
+    public override string ToString()
+        => DateHelpers.GetSeasonLiteral(Season, Year) ?? $"{Season} {Year}";
 }

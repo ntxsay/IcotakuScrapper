@@ -1,5 +1,5 @@
 ﻿using IcotakuScrapper.Extensions;
-using IcotakuScrapper.Helpers;
+using IcotakuScrapper.Services;
 using Microsoft.Data.Sqlite;
 
 namespace IcotakuScrapper.Common;

@@ -1,11 +1,6 @@
-﻿using HtmlAgilityPack;
-using IcotakuScrapper.Extensions;
-using IcotakuScrapper.Helpers;
+﻿using IcotakuScrapper.Extensions;
+
 using Microsoft.Data.Sqlite;
-using System;
-using System.Diagnostics;
-using System.Web;
-using System.Xml.Linq;
 
 namespace IcotakuScrapper.Common;
 
@@ -432,13 +427,13 @@ public partial class Tcategory
     {
         if (Name.IsStringNullOrEmptyOrWhiteSpace())
             return new OperationState<int>(false, "Le nom de l'item ne peut pas être vide");
-        
+
         if (Url.IsStringNullOrEmptyOrWhiteSpace())
             return new OperationState<int>(false, "L'url ne peut pas être vide");
 
         if (!Uri.TryCreate(Url, UriKind.Absolute, out var uri))
             return new OperationState<int>(false, "L'url n'est pas valide");
-        
+
         if (await ExistsAsync(Name, cancellationToken, cmd))
             return new OperationState<int>(false, "Le nom de l'item existe déjà");
 
@@ -475,7 +470,7 @@ public partial class Tcategory
         }
     }
 
-    public static async Task<OperationState> InsertOrReplaceAsync(IReadOnlyCollection<Tcategory> values, DbInsertMode insertMode = DbInsertMode.InsertOrReplace, 
+    public static async Task<OperationState> InsertOrReplaceAsync(IReadOnlyCollection<Tcategory> values, DbInsertMode insertMode = DbInsertMode.InsertOrReplace,
         CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
@@ -576,7 +571,7 @@ public partial class Tcategory
     {
         if (Name.IsStringNullOrEmptyOrWhiteSpace())
             return new OperationState(false, "Le nom de l'item ne peut pas être vide");
-        
+
         if (Url.IsStringNullOrEmptyOrWhiteSpace())
             return new OperationState(false, "L'url ne peut pas être vide");
 
@@ -645,7 +640,7 @@ public partial class Tcategory
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = 
+        command.CommandText =
             """
             DELETE FROM TanimeCategory WHERE IdCategory = $Id;
             DELETE FROM Tcategory WHERE Id = $Id
@@ -739,13 +734,13 @@ public partial class Tcategory
     {
         while (await reader.ReadAsync(cancellationToken ?? CancellationToken.None))
         {
-            yield return GetRecord(reader, 
-                idIndex: reader.GetOrdinal("Id"), 
+            yield return GetRecord(reader,
+                idIndex: reader.GetOrdinal("Id"),
                 sectionIndex: reader.GetOrdinal("Section"),
-                typeIndex: reader.GetOrdinal("Type"), 
-                nameIndex: reader.GetOrdinal("Name"), 
-                descriptionIndex: reader.GetOrdinal("Description"), 
-                sheetIdIndex: reader.GetOrdinal("SheetId"), 
+                typeIndex: reader.GetOrdinal("Type"),
+                nameIndex: reader.GetOrdinal("Name"),
+                descriptionIndex: reader.GetOrdinal("Description"),
+                sheetIdIndex: reader.GetOrdinal("SheetId"),
                 urlIndex: reader.GetOrdinal("Url"));
         }
     }
