@@ -1,4 +1,5 @@
 ﻿using IcotakuScrapper.Anime;
+using IcotakuScrapper.Extensions;
 using Microsoft.Data.Sqlite;
 
 namespace IcotakuScrapper.Helpers
@@ -12,6 +13,15 @@ namespace IcotakuScrapper.Helpers
         {
             return _guid.ToString("N")?.ToUpper();
         }
+        
+        internal static Guid ConvertStringSqliteToGuid(string sqliteStringGuid)
+        {
+            if (sqliteStringGuid.IsStringNullOrEmptyOrWhiteSpace())
+                return Guid.Empty;
+            
+            var isGuidCorrect = Guid.TryParse(sqliteStringGuid, out var guid);
+            return !isGuidCorrect ? Guid.Empty : guid;
+        }
 
         internal static async Task<int> GetLastInsertRowIdAsync(SqliteCommand command)
         {
@@ -23,10 +33,18 @@ namespace IcotakuScrapper.Helpers
             throw new InvalidOperationException("Impossible de récupérer l'identifiant de la ligne insérée");
         }
 
+        internal static void AddPagination(SqliteCommand command, uint currentPage = 1, uint maxContentByPage = 20)
+        {
+            var skipCount = (currentPage - 1) * maxContentByPage;
+            command.CommandText += Environment.NewLine;
+            command.AddLimitOffset(maxContentByPage, skipCount);
+        }
+
         internal static void AddLimitOffset(SqliteCommand command, uint limit, uint offset)
         {
             if (limit > 0)
-                command.CommandText += $" LIMIT {limit}";
+                command.CommandText += Environment.NewLine + $"LIMIT {limit}";
+
             if (offset > 0)
                 command.CommandText += $" OFFSET {offset}";
         }
@@ -46,17 +64,17 @@ namespace IcotakuScrapper.Helpers
             };
         }
 
-        public static void AddOrderSort(SqliteCommand command, AnimeSeasonalPlanningSortBy sortBy, OrderBy orderBy)
+        public static void AddOrderSort(SqliteCommand command, SeasonalAnimePlanningSortBy sortBy, OrderBy orderBy)
         {
             command.CommandText += Environment.NewLine + sortBy switch
             {
-                AnimeSeasonalPlanningSortBy.Id => $"ORDER BY TanimeSeasonalPlanning.Id {orderBy}",
-                AnimeSeasonalPlanningSortBy.SheetId => $"ORDER BY TanimeSeasonalPlanning.SheetId {orderBy}",
-                AnimeSeasonalPlanningSortBy.ReleaseDate => $"ORDER BY TanimeSeasonalPlanning.ReleaseMonth {orderBy}",
-                AnimeSeasonalPlanningSortBy.AnimeName => $"ORDER BY TanimeSeasonalPlanning.AnimeName {orderBy}",
-                AnimeSeasonalPlanningSortBy.OrigineAdaptation => $"ORDER BY TorigineAdaptation.Name {orderBy}",
-                AnimeSeasonalPlanningSortBy.Season => $"ORDER BY Tseason.SeasonNumber {orderBy}",
-                AnimeSeasonalPlanningSortBy.GroupName => $"ORDER BY TanimeSeasonalPlanning.GroupName {orderBy}",
+                SeasonalAnimePlanningSortBy.Id => $"ORDER BY TanimeSeasonalPlanning.Id {orderBy}",
+                SeasonalAnimePlanningSortBy.SheetId => $"ORDER BY TanimeSeasonalPlanning.SheetId {orderBy}",
+                SeasonalAnimePlanningSortBy.ReleaseMonth => $"ORDER BY TanimeSeasonalPlanning.ReleaseMonth {orderBy}",
+                SeasonalAnimePlanningSortBy.AnimeName => $"ORDER BY TanimeSeasonalPlanning.AnimeName {orderBy}",
+                SeasonalAnimePlanningSortBy.OrigineAdaptation => $"ORDER BY TorigineAdaptation.Name {orderBy}",
+                SeasonalAnimePlanningSortBy.Season => $"ORDER BY Tseason.SeasonNumber {orderBy}",
+                SeasonalAnimePlanningSortBy.GroupName => $"ORDER BY TanimeSeasonalPlanning.GroupName {orderBy}",
                 _ => throw new ArgumentOutOfRangeException(nameof(sortBy), sortBy, "La valeur spécifiée est invalide")
             };
         }

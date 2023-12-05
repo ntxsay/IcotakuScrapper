@@ -231,6 +231,11 @@ public static class DateHelpers
         return GetSeasonLiteral((WeatherSeasonKind)seasonNumber, year);
     }
 
+    public static string? GetSeasonLiteral(WeatherSeason season)
+    {
+        return GetSeasonLiteral(season.Season, season.Year);
+    }
+
     public static string? GetSeasonLiteral(WeatherSeasonKind season, uint year)
     {
         if (year < DateOnly.MinValue.Year || year > DateOnly.MaxValue.Year)
