@@ -33,7 +33,7 @@ namespace IcotakuScrapper.Common
         /// <summary>
         /// Retourne le type de catégorie en fonction de l'url de la page de catégorie depuis icotaku.com
         /// </summary>
-        /// <param name="sheetUri"></param>
+        /// <param name="sheetId">Id Icotaku de la fiche</param>
         /// <returns></returns>
         public static CategoryType? GetCategoryType(Uri sheetUri)
         {
@@ -129,7 +129,7 @@ namespace IcotakuScrapper.Common
         /// <summary>
         /// Scrape les informations de la catégorie depuis la page contenant la fiche de la catégorie depuis icotaku.com
         /// </summary>
-        /// <param name="sheetUri"></param>
+        /// <param name="sheetId">Id Icotaku de la fiche</param>
         /// <returns></returns>
         internal static Tcategory? ScrapCategoryFromSheetPage(Uri sheetUri, IcotakuSection? sectionToCheck = null, CategoryType? categoryTypeToCheck = null)
         {

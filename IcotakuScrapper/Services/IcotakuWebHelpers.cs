@@ -58,6 +58,24 @@ namespace IcotakuScrapper.Services
         };
 
         /// <summary>
+        /// Retourne une valeur booléenne indiquant si le nom de domaine de l'url correspond à celui de la section
+        /// </summary>
+        /// <param name="section"></param>
+        /// <param name="uri"></param>
+        /// <returns></returns>
+        public static bool IsHostNameValid(IcotakuSection section, Uri uri)
+        {
+            if (!uri.IsAbsoluteUri)
+                return false;
+
+            var host = GetHostName(section);
+            if (host == null)
+                return false;
+
+            return string.Equals(uri.Host, host, StringComparison.OrdinalIgnoreCase) || uri.Host.Contains(host, StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
         /// Retourne la section du site à partir de l'url de la fiche anime, manga, light novel, drama, editeur, etc...
         /// </summary>
         /// <param name="sheetUri">Url de la fiche</param>
@@ -234,7 +252,15 @@ namespace IcotakuScrapper.Services
             return null;
         }
 
-        public static async Task<string?> GetRestrictedHtmlAsync(IcotakuSection section, Uri sheetUri, string username, string password)
+        /// <summary>
+        /// Retourne le contenu html de la fiche restreinte (Hentai, Yaoi, Yuri, etc...) en se connectant au serveur d'Icotaku 
+        /// </summary>
+        /// <param name="section"></param>
+        /// <param name="sheetUri"></param>
+        /// <param name="username">Nom d'utilisateur du compte Icotaku</param>
+        /// <param name="password">Mot de passe du compe Icotaku</param>
+        /// <returns></returns>
+        internal static async Task<string?> GetRestrictedHtmlAsync(IcotakuSection section, Uri sheetUri, string username, string password)
         {
             try
             {

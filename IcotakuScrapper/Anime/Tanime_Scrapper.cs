@@ -10,6 +10,13 @@ namespace IcotakuScrapper.Anime;
 
 public partial class Tanime
 {
+    /// <summary>
+    /// Récupère les informations de l'anime via l'id Icotaku de la fiche
+    /// </summary>
+    /// <param name="sheetId">Id Icotaku de la fiche</param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
     public static async Task<OperationState<int>> ScrapFromSheetIdAsync(int sheetId,
         CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
@@ -17,32 +24,59 @@ public partial class Tanime
         if (index == null)
             return new OperationState<int>(false, "L'index permettant de récupérer l'url de la fiche de l'anime n'a pas été trouvé dans la base de données.");
 
-        return await ScrapFromUrlAsync(index.Url, cancellationToken, cmd);
+        if (!Uri.TryCreate(index.Url, UriKind.Absolute, out var sheetUri) || !sheetUri.IsAbsoluteUri)
+            return new OperationState<int>(false, "L'url de la fiche de l'anime est invalide.");
+
+        return await ScrapFromUrlAsync(sheetUri, cancellationToken, cmd);
+    }
+
+    /// <summary>
+    /// Récupère les informations de l'anime via l'url de la fiche
+    /// </summary>
+    /// <param name="sheetId">Id Icotaku de la fiche</param>
+    /// <param name="userName"></param>
+    /// <param name="passWord"></param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
+    public static async Task<OperationState<int>> ScrapFromUrlAsync(Uri sheetUri, string userName, string passWord,
+        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        var htmlContent = await IcotakuWebHelpers.GetRestrictedHtmlAsync(IcotakuSection.Anime, sheetUri, userName, passWord);
+        if (htmlContent == null || htmlContent.IsStringNullOrEmptyOrWhiteSpace())
+            return new OperationState<int>(false, "Le contenu de la fiche est introuvable.");
+
+        if (!IcotakuWebHelpers.IsHostNameValid(IcotakuSection.Anime, sheetUri))
+            return new OperationState<int>(false, "L'url de la fiche de l'anime n'est pas une url icotaku.");
+
+        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+
+        var animeResult = await ScrapAnimeAsync(htmlContent, sheetUri, cancellationToken, command);
+
+        return await ScrapAnimeFromUrlAsync(animeResult, cancellationToken, command);
+    }
+
+    public static async Task<OperationState<int>> ScrapFromUrlAsync(Uri sheetUri, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        if (!IcotakuWebHelpers.IsHostNameValid(IcotakuSection.Anime, sheetUri))
+            return new OperationState<int>(false, "L'url de la fiche de l'anime n'est pas une url icotaku.");
+
+        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+
+        var animeResult = await ScrapAnimeAsync(sheetUri, cancellationToken, command);
+
+        return await ScrapAnimeFromUrlAsync(animeResult, cancellationToken, command);
     }
 
     /// <summary>
     /// Récupère l'anime depuis l'url de la fiche icotaku.
     /// </summary>
-    /// <param name="url"></param>
+    /// <param name="sheetId">Id Icotaku de la fiche</param>
     /// <param name="cancellationToken"></param>
     /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<OperationState<int>> ScrapFromUrlAsync(string url, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    private static async Task<OperationState<int>> ScrapAnimeFromUrlAsync(OperationState<Tanime?> animeResult, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
-        if (url.IsStringNullOrEmptyOrWhiteSpace())
-            return new OperationState<int>(false, "L'url de la fiche de l'anime ne peut pas être vide");
-
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || !uri.IsAbsoluteUri)
-            return new OperationState<int>(false, "L'url de la fiche de l'anime n'est pas valide");
-
-        var hostname = IcotakuWebHelpers.GetHostName(IcotakuSection.Anime);
-        if (hostname == null || !uri.Host.Contains(hostname, StringComparison.OrdinalIgnoreCase))
-            return new OperationState<int>(false, "L'url de la fiche de l'anime n'est pas une url icotaku.");
-
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-
-        var animeResult = await ScrapAnimeAsync(uri, cancellationToken, command);
-
         if (!animeResult.IsSuccess)
             return new OperationState<int>(false, animeResult.Message);
 
@@ -50,13 +84,30 @@ public partial class Tanime
         if (anime == null)
             return new OperationState<int>(false, "Une erreur est survenue lors de la récupération de l'anime");
 
-        if (!anime.Url.IsStringNullOrEmptyOrWhiteSpace())
-        {
-            _ = await CreateIndexAsync(anime.Name, anime.Url, anime.SheetId, cancellationToken, command);
-        }
-        anime.Url = uri.ToString();
+        if (anime.Url == null || anime.Url.IsStringNullOrEmptyOrWhiteSpace())
+            return new OperationState<int>(false, "L'url de la fiche de l'anime est introuvable.");
+
+        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+
+        _ = await CreateIndexAsync(anime.Name, anime.Url, anime.SheetId, cancellationToken, command);
 
         return await anime.InsertAync(cancellationToken, command);
+    }
+
+    private static async Task<OperationState<Tanime?>> ScrapAnimeAsync(string htmlContent, Uri sheetUri, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        HtmlDocument htmlDocument = new();
+        htmlDocument.LoadHtml(htmlContent);
+
+        return await ScrapAnimeAsync(htmlDocument.DocumentNode, sheetUri, cancellationToken, cmd);
+    }
+
+    private static async Task<OperationState<Tanime?>> ScrapAnimeAsync(Uri sheetUri, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        HtmlWeb web = new();
+        var htmlDocument = web.Load(sheetUri.OriginalString);
+
+        return await ScrapAnimeAsync(htmlDocument.DocumentNode, sheetUri, cancellationToken, cmd);
     }
 
     /// <summary>
@@ -66,51 +117,48 @@ public partial class Tanime
     /// <param name="cancellationToken"></param>
     /// <param name="cmd"></param>
     /// <returns></returns>
-    private static async Task<OperationState<Tanime?>> ScrapAnimeAsync(Uri uri, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    private static async Task<OperationState<Tanime?>> ScrapAnimeAsync(HtmlNode documentNode, Uri sheetUri, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         try
         {
-            HtmlWeb web = new();
-            var htmlDocument = web.Load(uri.OriginalString);
-
-            var isAdultContent = ScrapIsAdultContent(htmlDocument.DocumentNode);
+            var isAdultContent = ScrapIsAdultContent(documentNode);
             if (Main.IsAccessingToAdultContent == false && isAdultContent)
                 return new OperationState<Tanime?>(false, "L'anime est considéré comme étant un contenu adulte (Hentai, Yuri, Yaoi).");
 
-            var isExplicitContent = ScrapIsExplicitContent(htmlDocument.DocumentNode);
+            var isExplicitContent = ScrapIsExplicitContent(documentNode);
             if (Main.IsAccessingToExplicitContent == false && isExplicitContent)
                 return new OperationState<Tanime?>(false, "L'anime est considéré comme étant un contenu explicite (Violence ou nudité explicite).");
 
-            var mainName = ScrapMainName(htmlDocument.DocumentNode);
+            var mainName = ScrapMainName(documentNode);
             if (mainName == null || mainName.IsStringNullOrEmptyOrWhiteSpace())
                 throw new Exception("Le nom de l'anime n'a pas été trouvé");
 
-            var sheetId = IcotakuWebHelpers.GetSheetId(uri) ?? throw new Exception("L'id de la fiche anime n'a pas été trouvé.");
+            var sheetId = IcotakuWebHelpers.GetSheetId(sheetUri) ?? throw new Exception("L'id de la fiche anime n'a pas été trouvé.");
             await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
 
             var anime = new Tanime()
             {
                 Name = mainName,
                 SheetId = sheetId,
-                Url = uri.ToString(),
+                Url = sheetUri.ToString(),
                 IsAdultContent = isAdultContent,
                 IsExplicitContent = isExplicitContent,
-                Note = ScrapNote(htmlDocument.DocumentNode),
-                VoteCount = ScrapVoteCount(htmlDocument.DocumentNode),
-                DiffusionState = ScrapDiffusionState(htmlDocument.DocumentNode),
-                EpisodesCount = ScrapTotalEpisodes(htmlDocument.DocumentNode),
-                Duration = ScrapDuration(htmlDocument.DocumentNode),
-                Target = await ScrapTargetAsync(htmlDocument.DocumentNode, cancellationToken, command),
-                OrigineAdaptation = await ScrapOrigineAdaptationAsync(htmlDocument.DocumentNode, cancellationToken, command),
-                Format = await ScrapFormatAsync(htmlDocument.DocumentNode, cancellationToken, command),
-                Season = await ScrapSeason(htmlDocument.DocumentNode, cancellationToken, command),
-                ReleaseDate = ScrapBeginDate(htmlDocument.DocumentNode),
-                Description = ScrapDescription(htmlDocument.DocumentNode),
-                ThumbnailUrl = SCrapFullThumbnail(htmlDocument.DocumentNode),
+                Note = ScrapNote(documentNode),
+                VoteCount = ScrapVoteCount(documentNode),
+                DiffusionState = ScrapDiffusionState(documentNode),
+                EpisodesCount = ScrapTotalEpisodes(documentNode),
+                Duration = ScrapDuration(documentNode),
+                Target = await ScrapTargetAsync(documentNode, cancellationToken, command),
+                OrigineAdaptation = await ScrapOrigineAdaptationAsync(documentNode, cancellationToken, command),
+                Format = await ScrapFormatAsync(documentNode, cancellationToken, command),
+                Season = await ScrapSeason(documentNode, cancellationToken, command),
+                ReleaseDate = ScrapBeginDate(documentNode),
+                Description = ScrapDescription(documentNode),
+                ThumbnailUrl = SCrapFullThumbnail(documentNode),
             };
 
             //Titres alternatifs
-            var alternativeNames = ScrapAlternativeTitles(htmlDocument.DocumentNode).ToArray();
+            var alternativeNames = ScrapAlternativeTitles(documentNode).ToArray();
             if (alternativeNames.Length > 0)
             {
                 foreach (var title in alternativeNames)
@@ -123,7 +171,7 @@ public partial class Tanime
             }
 
             //Websites
-            var websites = ScrapWebsites(htmlDocument.DocumentNode).ToArray();
+            var websites = ScrapWebsites(documentNode).ToArray();
             if (websites.Length > 0)
             {
                 foreach (var url in websites)
@@ -136,8 +184,8 @@ public partial class Tanime
             }
 
             //Genres et themes
-            var genres = await GetCategoriesAsync(htmlDocument.DocumentNode, CategoryType.Genre, cancellationToken, command).ToArrayAsync();
-            var themes = await GetCategoriesAsync(htmlDocument.DocumentNode, CategoryType.Theme, cancellationToken, command).ToArrayAsync();
+            var genres = await GetCategoriesAsync(documentNode, CategoryType.Genre, cancellationToken, command).ToArrayAsync();
+            var themes = await GetCategoriesAsync(documentNode, CategoryType.Theme, cancellationToken, command).ToArrayAsync();
             List<Tcategory> categories = [.. genres, .. themes];
             if (categories.Count > 0)
             {
@@ -149,7 +197,7 @@ public partial class Tanime
             }
 
             //Studios
-            var studios = await ScrapStudioAsync(htmlDocument.DocumentNode, cancellationToken, command).ToArrayAsync();
+            var studios = await ScrapStudioAsync(documentNode, cancellationToken, command).ToArrayAsync();
             if (studios.Length > 0)
             {
                 foreach (var studio in studios)
@@ -160,7 +208,7 @@ public partial class Tanime
             }
 
             //Licenses
-            var licenses = await ScrapLicensesAsync(htmlDocument.DocumentNode, cancellationToken, command).ToArrayAsync();
+            var licenses = await ScrapLicensesAsync(documentNode, cancellationToken, command).ToArrayAsync();
             if (licenses.Length > 0)
             {
                 foreach (var license in licenses)

@@ -41,7 +41,15 @@ namespace IcotakuScrapperWebApi.Controllers
         {
             if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
                 return new OperationState<int>(false, "L'url n'est pas valide");
-            return await Tanime.ScrapFromUrlAsync(uri.ToString());
+            return await Tanime.ScrapFromUrlAsync(uri);
+        }
+
+        [HttpPost("Create/Restricted/Url")]
+        public async Task<OperationState<int>> CreateRestrictedByUrlAsync([FromQuery] string url, [FromQuery] string username, [FromQuery] string password)
+        {
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+                return new OperationState<int>(false, "L'url n'est pas valide");
+            return await Tanime.ScrapFromUrlAsync(uri, username, password);
         }
 
 
