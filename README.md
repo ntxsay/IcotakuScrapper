@@ -22,7 +22,7 @@ Ce projet permet l'obtention et le stockage local de synopsis d'animés (pour le
 
 ### Récupérer les informations d'un animé
 
-```
+```cs
 //Récupère les informations de l'anime via l'url de la fiche
 OperationState<int> animeCreationResult = await Tanime.ScrapFromUrlAsync("https://anime.icotaku.com/anime/5633/Dr-STONE.html");
 
@@ -38,7 +38,7 @@ Console.WriteLine(animeCreationResult.Data);
 
 ### Afficher les informations d'un animé
 
-```
+```csharp
 //Récupère les informations de l'anime précédement "scrapé" via l'url de la fiche
 Tanime? anime = await Tanime.SingleAsync(new Uri("https://anime.icotaku.com/anime/5633/Dr-STONE.html"));
 
