@@ -218,7 +218,7 @@ public class TanimeLicense
         if (IdAnime <= 0 || !await TanimeBase.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken, command))
             return new OperationState<int>(false, "L'anime n'existe pas.");
         
-        if (Distributor.Id <= 0 || !await Tcontact.ExistsAsync(Distributor.Id, IntColumnSelect.Id, cancellationToken, command))
+        if (Distributor.Id <= 0 || !await TcontactBase.ExistsAsync(Distributor.Id, IntColumnSelect.Id, cancellationToken, command))
             return new OperationState<int>(false, "Le distributor n'existe pas.");
         
         if (Type.Id <= 0 || !await TlicenseType.ExistsAsync(Type.Id, cancellationToken, command))
@@ -318,7 +318,7 @@ public class TanimeLicense
         if (IdAnime <= 0 || !await TanimeBase.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken, command))
             return new OperationState(false, "L'anime n'existe pas.");
         
-        if (Distributor.Id <= 0 || !await Tcontact.ExistsAsync(Distributor.Id, IntColumnSelect.Id, cancellationToken, command))
+        if (Distributor.Id <= 0 || !await TcontactBase.ExistsAsync(Distributor.Id, IntColumnSelect.Id, cancellationToken, command))
             return new OperationState(false, "Le distributor n'existe pas.");
         
         if (Type.Id <= 0 || !await TlicenseType.ExistsAsync(Type.Id, cancellationToken, command))

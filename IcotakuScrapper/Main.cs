@@ -14,7 +14,7 @@ namespace IcotakuScrapper
         /// <summary>
         /// Obtient ou définit une valeur indiquant si l'utilisateur a accès au contenu explicite (violence ou nudité explicite)
         /// </summary>
-        public static bool IsAccessingToExplicitContent { get; set; }
+        public static bool IsAccessingToExplicitContent { get; set; } = true;
 
         #region Working Directory Variables/Properties
         /// <summary>

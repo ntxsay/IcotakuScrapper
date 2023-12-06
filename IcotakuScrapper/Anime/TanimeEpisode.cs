@@ -343,7 +343,7 @@ public partial class TanimeEpisode
             return new OperationState<int>(false, "Le numéro de l'épisode ne peut pas être inférieur ou égal à 0");
 
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        if (IdAnime <= 0 || !await Tanime.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken, command))
+        if (IdAnime <= 0 || !await TanimeBase.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken, command))
             return new OperationState<int>(false, "L'identifiant de l'anime est invalide");
 
         if (await ExistsAsync(IdAnime, EpisodeNumber, cancellationToken, command))
@@ -388,7 +388,7 @@ public partial class TanimeEpisode
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        if (idAnime <= 0 || !await Tanime.ExistsAsync(idAnime, IntColumnSelect.Id, cancellationToken, command))
+        if (idAnime <= 0 || !await TanimeBase.ExistsAsync(idAnime, IntColumnSelect.Id, cancellationToken, command))
             return new OperationState(false, "L'anime n'existe pas.");
 
         if (values.Count == 0)
@@ -461,7 +461,7 @@ public partial class TanimeEpisode
         if (Id <= 0 || !await ExistsAsync(Id, SelectCountIdIdAnimeKind.Id, cancellationToken, command))
             return new OperationState(false, "L'identifiant de l'épisode est invalide");
 
-        if (IdAnime <= 0 || !await Tanime.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken, command))
+        if (IdAnime <= 0 || !await TanimeBase.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken, command))
             return new OperationState(false, "L'identifiant de l'anime est invalide");
 
         var existingId = await GetIdOfAsync(IdAnime, EpisodeNumber, cancellationToken, command);

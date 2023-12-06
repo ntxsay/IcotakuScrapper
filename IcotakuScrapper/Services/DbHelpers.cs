@@ -118,11 +118,19 @@ namespace IcotakuScrapper.Services
                         _ => throw new ArgumentOutOfRangeException(nameof(startFilterMode), startFilterMode, "La valeur spécifiée est invalide"),
                     };
 
-                AddExplicitContent(command, startFilterMode, isExplicitContentColumnName, isAdultContent, isExplicitContent);
+                AddExplicitContent(command, isAdultContent.HasValue ? DbStartFilterMode.And : DbStartFilterMode.Where, isExplicitContentColumnName, isAdultContent, isExplicitContent);
             }
             else //Si l'utilisateur n'a pas accès au contenu adulte de manière globale ...
             {
-                AddExplicitContent(command, startFilterMode, isExplicitContentColumnName, false, isExplicitContent);
+                command.CommandText += Environment.NewLine + startFilterMode switch
+                {
+                    DbStartFilterMode.Where => $"WHERE {isAdultContentColumnName} = 0",
+                    DbStartFilterMode.And => $"AND {isAdultContentColumnName} = 0",
+                    DbStartFilterMode.Or => $"OR {isAdultContentColumnName} = 0",
+                    _ => throw new ArgumentOutOfRangeException(nameof(startFilterMode), startFilterMode, "La valeur spécifiée est invalide"),
+                };
+
+                AddExplicitContent(command, DbStartFilterMode.And, isExplicitContentColumnName, false, isExplicitContent);
             }
 
             if (isAdultContent.HasValue)

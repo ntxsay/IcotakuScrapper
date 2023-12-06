@@ -194,9 +194,9 @@ public partial class Tanime : TanimeBase
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
         command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Tanime.Url = $Url COLLATE NOCASE";
-        
         command.Parameters.Clear();
-        
+
+        command.AddExplicitContentFilter(DbStartFilterMode.And, "Tanime.IsAdultContent", "Tanime.IsExplicitContent", null, null);
         command.Parameters.AddWithValue("$Url", sheetUri.ToString());
         
         var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);

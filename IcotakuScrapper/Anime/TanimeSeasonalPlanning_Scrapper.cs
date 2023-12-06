@@ -256,7 +256,7 @@ public partial class TanimeSeasonalPlanning
                 if (decodedItem == null || decodedItem.IsStringNullOrEmptyOrWhiteSpace())
                     continue;
 
-                var isExist = await Tcontact.ExistsAsync(decodedItem, cancellationToken, cmd);
+                var isExist = await TcontactBase.ExistsAsync(decodedItem, cancellationToken, cmd);
                 if (!isExist)
                 {
                     var contact = new Tcontact()

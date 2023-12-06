@@ -192,7 +192,7 @@ public class TanimeStudio
             return new OperationState<int>(false, "L'anime n'existe pas.", 0);
 
 
-        if (Studio.Id <= 0 || !await Tcontact.ExistsAsync(Studio.Id, IntColumnSelect.Id, cancellationToken, command))
+        if (Studio.Id <= 0 || !await TcontactBase.ExistsAsync(Studio.Id, IntColumnSelect.Id, cancellationToken, command))
             return new OperationState<int>(false, "Le studio n'existe pas.", 0);
 
         if (await ExistsAsync(IdAnime, Studio.Id, cancellationToken, command))
