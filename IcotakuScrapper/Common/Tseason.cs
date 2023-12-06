@@ -181,7 +181,7 @@ public class Tseason
         
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
-            return Array.Empty<Tseason>();
+            return [];
         
         return await GetRecords(reader, cancellationToken).ToArrayAsync(cancellationToken ?? CancellationToken.None);
     }
@@ -208,7 +208,7 @@ public class Tseason
         
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
-            return Array.Empty<Tseason>();
+            return [];
         
         return await GetRecords(reader, cancellationToken).ToArrayAsync(cancellationToken ?? CancellationToken.None);
     }
@@ -235,7 +235,7 @@ public class Tseason
         
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
-            return Array.Empty<Tseason>();
+            return [];
         
         return await GetRecords(reader, cancellationToken).ToArrayAsync(cancellationToken ?? CancellationToken.None);
     }

@@ -72,7 +72,7 @@ public partial class TorigineAdaptation
             {
                 Name = HttpUtility.HtmlDecode(s.InnerText.Trim()).Trim(),
                 Section = section
-            }).ToArray() ?? Array.Empty<TorigineAdaptation>();
+            }).ToArray() ?? [];
     }
 
 }

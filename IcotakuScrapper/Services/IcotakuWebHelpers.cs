@@ -1,7 +1,7 @@
 ﻿using HtmlAgilityPack;
 using IcotakuScrapper.Extensions;
-using IcotakuScrapper.Services.IOS;
-using Microsoft.Data.Sqlite;
+using System.Net;
+using System.Net.Http.Headers;
 
 namespace IcotakuScrapper.Services
 {
@@ -150,7 +150,7 @@ namespace IcotakuScrapper.Services
                 return null;
 
             var href = relativePath.ToString();
-            
+
             if (href.StartsWith('/'))
                 href = href.TrimStart('/');
 
@@ -233,9 +233,98 @@ namespace IcotakuScrapper.Services
 
             return null;
         }
+
+        public static async Task<string?> GetRestrictedHtmlAsync(IcotakuSection section, Uri sheetUri, string username, string password)
+        {
+            try
+            {
+                var baseUrl = GetBaseUrl(section);
+                if (baseUrl == null)
+                    return null;
+
+                var handler = new HttpClientHandler
+                {
+                    CookieContainer = new CookieContainer(),
+                    UseCookies = true
+                };
+
+                using var client = new HttpClient(handler)
+                {
+                    BaseAddress = new Uri(baseUrl)
+                };
+
+                client.DefaultRequestHeaders.Accept.Clear();
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("text/html"));
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/xhtml+xml"));
+                client.DefaultRequestHeaders.AcceptEncoding.Clear();
+                client.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("utf-8"));
+                client.DefaultRequestHeaders.AcceptLanguage.Clear();
+                client.DefaultRequestHeaders.AcceptLanguage.Add(new StringWithQualityHeaderValue("fr-FR"));
+                client.DefaultRequestHeaders.AcceptLanguage.Add(new StringWithQualityHeaderValue("fr"));
+
+
+                // Récupérer la page d'accueil pour récupérer le jeton CSRF
+                using var homePageResult = await client.GetAsync("/");
+                homePageResult.EnsureSuccessStatusCode();
+
+                var homePageContent = await homePageResult.Content.ReadAsStringAsync();
+                var homePageDocument = new HtmlDocument();
+                homePageDocument.LoadHtml(homePageContent);
+
+                var csrfTokenNode = homePageDocument.DocumentNode.SelectSingleNode("//input[@name='_csrf_token']");
+                if (csrfTokenNode == null)
+                {
+                    LogServices.LogDebug("Le jeton CSRF n'a pas été trouvé");
+                    return null;
+                }
+
+                var csrfToken = csrfTokenNode.GetAttributeValue("value", string.Empty);
+
+                if (csrfToken.IsStringNullOrEmptyOrWhiteSpace())
+                {
+                    LogServices.LogDebug("Le jeton CSRF est vide");
+                    return null;
+                }
+
+                // Récupérer le cookie de session
+                var cookies = handler.CookieContainer.GetCookies(client.BaseAddress);
+                var sessionCookie = cookies["icookie"];
+
+                if (sessionCookie == null)
+                {
+                    LogServices.LogDebug("Le cookie de session n'a pas été trouvé");
+                    return null;
+                }
+
+                // Se connecter
+                using var loginResult = await client.PostAsync("/login.html", new FormUrlEncodedContent(new Dictionary<string, string>
+                {
+                    {"_csrf_token", csrfToken},
+                    {"login", username},
+                    {"password", password},
+                    {"referer", "/" }
+                }));
+
+                loginResult.EnsureSuccessStatusCode();
+
+                // Récupérer la page de la fiche
+                var sheetResult = await client.GetAsync(sheetUri.PathAndQuery);
+
+                sheetResult.EnsureSuccessStatusCode();
+
+                var sheetContent = await sheetResult.Content.ReadAsStringAsync();
+                return sheetContent;
+
+            }
+            catch (Exception e)
+            {
+                LogServices.LogDebug(e);
+                return null;
+            }
+        }
+
     }
 
-    
 
 
 }

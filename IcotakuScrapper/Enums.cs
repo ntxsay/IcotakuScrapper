@@ -272,3 +272,11 @@ public enum DbInsertMode
     Replace,
 }
 
+public enum DbStartFilterMode
+{
+    None,
+    Where,
+    And,
+    Or,
+}
+

@@ -18,11 +18,11 @@ namespace IcotakuScrapperWebApi.Controllers
 
         [HttpGet("Single/Id/{id}")]
         public async Task<Tanime?> SelectByIdAsync([FromRoute] uint id)
-            => await Tanime.SingleAsync((int)id, SheetIntColumnSelect.Id);
+            => await Tanime.SingleAsync((int)id, IntColumnSelect.Id);
 
         [HttpGet("Single/SheetId/{id}")]
         public async Task<Tanime?> SelectBySheetIdAsync([FromRoute] uint id)
-            => await Tanime.SingleAsync((int)id, SheetIntColumnSelect.SheetId);
+            => await Tanime.SingleAsync((int)id, IntColumnSelect.SheetId);
 
         [HttpGet("Single/Name")]
         public async Task<Tanime?> SelectByNameAsync([FromQuery] string name)
@@ -41,7 +41,7 @@ namespace IcotakuScrapperWebApi.Controllers
         {
             if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
                 return new OperationState<int>(false, "L'url n'est pas valide");
-            return await Tanime.ScrapAnimeFromUrl(uri.ToString());
+            return await Tanime.ScrapFromUrlAsync(uri.ToString());
         }
 
 

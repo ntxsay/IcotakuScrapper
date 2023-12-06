@@ -1,5 +1,4 @@
 ﻿using IcotakuScrapper.Anime;
-
 using Microsoft.Data.Sqlite;
 
 namespace IcotakuScrapper.Extensions
@@ -32,6 +31,18 @@ namespace IcotakuScrapper.Extensions
 
         public static void StartWithInsertMode(this SqliteCommand command, DbInsertMode insertMode)
             => DbHelpers.StartWithInsertMode(command, insertMode);
+
+        /// <summary>
+        /// Ajoute les clauses de filtres de contenu explicite et adulte à la commande SQL.
+        /// </summary>
+        /// <param name="command"></param>
+        /// <param name="startFilterMode"></param>
+        /// <param name="isAdultContentColumnName"></param>
+        /// <param name="isExplicitContentColumnName"></param>
+        /// <param name="isAdultContent"></param>
+        /// <param name="isExplicitContent"></param>
+        public static void AddExplicitContentFilter(this SqliteCommand command, DbStartFilterMode startFilterMode, string isAdultContentColumnName, string isExplicitContentColumnName, bool? isAdultContent = false, bool? isExplicitContent = false)
+            => DbHelpers.AddExplicitContentFilter(command, startFilterMode, isAdultContentColumnName, isExplicitContentColumnName, isAdultContent, isExplicitContent);
 
         public static bool IsIntColumnValidated(this SqliteCommand command, IntColumnSelect currentSelectedColumn, HashSet<IntColumnSelect> acceptedColumns)
             => DbHelpers.IsIntColumnValidated(command, currentSelectedColumn, acceptedColumns);

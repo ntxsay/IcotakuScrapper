@@ -172,7 +172,7 @@ public partial class TorigineAdaptation
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
-            return Array.Empty<TorigineAdaptation>();
+            return [];
 
         return await GetRecords(reader, cancellationToken).ToArrayAsync(cancellationToken ?? CancellationToken.None);
     }
@@ -197,7 +197,7 @@ public partial class TorigineAdaptation
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
-            return Array.Empty<TorigineAdaptation>();
+            return [];
 
         return await GetRecords(reader, cancellationToken).ToArrayAsync(cancellationToken ?? CancellationToken.None);
     }

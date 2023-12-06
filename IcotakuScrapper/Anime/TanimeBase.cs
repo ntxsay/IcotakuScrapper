@@ -91,7 +91,7 @@ public class TanimeBase
     /// <summary>
     /// Obtient ou définit la liste des  catégories de l'anime (genre et thèmes).
     /// </summary>
-    public HashSet<Tcategory> Categories { get; } = new();
+    public HashSet<Tcategory> Categories { get; } = [];
 
     public TanimeBase()
     {
@@ -131,11 +131,11 @@ public class TanimeBase
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        var isColumnSelectValid = command.IsIntColumnValidated(columnSelect, new HashSet<IntColumnSelect>()
-        {
+        var isColumnSelectValid = command.IsIntColumnValidated(columnSelect,
+        [
             IntColumnSelect.Id,
             IntColumnSelect.SheetId,
-        });
+        ]);
 
         if (!isColumnSelectValid)
         {
@@ -301,19 +301,18 @@ public class TanimeBase
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        var isColumnSelectValid = command.IsIntColumnValidated(columnSelect, new HashSet<IntColumnSelect>()
-        {
+        var isColumnSelectValid = command.IsIntColumnValidated(columnSelect,
+        [
             IntColumnSelect.Id,
             IntColumnSelect.SheetId,
-        });
+        ]);
 
         if (!isColumnSelectValid)
         {
             return null;
         }
-        command.CommandText = SqlSelectScript + Environment.NewLine;
 
-        command.CommandText += columnSelect switch
+        command.CommandText = SqlSelectScript + Environment.NewLine + columnSelect switch
         {
             IntColumnSelect.Id => "WHERE Tanime.Id = $Id",
             IntColumnSelect.SheetId => "WHERE Tanime.SheetId = $Id",
@@ -321,6 +320,8 @@ public class TanimeBase
         };
 
         command.Parameters.Clear();
+
+        command.AddExplicitContentFilter(DbStartFilterMode.And, "Tanime.IsAdultContent", "Tanime.IsExplicitContent", null, null);
 
         command.Parameters.AddWithValue("$Id", id);
 
@@ -335,12 +336,10 @@ public class TanimeBase
             return null;
 
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = SqlSelectScript + Environment.NewLine;
-
-        command.CommandText += "WHERE Tanime.Name = $Name COLLATE NOCASE";
-
+        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Tanime.Name = $Name COLLATE NOCASE";
         command.Parameters.Clear();
 
+        command.AddExplicitContentFilter(DbStartFilterMode.And, "Tanime.IsAdultContent", "Tanime.IsExplicitContent", null, null);
         command.Parameters.AddWithValue("$Name", name);
 
         var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
@@ -351,12 +350,10 @@ public class TanimeBase
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = SqlSelectScript + Environment.NewLine;
-
-        command.CommandText += "WHERE Tanime.Url = $Url COLLATE NOCASE";
-
+        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Tanime.Url = $Url COLLATE NOCASE";
         command.Parameters.Clear();
 
+        command.AddExplicitContentFilter(DbStartFilterMode.And, "Tanime.IsAdultContent", "Tanime.IsExplicitContent", null, null);
         command.Parameters.AddWithValue("$Url", sheetUri.ToString());
 
         var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
@@ -418,7 +415,7 @@ public class TanimeBase
     private static async Task<TanimeBase[]> GetRecords(SqliteDataReader reader,
         CancellationToken? cancellationToken = null)
     {
-        List<TanimeBase> records = new();
+        List<TanimeBase> records = [];
         while (await reader.ReadAsync(cancellationToken ?? CancellationToken.None))
         {
             var idPlanning = reader.GetInt32(reader.GetOrdinal("BaseId"));

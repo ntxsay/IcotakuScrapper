@@ -94,10 +94,97 @@ namespace IcotakuScrapper.Services
             };
         }
 
+        /// <summary>
+        /// Ajoute le filtrage du contenu adulte et explicite à la commande SQL.
+        /// </summary>
+        /// <param name="command"></param>
+        /// <param name="startFilterMode"></param>
+        /// <param name="isAdultContent"></param>
+        /// <param name="isExplicitContent"></param>
+        /// <exception cref="ArgumentOutOfRangeException"></exception>
+        public static void AddExplicitContentFilter(SqliteCommand command, DbStartFilterMode startFilterMode, string isAdultContentColumnName, string isExplicitContentColumnName, bool? isAdultContent = false, bool? isExplicitContent = false)
+        {
+            //Si l'utilisateur a accès au contenu adulte de manière globale...
+            if (Main.IsAccessingToAdultContent)
+            {
+                //Et que l'utilisateur a aussi accès au contenu adulte via le paramètre de la méthode
+                //Alors on commence par filtrer le contenu adulte
+                if (isAdultContent.HasValue)
+                    command.CommandText += Environment.NewLine + startFilterMode switch
+                    {
+                        DbStartFilterMode.Where => $"WHERE {isAdultContentColumnName} = $IsAdultContent",
+                        DbStartFilterMode.And => $"AND {isAdultContentColumnName} = $IsAdultContent",
+                        DbStartFilterMode.Or => $"OR {isAdultContentColumnName} = $IsAdultContent",
+                        _ => throw new ArgumentOutOfRangeException(nameof(startFilterMode), startFilterMode, "La valeur spécifiée est invalide"),
+                    };
+
+                AddExplicitContent(command, startFilterMode, isExplicitContentColumnName, isAdultContent, isExplicitContent);
+            }
+            else //Si l'utilisateur n'a pas accès au contenu adulte de manière globale ...
+            {
+                AddExplicitContent(command, startFilterMode, isExplicitContentColumnName, false, isExplicitContent);
+            }
+
+            if (isAdultContent.HasValue)
+                command.Parameters.AddWithValue("$IsAdultContent", isAdultContent.Value ? 1 : 0);
+        }
+
+        /// <summary>
+        /// Ajoute le filtrage du contenu explicite à la commande SQL.
+        /// </summary>
+        /// <param name="command"></param>
+        /// <param name="startFilterMode"></param>
+        /// <param name="isAdultContent"></param>
+        /// <param name="isExplicitContent"></param>
+        /// <exception cref="ArgumentOutOfRangeException"></exception>
+        private static void AddExplicitContent(SqliteCommand command, DbStartFilterMode startFilterMode, string columnName, bool? isAdultContent = false, bool? isExplicitContent = false)
+        {
+            //Et que l'utilisateur a accès au contenu explicite de manière globale ...
+            if (Main.IsAccessingToExplicitContent)
+            {
+                //Et que l'utilisateur a aussi accès au contenu explicite via le paramètre de la méthode
+                if (isExplicitContent.HasValue)
+                {
+                    //Alors on poursuit par le filtrage du contenu explicite
+                    if (isAdultContent.HasValue)
+                        command.CommandText += Environment.NewLine + $"AND {columnName} = $IsExplicitContent";
+                    //Alors on commence par filtrer le contenu explicite
+                    else
+                        command.CommandText += Environment.NewLine + startFilterMode switch
+                        {
+                            DbStartFilterMode.Where => $"WHERE {columnName} = $IsExplicitContent",
+                            DbStartFilterMode.And => $"AND {columnName} = $IsExplicitContent",
+                            DbStartFilterMode.Or => $"OR {columnName} = $IsExplicitContent",
+                            _ => throw new ArgumentOutOfRangeException(nameof(startFilterMode), startFilterMode, "La valeur spécifiée est invalide"),
+                        };
+                }
+            }
+            else //Si l'utilisateur n'a pas accès au contenu explicite de manière globale ...
+            {
+                //Alors on poursuit par le filtrage du contenu explicite ignoré
+                if (isAdultContent.HasValue)
+                    command.CommandText += Environment.NewLine + "AND {columnName} = 0";
+
+                //Alors on commence par le filtrage du contenu explicite ignoré
+                else
+                    command.CommandText += Environment.NewLine + startFilterMode switch
+                    {
+                        DbStartFilterMode.Where => "WHERE {columnName} = 0",
+                        DbStartFilterMode.And => "AND {columnName} = 0",
+                        DbStartFilterMode.Or => "OR {columnName} = 0",
+                        _ => throw new ArgumentOutOfRangeException(nameof(startFilterMode), startFilterMode, "La valeur spécifiée est invalide"),
+                    };
+            }
+
+            if (isExplicitContent.HasValue)
+                command.Parameters.AddWithValue("$IsExplicitContent", isExplicitContent.Value ? 1 : 0);
+        }
+
         public static bool IsIntColumnValidated(SqliteCommand command, IntColumnSelect currentSelectedColumn, HashSet<IntColumnSelect> acceptedColumns)
         {
             if (acceptedColumns.Count == 0)
             {
+                LogServices.LogDebug("La liste des colonnes acceptées est vide.");
                 command.CommandText = string.Empty;
                 return false;
             }
@@ -105,6 +192,7 @@ namespace IcotakuScrapper.Services
             var any = acceptedColumns.Any(a => a == currentSelectedColumn);
             if (!any)
             {
+                LogServices.LogDebug($"La colonne {currentSelectedColumn} n'est pas acceptée.");
                 command.CommandText = string.Empty;
                 return false;
             }

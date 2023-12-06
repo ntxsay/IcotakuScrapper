@@ -1,5 +1,4 @@
 ﻿using IcotakuScrapper.Extensions;
-
 using Microsoft.Data.Sqlite;
 using System.Globalization;
 
@@ -7,6 +6,16 @@ namespace IcotakuScrapper
 {
     public static class Main
     {
+        /// <summary>
+        /// Obtient ou définit une valeur indiquant si l'utilisateur a accès au contenu pour adulte (Hentai, Yaoi, Yuri)
+        /// </summary>
+        public static bool IsAccessingToAdultContent { get; set; } = false;
+
+        /// <summary>
+        /// Obtient ou définit une valeur indiquant si l'utilisateur a accès au contenu explicite (violence ou nudité explicite)
+        /// </summary>
+        public static bool IsAccessingToExplicitContent { get; set; }
+
         #region Working Directory Variables/Properties
         /// <summary>
         ///     Chemin d'accès du dossier contenant les ressources de l'API

@@ -168,7 +168,7 @@ public class TcontactGenre
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
-            return Array.Empty<TcontactGenre>();
+            return [];
 
         return await GetRecords(reader, cancellationToken).ToArrayAsync(cancellationToken ?? CancellationToken.None);
     }

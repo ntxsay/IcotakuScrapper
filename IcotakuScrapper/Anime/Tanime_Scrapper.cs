@@ -10,14 +10,14 @@ namespace IcotakuScrapper.Anime;
 
 public partial class Tanime
 {
-    public static async Task<OperationState<int>> ScrapAnimeFromSheetId(int sheetId,
+    public static async Task<OperationState<int>> ScrapFromSheetIdAsync(int sheetId,
         CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         var index = await TsheetIndex.SingleAsync(sheetId, IntColumnSelect.SheetId, cancellationToken, cmd);
         if (index == null)
             return new OperationState<int>(false, "L'index permettant de récupérer l'url de la fiche de l'anime n'a pas été trouvé dans la base de données.");
 
-        return await ScrapAnimeFromUrl(index.Url, cancellationToken, cmd);
+        return await ScrapFromUrlAsync(index.Url, cancellationToken, cmd);
     }
 
     /// <summary>
@@ -27,7 +27,7 @@ public partial class Tanime
     /// <param name="cancellationToken"></param>
     /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<OperationState<int>> ScrapAnimeFromUrl(string url, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public static async Task<OperationState<int>> ScrapFromUrlAsync(string url, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         if (url.IsStringNullOrEmptyOrWhiteSpace())
             return new OperationState<int>(false, "L'url de la fiche de l'anime ne peut pas être vide");
@@ -73,6 +73,14 @@ public partial class Tanime
             HtmlWeb web = new();
             var htmlDocument = web.Load(uri.OriginalString);
 
+            var isAdultContent = ScrapIsAdultContent(htmlDocument.DocumentNode);
+            if (Main.IsAccessingToAdultContent == false && isAdultContent)
+                return new OperationState<Tanime?>(false, "L'anime est considéré comme étant un contenu adulte (Hentai, Yuri, Yaoi).");
+
+            var isExplicitContent = ScrapIsExplicitContent(htmlDocument.DocumentNode);
+            if (Main.IsAccessingToExplicitContent == false && isExplicitContent)
+                return new OperationState<Tanime?>(false, "L'anime est considéré comme étant un contenu explicite (Violence ou nudité explicite).");
+
             var mainName = ScrapMainName(htmlDocument.DocumentNode);
             if (mainName == null || mainName.IsStringNullOrEmptyOrWhiteSpace())
                 throw new Exception("Le nom de l'anime n'a pas été trouvé");
@@ -85,8 +93,8 @@ public partial class Tanime
                 Name = mainName,
                 SheetId = sheetId,
                 Url = uri.ToString(),
-                IsAdultContent = ScrapIsAdultContent(htmlDocument.DocumentNode),
-                IsExplicitContent = ScrapIsExplicitContent(htmlDocument.DocumentNode),
+                IsAdultContent = isAdultContent,
+                IsExplicitContent = isExplicitContent,
                 Note = ScrapNote(htmlDocument.DocumentNode),
                 VoteCount = ScrapVoteCount(htmlDocument.DocumentNode),
                 DiffusionState = ScrapDiffusionState(htmlDocument.DocumentNode),

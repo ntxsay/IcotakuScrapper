@@ -156,7 +156,7 @@ public class TanimeCategory
         command.Parameters.AddWithValue("$Id", id);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
-            return Array.Empty<TanimeCategory>();
+            return [];
         return await GetRecords(reader, cancellationToken).ToArrayAsync(cancellationToken ?? CancellationToken.None);
     }
 

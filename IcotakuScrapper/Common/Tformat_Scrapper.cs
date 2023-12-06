@@ -71,7 +71,7 @@ public partial class Tformat
             {
                 Name = HttpUtility.HtmlDecode(s.InnerText.Trim()).Trim(),
                 Section = section
-            }).ToArray() ?? Array.Empty<Tformat>();
+            }).ToArray() ?? [];
     }
 
 }

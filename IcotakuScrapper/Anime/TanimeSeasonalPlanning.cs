@@ -350,7 +350,7 @@ public partial class TanimeSeasonalPlanning
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
-            return Array.Empty<TanimeSeasonalPlanning>();
+            return [];
 
         return await GetRecords(reader, cancellationToken).ToArrayAsync();
     }
@@ -393,7 +393,7 @@ public partial class TanimeSeasonalPlanning
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
-            return Array.Empty<TanimeSeasonalPlanning>();
+            return [];
 
         return await GetRecords(reader, cancellationToken).ToArrayAsync();
     }
@@ -413,7 +413,7 @@ public partial class TanimeSeasonalPlanning
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
-            return Array.Empty<TanimeSeasonalPlanning>();
+            return [];
 
         return await GetRecords(reader, cancellationToken).ToArrayAsync();
     }
@@ -435,7 +435,7 @@ public partial class TanimeSeasonalPlanning
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
-            return Array.Empty<TanimeSeasonalPlanning>();
+            return [];
 
         return await GetRecords(reader, cancellationToken).ToArrayAsync();
     }

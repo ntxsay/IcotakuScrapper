@@ -327,7 +327,7 @@ public partial class TanimeDailyPlanning
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
-            return Array.Empty<TanimeDailyPlanning>();
+            return [];
 
         return await GetRecords(reader, cancellationToken).ToArrayAsync();
     }
@@ -360,7 +360,7 @@ public partial class TanimeDailyPlanning
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
-            return Array.Empty<TanimeDailyPlanning>();
+            return [];
 
         return await GetRecords(reader, cancellationToken).ToArrayAsync();
     }
@@ -395,7 +395,7 @@ public partial class TanimeDailyPlanning
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
-            return Array.Empty<TanimeDailyPlanning>();
+            return [];
 
         return await GetRecords(reader, cancellationToken).ToArrayAsync();
     }
@@ -432,7 +432,7 @@ public partial class TanimeDailyPlanning
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
-            return Array.Empty<TanimeDailyPlanning>();
+            return [];
 
         return await GetRecords(reader, cancellationToken).ToArrayAsync();
     }

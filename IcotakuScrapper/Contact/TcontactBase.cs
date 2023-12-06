@@ -84,11 +84,11 @@ public class TcontactBase
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        var isColumnSelectValid = command.IsIntColumnValidated(columnSelect, new HashSet<IntColumnSelect>()
-        {
+        var isColumnSelectValid = command.IsIntColumnValidated(columnSelect,
+        [
             IntColumnSelect.Id,
             IntColumnSelect.SheetId,
-        });
+        ]);
         
         if (!isColumnSelectValid)
         {
@@ -231,11 +231,11 @@ public class TcontactBase
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        var isColumnSelectValid = command.IsIntColumnValidated(columnSelect, new HashSet<IntColumnSelect>()
-        {
+        var isColumnSelectValid = command.IsIntColumnValidated(columnSelect,
+        [
             IntColumnSelect.Id,
             IntColumnSelect.SheetId,
-        });
+        ]);
         
         if (!isColumnSelectValid)
         {

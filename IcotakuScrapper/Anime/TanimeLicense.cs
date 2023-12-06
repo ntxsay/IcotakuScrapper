@@ -136,13 +136,13 @@ public class TanimeLicense
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        var isColumnSelectValid = command.IsIntColumnValidated(columnSelect, new HashSet<IntColumnSelect>()
-        {
+        var isColumnSelectValid = command.IsIntColumnValidated(columnSelect,
+        [
             IntColumnSelect.Id,
             IntColumnSelect.IdAnime,
             IntColumnSelect.IdDistributor,
             IntColumnSelect.IdLicenseType,
-        });
+        ]);
         
         if (!isColumnSelectValid)
         {
@@ -167,7 +167,7 @@ public class TanimeLicense
         command.Parameters.AddWithValue("$Id", id);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
-            return Array.Empty<TanimeLicense>();
+            return [];
         return await GetRecords(reader, cancellationToken).ToArrayAsync(cancellationToken ?? CancellationToken.None);
     }
 

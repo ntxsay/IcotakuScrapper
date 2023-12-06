@@ -79,7 +79,7 @@ public class Tcontact : TcontactBase
         
         var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
-            return Array.Empty<Tcontact>();
+            return [];
         
         return await GetRecords(reader, cancellationToken);
     }
@@ -92,11 +92,11 @@ public class Tcontact : TcontactBase
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        var isColumnSelectValid = command.IsIntColumnValidated(columnSelect, new HashSet<IntColumnSelect>()
-        {
+        var isColumnSelectValid = command.IsIntColumnValidated(columnSelect,
+        [
             IntColumnSelect.Id,
             IntColumnSelect.SheetId,
-        });
+        ]);
         
         if (!isColumnSelectValid)
         {
@@ -293,7 +293,7 @@ public class Tcontact : TcontactBase
     private static async Task<Tcontact[]> GetRecords(SqliteDataReader reader,
         CancellationToken? cancellationToken = null)
     {
-        List<Tcontact> recordList = new();
+        List<Tcontact> recordList = [];
         while (await reader.ReadAsync(cancellationToken ?? CancellationToken.None))
         {
             var id = reader.GetInt32(reader.GetOrdinal("BaseId"));
