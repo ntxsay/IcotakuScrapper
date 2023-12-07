@@ -110,7 +110,7 @@ public partial class Tanime : TanimeBase
     
 
     private static async Task<OperationState<int>> CreateIndexAsync(string animeName, string animeUrl, int animeSheetId, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
-        => await TsheetIndex.InsertAsync(IcotakuSection.Anime, SheetType.Anime, animeName, animeUrl, animeSheetId, 0, cancellationToken, cmd);
+        => await TsheetIndex.InsertAsync(IcotakuSection.Anime, IcotakuSheetType.Anime, animeName, animeUrl, animeSheetId, 0, cancellationToken, cmd);
     
 
 

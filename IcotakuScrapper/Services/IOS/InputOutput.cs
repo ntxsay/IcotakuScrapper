@@ -10,18 +10,18 @@ namespace IcotakuScrapper.Services.IOS
     {
         #region Get
         /// <summary>
-        /// Retourne le chemin d'accès du dossier de la section spécifiée
+        /// Retourne le chemin d'accès du dossier de la defaultFolder spécifiée
         /// </summary>
-        /// <param name="section"></param>
+        /// <param name="defaultFolder"></param>
         /// <returns></returns>
-        public static string GetSectionPath(IcotakuSection section)
-            => Path.Combine(Main.BasePath, section.ToString());
+        public static string GetSectionPath(IcotakuDefaultFolder defaultFolder)
+            => Path.Combine(Main.BasePath, defaultFolder.ToString());
 
-        public static string GetItemPath(IcotakuSection section, Guid itemGuid)
+        public static string GetItemPath(IcotakuDefaultFolder defaultFolder, Guid itemGuid)
         {
             if (itemGuid == Guid.Empty)
                 throw new ArgumentException("L'identifiant de l'item ne peut pas être vide.", nameof(itemGuid));
-            return Path.Combine(GetSectionPath(section), itemGuid.ToString());
+            return Path.Combine(GetSectionPath(defaultFolder), itemGuid.ToString());
         }
 
         public static string GetSpecifiedPath(params string[] partialPaths)
@@ -35,9 +35,9 @@ namespace IcotakuScrapper.Services.IOS
             return path;
         }
 
-        public static string GetSpecifiedPath(IcotakuSection section, params string[] partialPaths)
+        public static string GetSpecifiedPath(IcotakuDefaultFolder defaultFolder, params string[] partialPaths)
         {
-            var path = GetSectionPath(section);
+            var path = GetSectionPath(defaultFolder);
             foreach (var partialPath in partialPaths)
             {
                 path = Path.Combine(path, partialPath);
@@ -46,9 +46,9 @@ namespace IcotakuScrapper.Services.IOS
             return path;
         }
 
-        public static string GetSpecifiedPath(IcotakuSection section, Guid itemGuid, params string[] partialPaths)
+        public static string GetSpecifiedPath(IcotakuDefaultFolder defaultFolder, Guid itemGuid, params string[] partialPaths)
         {
-            var path = GetItemPath(section, itemGuid);
+            var path = GetItemPath(defaultFolder, itemGuid);
             foreach (var partialPath in partialPaths)
             {
                 path = Path.Combine(path, partialPath);
@@ -60,11 +60,11 @@ namespace IcotakuScrapper.Services.IOS
 
         #region Create
 
-        public static string? CreateSectionDirectory(IcotakuSection section)
+        public static string? CreateDefaultDirectory(IcotakuDefaultFolder defaultFolder)
         {
             try
             {
-                var path = GetSectionPath(section);
+                var path = GetSectionPath(defaultFolder);
                 if (!Directory.Exists(path))
                     Directory.CreateDirectory(path);
                 return path;
@@ -76,11 +76,11 @@ namespace IcotakuScrapper.Services.IOS
             }
         }
 
-        public static string? CreateItemDirectory(IcotakuSection section, Guid itemGuid)
+        public static string? CreateItemDirectory(IcotakuDefaultFolder defaultFolder, Guid itemGuid)
         {
             try
             {
-                var path = GetItemPath(section, itemGuid);
+                var path = GetItemPath(defaultFolder, itemGuid);
                 if (!Directory.Exists(path))
                     Directory.CreateDirectory(path);
                 return path;
@@ -108,11 +108,11 @@ namespace IcotakuScrapper.Services.IOS
             }
         }
 
-        public static string? CreateSpecifiedDirectory(IcotakuSection section, params string[] partialPaths)
+        public static string? CreateSpecifiedDirectory(IcotakuDefaultFolder defaultFolder, params string[] partialPaths)
         {
             try
             {
-                var path = GetSpecifiedPath(section, partialPaths);
+                var path = GetSpecifiedPath(defaultFolder, partialPaths);
                 if (!Directory.Exists(path))
                     Directory.CreateDirectory(path);
                 return path;
@@ -124,11 +124,11 @@ namespace IcotakuScrapper.Services.IOS
             }
         }
 
-        public static string? CreateSpecifiedDirectory(IcotakuSection section, Guid itemGuid, params string[] partialPaths)
+        public static string? CreateSpecifiedDirectory(IcotakuDefaultFolder defaultFolder, Guid itemGuid, params string[] partialPaths)
         {
             try
             {
-                var path = GetSpecifiedPath(section, itemGuid, partialPaths);
+                var path = GetSpecifiedPath(defaultFolder, itemGuid, partialPaths);
                 if (!Directory.Exists(path))
                     Directory.CreateDirectory(path);
                 return path;
@@ -142,13 +142,87 @@ namespace IcotakuScrapper.Services.IOS
 
         #endregion
 
-        #region Delete
+        #region Exists
 
-        public static bool DeleteSectionDirectory(IcotakuSection section)
+        public static bool ExistsSectionDirectory(IcotakuDefaultFolder defaultFolder)
         {
             try
             {
-                var path = GetSectionPath(section);
+                var path = GetSectionPath(defaultFolder);
+                return Directory.Exists(path);
+            }
+            catch (Exception e)
+            {
+                LogServices.LogDebug(e);
+                return false;
+            }
+        }
+
+        public static bool ExistsItemDirectory(IcotakuDefaultFolder defaultFolder, Guid itemGuid)
+        {
+            try
+            {
+                var path = GetItemPath(defaultFolder, itemGuid);
+                return Directory.Exists(path);
+            }
+            catch (Exception e)
+            {
+                LogServices.LogDebug(e);
+                return false;
+            }
+        }
+
+        public static bool ExistsSpecifiedDirectory(params string[] partialPaths)
+        {
+            try
+            {
+                var path = GetSpecifiedPath(partialPaths);
+                return Directory.Exists(path);
+            }
+            catch (Exception e)
+            {
+                LogServices.LogDebug(e);
+                return false;
+            }
+        }
+
+        public static bool ExistsSpecifiedDirectory(IcotakuDefaultFolder defaultFolder, params string[] partialPaths)
+        {
+            try
+            {
+                var path = GetSpecifiedPath(defaultFolder, partialPaths);
+                return Directory.Exists(path);
+            }
+            catch (Exception e)
+            {
+                LogServices.LogDebug(e);
+                return false;
+            }
+        }
+
+        public static bool ExistsSpecifiedDirectory(IcotakuDefaultFolder defaultFolder, Guid itemGuid, params string[] partialPaths)
+        {
+            try
+            {
+                var path = GetSpecifiedPath(defaultFolder, itemGuid, partialPaths);
+                return Directory.Exists(path);
+            }
+            catch (Exception e)
+            {
+                LogServices.LogDebug(e);
+                return false;
+            }
+        }
+
+        #endregion
+
+        #region Delete
+
+        public static bool DeleteSectionDirectory(IcotakuDefaultFolder defaultFolder)
+        {
+            try
+            {
+                var path = GetSectionPath(defaultFolder);
                 if (Directory.Exists(path))
                     Directory.Delete(path, true);
                 return !Directory.Exists(path);
@@ -160,11 +234,11 @@ namespace IcotakuScrapper.Services.IOS
             }
         }
 
-        public static bool DeleteItemDirectory(IcotakuSection section, Guid itemGuid)
+        public static bool DeleteItemDirectory(IcotakuDefaultFolder defaultFolder, Guid itemGuid)
         {
             try
             {
-                var path = GetItemPath(section, itemGuid);
+                var path = GetItemPath(defaultFolder, itemGuid);
                 if (Directory.Exists(path))
                     Directory.Delete(path, true);
                 return !Directory.Exists(path);
@@ -192,11 +266,11 @@ namespace IcotakuScrapper.Services.IOS
             }
         }
 
-        public static bool DeleteSpecifiedDirectory(IcotakuSection section, params string[] partialPaths)
+        public static bool DeleteSpecifiedDirectory(IcotakuDefaultFolder defaultFolder, params string[] partialPaths)
         {
             try
             {
-                var path = GetSpecifiedPath(section, partialPaths);
+                var path = GetSpecifiedPath(defaultFolder, partialPaths);
                 if (Directory.Exists(path))
                     Directory.Delete(path, true);
                 return !Directory.Exists(path);
@@ -209,11 +283,11 @@ namespace IcotakuScrapper.Services.IOS
         }
 
 
-        public static bool DeleteSpecifiedDirectory(IcotakuSection section, Guid itemGuid, params string[] partialPaths)
+        public static bool DeleteSpecifiedDirectory(IcotakuDefaultFolder defaultFolder, Guid itemGuid, params string[] partialPaths)
         {
             try
             {
-                var path = GetSpecifiedPath(section, itemGuid, partialPaths);
+                var path = GetSpecifiedPath(defaultFolder, itemGuid, partialPaths);
                 if (Directory.Exists(path))
                     Directory.Delete(path, true);
                 return !Directory.Exists(path);

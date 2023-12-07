@@ -10,13 +10,13 @@ namespace IcotakuScrapper.Services
         /// <param name="fileUri"></param>
         /// <param name="localPath">CHemin d'accès local relatif</param>
         /// <returns></returns>
-        public static async Task<bool> DownloadFileAsync(Uri fileUri, string destinationFile)
+        public static async Task<bool> DownloadFileAsync(Uri fileUri, string destinationFile, CancellationToken cancellationToken)
         {
             try
             {
                 using HttpClient client = new();
 
-                using HttpResponseMessage response = await client.GetAsync(fileUri);
+                using HttpResponseMessage response = await client.GetAsync(fileUri, cancellationToken);
 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -39,10 +39,10 @@ namespace IcotakuScrapper.Services
                     return false;
                 }
 
-                await using (Stream stream = await response.Content.ReadAsStreamAsync())
+                await using (Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken))
                 {
                     await using FileStream fileStream = File.Create(destinationFile);
-                    await stream.CopyToAsync(fileStream);
+                    await stream.CopyToAsync(fileStream, cancellationToken);
                 }
 
                 Console.WriteLine("Téléchargement terminé !");

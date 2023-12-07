@@ -27,8 +27,20 @@ namespace IcotakuScrapperWebApi
                     .AddSupportedUICultures(supportedCultures);
             });
 
-            //IcotakuScrapper.Main.SetCultureInfo(configureOptions[2]);
+            IcotakuScrapper.Main.LoadDatabaseAt(@"C:\Datas\icotaku.db");
+            
+            //Initialise la connexion à la base de données SQLite
+            IcotakuScrapper.Main.InitializeDbConnectionString(null);
+            
+            //Initialise le dossier de travail
+            IcotakuScrapper.Main.LoadWorkingDirectoryAt(@"C:\Datas\icotaku");
 
+            //Interdit l'accès au contenu adulte au sein de l'application
+            IcotakuScrapper.Main.IsAccessingToAdultContent = false;
+            
+            //Autorise l'accès au contenu explicite au sein de l'application
+            IcotakuScrapper.Main.IsAccessingToExplicitContent = true;
+            
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.

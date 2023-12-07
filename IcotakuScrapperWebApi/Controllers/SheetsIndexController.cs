@@ -9,7 +9,7 @@ namespace IcotakuScrapperWebApi.Controllers
     public class SheetsIndexController : ControllerBase
     {
         [HttpGet("All")]
-        public async Task<TsheetIndex[]> SelectAllAsync([FromQuery] IcotakuSection[] sections, [FromQuery] SheetType[] sheetTypes, [FromQuery] SheetSortBy sortBy = SheetSortBy.Type, [FromQuery] OrderBy orderBy = OrderBy.Asc, [FromQuery] uint limit = 0, [FromQuery] uint skip = 0)
+        public async Task<TsheetIndex[]> SelectAllAsync([FromQuery] IcotakuSection[] sections, [FromQuery] IcotakuSheetType[] sheetTypes, [FromQuery] SheetSortBy sortBy = SheetSortBy.Type, [FromQuery] OrderBy orderBy = OrderBy.Asc, [FromQuery] uint limit = 0, [FromQuery] uint skip = 0)
         {
             var distinctSections = sections.Distinct();
             var distinctSheetTypes = sheetTypes.Distinct();
@@ -17,7 +17,7 @@ namespace IcotakuScrapperWebApi.Controllers
         }
 
         [HttpPost("Create")]
-        public async Task<OperationState> CreateAsync([FromQuery] IcotakuSection section, [FromQuery]SheetType sheetType)
+        public async Task<OperationState> CreateAsync([FromQuery] IcotakuSection section, [FromQuery]IcotakuSheetType sheetType)
         {
             return await TsheetIndex.CreateIndexesAsync(section, sheetType);
         }

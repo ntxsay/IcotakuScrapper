@@ -167,7 +167,7 @@ public partial class TanimeDailyPlanning
                     continue;
 
                 var animeSheetId = IcotakuWebHelpers.GetSheetId(animeSheetUri);
-                if (animeSheetId is null)
+                if (animeSheetId == 0)
                     continue;
 
                 var noEpisodeNode = animeOnDay_TdNode.SelectSingleNode("./span[2]/text()");
@@ -191,7 +191,7 @@ public partial class TanimeDailyPlanning
 
                 var record = new TanimeDailyPlanning()
                 {
-                    SheetId = animeSheetId.Value,
+                    SheetId = animeSheetId,
                     AnimeName = animeName,
                     Url = animeSheetUri.ToString(),
                     EpisodeNumber = episodeNumber,

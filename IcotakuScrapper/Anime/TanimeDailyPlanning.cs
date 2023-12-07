@@ -759,7 +759,7 @@ public partial class TanimeDailyPlanning
                         : reader.GetString(reader.GetOrdinal("BaseThumbnailUrl"))
             };
 
-            var animeBase = await TanimeBase.SingleAsync(animeSheetId, IntColumnSelect.SheetId, cancellationToken);
+            var animeBase = await TanimeBase.SingleAsync((int)animeSheetId, IntColumnSelect.SheetId, cancellationToken);
             if (animeBase is not null)
                 record.Anime = animeBase;
 

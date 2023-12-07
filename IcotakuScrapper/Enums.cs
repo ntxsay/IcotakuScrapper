@@ -99,19 +99,6 @@ public enum IcotakuSection : byte
     Community,
 }
 
-public enum IcotakuDownloadSection : byte
-{
-    /// <summary>
-    /// Reprentente la section des animés du dossier de téléchargement.
-    /// </summary>
-    Anime,
-    Manga,
-    LightNovel,
-    Drama,
-    Person,
-    Character
-}
-
 public enum IcotakuDownloadType : byte
 {
     /// <summary>
@@ -136,14 +123,27 @@ public enum IcotakuDownloadType : byte
 }
 
 
-public enum SheetType : byte
+public enum IcotakuSheetType : byte
 {
     Unknown,
     Anime,
+    Manga,
+    LightNovel,
+    Drama,
     Person,
     Character,
     Studio,
     Distributor,
+}
+
+public enum IcotakuDefaultFolder : byte
+{
+    Animes,
+    Mangas,
+    LightNovels,
+    Dramas,
+    Contacts,
+    Community,
 }
 
 /// <summary>

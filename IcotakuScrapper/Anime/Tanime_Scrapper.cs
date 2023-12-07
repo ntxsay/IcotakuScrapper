@@ -68,6 +68,7 @@ public partial class Tanime
         return await ScrapAnimeFromUrlAsync(animeResult, cancellationToken, command);
     }
 
+    #region Prepration scrapping
     /// <summary>
     /// Récupère l'anime depuis l'url de la fiche icotaku.
     /// </summary>
@@ -133,7 +134,7 @@ public partial class Tanime
             if (mainName == null || mainName.IsStringNullOrEmptyOrWhiteSpace())
                 throw new Exception("Le nom de l'anime n'a pas été trouvé");
 
-            var sheetId = IcotakuWebHelpers.GetSheetId(sheetUri) ?? throw new Exception("L'id de la fiche anime n'a pas été trouvé.");
+            var sheetId = IcotakuWebHelpers.GetSheetId(sheetUri);
             await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
 
             var anime = new Tanime()
@@ -246,6 +247,8 @@ public partial class Tanime
             return new OperationState<Tanime?>(false, ex.Message);
         }
     }
+
+    #endregion
 
     #region General
     /// <summary>
@@ -746,7 +749,7 @@ public partial class Tanime
 
             //Récupère l'id de la fiche du studio
             var sheetId = IcotakuWebHelpers.GetSheetId(uri);
-            if (sheetId == null)
+            if (sheetId < 0)
                 continue;
 
             await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
@@ -757,7 +760,7 @@ public partial class Tanime
                 continue;
             }
 
-            record = new Tcontact(sheetId.Value, ContactType.Studio, uri, displayName);
+            record = new Tcontact(sheetId, ContactType.Studio, uri, displayName);
             var result = await record.InsertAync(cancellationToken, command);
             if (!result.IsSuccess)
                 continue;
@@ -836,7 +839,7 @@ public partial class Tanime
 
             //Récupère l'id de la fiche du studio
             var sheetId = IcotakuWebHelpers.GetSheetId(uri);
-            if (sheetId == null)
+            if (sheetId < 0)
                 continue;
 
             await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
@@ -847,7 +850,7 @@ public partial class Tanime
                 continue;
             }
 
-            record = new Tcontact(sheetId.Value, ContactType.Distributor, uri, displayName);
+            record = new Tcontact(sheetId, ContactType.Distributor, uri, displayName);
             var result = await record.InsertAync(cancellationToken, command);
             if (!result.IsSuccess)
                 continue;
@@ -899,6 +902,11 @@ public partial class Tanime
 
     [GeneratedRegex(@"(\d+)")]
     private static partial Regex GetVoteCountRegex();
+
+    #endregion
+
+    #region Download Folder
+
 
     #endregion
 }

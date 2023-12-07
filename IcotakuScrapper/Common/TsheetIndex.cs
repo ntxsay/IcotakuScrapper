@@ -39,7 +39,7 @@ public partial class TsheetIndex
     /// <summary>
     /// Obtient ou définit le type de la fiche (anime, manga, personnage, studio, etc.)
     /// </summary>
-    public SheetType Type { get; set; }
+    public IcotakuSheetType Type { get; set; }
 
     /// <summary>
     /// Obtient ou définit l'url de la fiche
@@ -322,7 +322,7 @@ public partial class TsheetIndex
     /// <param name="cmd"></param>
     /// <returns></returns>
     /// <exception cref="ArgumentOutOfRangeException"></exception>
-    public static async Task<TsheetIndex[]> SelectAsync(HashSet<IcotakuSection> sections, HashSet<SheetType> sheetTypes, SheetSortBy sortBy,
+    public static async Task<TsheetIndex[]> SelectAsync(HashSet<IcotakuSection> sections, HashSet<IcotakuSheetType> sheetTypes, SheetSortBy sortBy,
         OrderBy orderBy, uint limit = 0, uint skip = 0, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
@@ -477,7 +477,7 @@ public partial class TsheetIndex
     /// <param name="cancellationToken"></param>
     /// <param name="cmd"></param>
     /// <returns></returns>
-    internal static async Task<OperationState<int>> InsertAsync(IcotakuSection section, SheetType sheetType, string name, string url,
+    internal static async Task<OperationState<int>> InsertAsync(IcotakuSection section, IcotakuSheetType sheetType, string name, string url,
         int sheetId, uint foundedPage, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         if (name.IsStringNullOrEmptyOrWhiteSpace())
@@ -591,7 +591,7 @@ public partial class TsheetIndex
         SqliteCommand? cmd = null)
         => await UpdateAsync(Id, Section, Type, Name, Url, SheetId, FoundedPage, cancellationToken, cmd);
 
-    public static async Task<OperationState> UpdateAsync(int id,IcotakuSection section, SheetType sheetType, string name, string url,
+    public static async Task<OperationState> UpdateAsync(int id,IcotakuSection section, IcotakuSheetType sheetType, string name, string url,
         int sheetId, uint foundedPage,
         CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
@@ -733,7 +733,7 @@ public partial class TsheetIndex
         }
     }
 
-    public static async Task<OperationState> DeleteAllAsync(IcotakuSection section, SheetType sheetType, CancellationToken? cancellationToken = null,
+    public static async Task<OperationState> DeleteAllAsync(IcotakuSection section, IcotakuSheetType sheetType, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
@@ -795,7 +795,7 @@ public partial class TsheetIndex
             Id = reader.GetInt32(idIndex),
             SheetId = reader.GetInt32(sheetIdIndex),
             Section = (IcotakuSection)reader.GetByte(sectionIndex),
-            Type = (SheetType)reader.GetByte(typeIndex),
+            Type = (IcotakuSheetType)reader.GetByte(typeIndex),
             Url = reader.GetString(urlIndex),
             Name = reader.GetString(nameIndex),
             FoundedPage = (uint)reader.GetInt32(foundedPageIndex)

@@ -6,6 +6,15 @@ namespace IcotakuScrapperTest
     public class AnimeTest
     {
 
+        public void SetUp()
+        {
+            //Chemin d'accès complet à la base de données SQLite
+            string dbPath = @"C:\MyProject\Data\IcotakuScrapper.db";
+
+            //Indique à l'application où se trouve la base de données
+            Main.LoadDatabaseAt(dbPath);
+        }
+
         [Test]
         public async Task GetAnimeFromUrlAsync()
         {

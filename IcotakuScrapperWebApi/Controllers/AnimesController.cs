@@ -1,5 +1,6 @@
 ﻿using IcotakuScrapper;
 using IcotakuScrapper.Anime;
+using IcotakuScrapper.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IcotakuScrapperWebApi.Controllers
@@ -67,6 +68,24 @@ namespace IcotakuScrapperWebApi.Controllers
             if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
                 return new OperationState(false, "L'url n'est pas valide");
             return await TanimeBase.DeleteAsync(uri);
+        }
+
+        [HttpGet("Download/Path/Url")]
+        public async Task<IActionResult> GetDownloadedFolderAsync([FromQuery] string url)
+        {
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+                return NotFound("L'url n'est pas valide.");
+
+            return Ok(await TanimeBase.GetFolderPathAsync(uri));
+        }
+
+        [HttpPost("Download/Folder/Url")]
+        public async Task<IActionResult> DownloadAsync([FromQuery] string url)
+        {
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+                return NotFound("L'url n'est pas valide.");
+
+            return Ok(await TanimeBase.DownloadFolderAsync(uri));
         }
     }
 }

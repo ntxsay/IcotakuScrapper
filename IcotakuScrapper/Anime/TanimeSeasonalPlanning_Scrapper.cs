@@ -95,14 +95,14 @@ public partial class TanimeSeasonalPlanning
                     continue;
 
                 var animeSheetId = IcotakuWebHelpers.GetSheetId(animeUri);
-                if (animeSheetId is null)
+                if (animeSheetId < 0)
                     continue;
 
                 TanimeSeasonalPlanning record = new()
                 {
                     AnimeName = title,
                     GroupName = categoryName,
-                    SheetId = animeSheetId.Value,
+                    SheetId = animeSheetId,
                     Url = animeUri.ToString(),
                     Season = seasonRecord,
                 };

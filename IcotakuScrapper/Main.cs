@@ -21,19 +21,12 @@ namespace IcotakuScrapper
         ///     Chemin d'accès du dossier contenant les ressources de l'API
         /// </summary>
         internal static string BasePath { get; private set; } =
-            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ParentFolderName);
-
-        /// <summary>
-        ///     Retourne l'objet <see cref="DirectoryInfo" /> représentant le dossier parent-root de l'api.
-        /// </summary>
-        /// <returns></returns>
-        internal static DirectoryInfo BaseDirectoryInfo { get; private set; } =
-            new(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ParentFolderName));
-
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, IcotakuDefaultParentFolderName);
+        
         /// <summary>
         ///     Nom du dossier parent contenant tous les autres dossiers nécessaire au bon fontionnement de l'application
         /// </summary>
-        private const string ParentFolderName = "Resources";
+        private const string IcotakuDefaultParentFolderName = "IcotakuScrapper";
         #endregion
 
         #region Culture
@@ -65,6 +58,11 @@ namespace IcotakuScrapper
         internal const string DefaultDbFileName = "icotaku.db";
 
         /// <summary>
+        /// Obtient le chemin d'accès complet de la base de données SQLite de l'application
+        /// </summary>
+        private static string DefaultDbFile => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, DbFileName);
+        
+        /// <summary>
         /// Nom actuel de la base de données SQLite de l'application
         /// </summary>
         public static string DbFileName { get; private set; } = DefaultDbFileName;
@@ -89,34 +87,18 @@ namespace IcotakuScrapper
         /// </summary>
         /// <param name="directoryPath">chemin d'accès du dossier à vérifier</param>
         /// <returns>True si le dossier de travail a été chargé sinon False</returns>
-        public static bool LoadWorkingDirectoryAt(string directoryPath)
+        public static void LoadWorkingDirectoryAt(string directoryPath)
         {
             if (directoryPath.IsStringNullOrEmptyOrWhiteSpace())
-            {
-                LogServices.LogDebug("Le chemin d'accès du dossier est invalide");
-                return false;
-            }
+                throw new DirectoryNotFoundException("Le chemin d'accès du dossier de travail est invalide.");
 
             if (!Path.IsPathFullyQualified(directoryPath))
-            {
-                LogServices.LogDebug("Le chemin d'accès du dossier est invalide");
-                return false;
-            }
+                throw new DirectoryNotFoundException("Le chemin d'accès du dossier de travail est invalide.");
 
-            try
-            {
-                if (!Directory.Exists(directoryPath))
-                    Directory.CreateDirectory(directoryPath);
+            if (!Directory.Exists(directoryPath))
+                Directory.CreateDirectory(directoryPath);
 
-                BasePath = directoryPath;
-                BaseDirectoryInfo = new DirectoryInfo(directoryPath);
-                return Directory.Exists(directoryPath);
-            }
-            catch (Exception e)
-            {
-                LogServices.LogDebug(e);
-                return false;
-            }
+            BasePath = directoryPath;
         }
         #endregion
 
@@ -128,22 +110,37 @@ namespace IcotakuScrapper
         /// <list type="bullet">Par défaut la base de données se trouve à la racine du projet mais si vous souhaitez changer l'emplacement de la base de données sans altérer le code.</list>
         /// <list type="bullet">De préférence copiez la base de données vers le nouvel emplacement</list>
         /// Si la base de données n'existe pas, elle est créée</remarks>
-        /// <param name="databasefile">Chemin d'accès complet du fichier à vérifier</param>
-        public static bool LoadDataBaseAt(string databasefile)
+        /// <param name="databaseFile">Chemin d'accès complet du fichier à vérifier</param>
+        public static void LoadDatabaseAt(string databaseFile)
         {
-            if (databasefile.IsStringNullOrEmptyOrWhiteSpace() || !File.Exists(databasefile))
-                return false;
+            if (databaseFile.IsStringNullOrEmptyOrWhiteSpace())
+                throw new FileNotFoundException("Le chemin d'accès à la base de données est invalide.");
+            
+            if (!Path.IsPathFullyQualified(databaseFile))
+                throw new FileNotFoundException("Le chemin d'accès à la base de données est invalide.");
+            
+            if (!Path.HasExtension(databaseFile))
+                throw new FileNotFoundException("Le fichier de la base de données ne contient pas l'extension \".db\".");
+            
+            if (!Path.GetExtension(databaseFile).Equals(".db", StringComparison.OrdinalIgnoreCase))
+                throw new FileNotFoundException("Le fichier de la base de données ne contient pas l'extension \".db\".");
+            
+            if (!File.Exists(databaseFile))
+            {
+                if (!File.Exists(DefaultDbFile))
+                    throw new FileNotFoundException($"La base de données n'existe pas à : \"{DefaultDbFile}\"");
+                File.Copy(DefaultDbFile, databaseFile);
+            }
 
-            DbFile = databasefile;
-            DbFileName = Path.GetFileName(databasefile);
-            return true;
+            DbFile = databaseFile;
+            DbFileName = Path.GetFileName(databaseFile);
         }
 
         /// <summary>
         /// Initialise la chaine de connexion à la base de données SQLite
         /// </summary>
         /// <param name="sqliteCipherPassword">Clé de décryptage de la base de données</param>
-        public static void GetDbConnectionString(string? sqliteCipherPassword = null)
+        public static void InitializeDbConnectionString(string? sqliteCipherPassword = null)
         {
             if (sqliteCipherPassword == null || sqliteCipherPassword.IsStringNullOrEmptyOrWhiteSpace())
             {

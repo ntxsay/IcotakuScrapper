@@ -135,7 +135,7 @@ namespace IcotakuScrapper.Common
         {
             // On récupère l'id de la fiche de la catégorie
             var sheetId = IcotakuWebHelpers.GetSheetId(sheetUri);
-            if (!sheetId.HasValue)
+            if (sheetId == 0)
                 return null;
 
             // On vérifie que la section de la fiche est bien celle demandée
@@ -168,7 +168,7 @@ namespace IcotakuScrapper.Common
 
             Tcategory tcategory = new()
             {
-                SheetId = sheetId.Value,
+                SheetId = sheetId,
                 Section = section.Value,
                 Type = categoryType.Value,
                 Url = sheetUri.ToString(),

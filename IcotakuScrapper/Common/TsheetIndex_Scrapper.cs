@@ -15,18 +15,18 @@ public partial class TsheetIndex
     /// <param name="page"></param>
     /// <returns></returns>
     /// <exception cref="ArgumentOutOfRangeException"></exception>
-    public static string? GetIcotakuFilterUrl(IcotakuSection contentSection, SheetType sheetType, uint page = 1)
+    public static string? GetIcotakuFilterUrl(IcotakuSection contentSection, IcotakuSheetType sheetType, uint page = 1)
     {
         return contentSection switch
         {
             IcotakuSection.Anime => sheetType switch
             {
-                SheetType.Unknown => null,
-                SheetType.Anime => $"https://anime.icotaku.com/animes.html?filter=all{(page == 0 ? "" : "&page=" + page)}",
-                SheetType.Person => $"https://anime.icotaku.com/individus.html?filter=all{(page == 0 ? "" : "&page=" + page)}",
-                SheetType.Character => $"https://anime.icotaku.com/personnages.html?filter=all{(page == 0 ? "" : "&page=" + page)}",
-                SheetType.Studio => null,
-                SheetType.Distributor => null,
+                IcotakuSheetType.Unknown => null,
+                IcotakuSheetType.Anime => $"https://anime.icotaku.com/animes.html?filter=all{(page == 0 ? "" : "&page=" + page)}",
+                IcotakuSheetType.Person => $"https://anime.icotaku.com/individus.html?filter=all{(page == 0 ? "" : "&page=" + page)}",
+                IcotakuSheetType.Character => $"https://anime.icotaku.com/personnages.html?filter=all{(page == 0 ? "" : "&page=" + page)}",
+                IcotakuSheetType.Studio => null,
+                IcotakuSheetType.Distributor => null,
                 _ => throw new ArgumentOutOfRangeException(nameof(sheetType), sheetType, "Ce type de fiche n'est pas pris en charge.")
             },
             IcotakuSection.Manga => null,
@@ -46,7 +46,7 @@ public partial class TsheetIndex
     /// <param name="page"></param>
     /// <returns></returns>
     /// <exception cref="ArgumentOutOfRangeException"></exception>
-    public static string? GetIcotakuFilterUrl(char letter, IcotakuSection contentSection, SheetType sheetType, uint page = 1)
+    public static string? GetIcotakuFilterUrl(char letter, IcotakuSection contentSection, IcotakuSheetType sheetType, uint page = 1)
     {
         if (!char.IsLetter(letter))
             return null;
@@ -55,12 +55,12 @@ public partial class TsheetIndex
         {
             IcotakuSection.Anime =>sheetType switch
             {
-                SheetType.Unknown => null,
-                SheetType.Anime => $"https://anime.icotaku.com/animes.html?filter={letter}{(page == 0 ? "" : "&page=" + page)}",
-                SheetType.Person => $"https://anime.icotaku.com/individus.html?filter={{letter}}{(page == 0 ? "" : "&page=" + page)}",
-                SheetType.Character => $"https://anime.icotaku.com/personnages.html?filter={{letter}}{(page == 0 ? "" : "&page=" + page)}",
-                SheetType.Studio => null,
-                SheetType.Distributor => null,
+                IcotakuSheetType.Unknown => null,
+                IcotakuSheetType.Anime => $"https://anime.icotaku.com/animes.html?filter={letter}{(page == 0 ? "" : "&page=" + page)}",
+                IcotakuSheetType.Person => $"https://anime.icotaku.com/individus.html?filter={{letter}}{(page == 0 ? "" : "&page=" + page)}",
+                IcotakuSheetType.Character => $"https://anime.icotaku.com/personnages.html?filter={{letter}}{(page == 0 ? "" : "&page=" + page)}",
+                IcotakuSheetType.Studio => null,
+                IcotakuSheetType.Distributor => null,
                 _ => throw new ArgumentOutOfRangeException(nameof(sheetType), sheetType, "Ce type de fiche n'est pas pris en charge.")
             },
             IcotakuSection.Manga => null,
@@ -79,7 +79,7 @@ public partial class TsheetIndex
     /// <param name="sheetType"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<OperationState> CreateIndexesAsync(IcotakuSection contentSection, SheetType sheetType,
+    public static async Task<OperationState> CreateIndexesAsync(IcotakuSection contentSection, IcotakuSheetType sheetType,
         CancellationToken? cancellationToken = null)
     {
         var (minPage, maxPage) = GetMinAndMaxPage(contentSection);
@@ -107,7 +107,7 @@ public partial class TsheetIndex
     }
 
 
-    private static IEnumerable<TsheetIndex> GetSheetIndexes(IcotakuSection contentSection, SheetType sheetType, uint currentPage = 1)
+    private static IEnumerable<TsheetIndex> GetSheetIndexes(IcotakuSection contentSection, IcotakuSheetType sheetType, uint currentPage = 1)
     {
         //url de la page en cours contenant le tableau des fiches
         var pageUrl = GetIcotakuFilterUrl(contentSection, sheetType, currentPage);
@@ -140,7 +140,7 @@ public partial class TsheetIndex
     /// <param name="sheetType"></param>
     /// <param name="currentPage"></param>
     /// <returns></returns>
-    private static TsheetIndex? GetSheetIndex(HtmlNode htmlNode, IcotakuSection contentSection, SheetType sheetType, uint currentPage)
+    private static TsheetIndex? GetSheetIndex(HtmlNode htmlNode, IcotakuSection contentSection, IcotakuSheetType sheetType, uint currentPage)
     {
         var sheetHref = htmlNode.GetAttributeValue("href", string.Empty);
         if (sheetHref.IsStringNullOrEmptyOrWhiteSpace())

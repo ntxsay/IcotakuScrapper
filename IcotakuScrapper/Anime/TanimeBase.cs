@@ -1,6 +1,8 @@
 ﻿using IcotakuScrapper.Common;
 using IcotakuScrapper.Extensions;
+using IcotakuScrapper.Services.IOS;
 using Microsoft.Data.Sqlite;
+using System.Threading;
 
 namespace IcotakuScrapper.Anime;
 
@@ -109,6 +111,60 @@ public class TanimeBase
     }
 
     public override string ToString() => $"{Name} ({Id}/{SheetId})";
+
+    /// <summary>
+    /// Télécharge le dossier complet de la fiche comprendant les fichiers et les sous dossiers
+    /// </summary>
+    /// <remarks>Ce dossier comprend généralement les vignettes de la fiche et les captures d'écran des épisodes.</remarks>
+    /// <returns></returns>
+    public async Task<bool> DownloadFolderAsync(CancellationToken? cancellationToken = null)
+    {
+        return await DownloadFolderAsync(Guid, SheetId, cancellationToken ?? CancellationToken.None);
+    }
+
+    public static async Task<bool> DownloadFolderAsync(Uri sheetUri, CancellationToken? cancellationToken = null)
+    {
+        var itemGuid = await GetGuidAsync(sheetUri, cancellationToken ?? CancellationToken.None);
+        if (itemGuid == Guid.Empty)
+            return false;
+
+        var sheetId = IcotakuWebHelpers.GetSheetId(sheetUri);
+        if (sheetId == 0)
+            return false;
+
+        return await IcotakuWebHelpers.DownloadFullSheetFolderAsync(IcotakuSheetType.Anime, sheetId, itemGuid, cancellationToken ?? CancellationToken.None);
+    }
+
+    public static async Task<bool> DownloadFolderAsync(Guid itemGuid, int sheetId, CancellationToken? cancellationToken = null)
+    {
+        return await IcotakuWebHelpers.DownloadFullSheetFolderAsync(IcotakuSheetType.Anime, sheetId, itemGuid, cancellationToken ?? CancellationToken.None);
+    }
+
+    /// <summary>
+    /// Retourne le chemin d'accès du dossier de la fiche anime.
+    /// </summary>
+    /// <returns></returns>
+    public string? GetFolderPath()
+    {
+        return GetFolderPath(Guid);
+    }
+
+    public static async Task<string?> GetFolderPathAsync(Uri sheetUri, CancellationToken? cancellationToken = null)
+    {
+        var itemGuid = await GetGuidAsync(sheetUri, cancellationToken ?? CancellationToken.None);
+        if (itemGuid == Guid.Empty)
+            return null;
+
+        return GetFolderPath(itemGuid);
+    }
+
+    public static string? GetFolderPath(Guid itemGuid)
+    {
+        if (!InputOutput.ExistsItemDirectory(IcotakuDefaultFolder.Animes, itemGuid))
+            return null;
+        return InputOutput.GetItemPath(IcotakuDefaultFolder.Animes, itemGuid);
+    }
+
 
     #region Count
 
@@ -358,6 +414,54 @@ public class TanimeBase
 
         var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         return !reader.HasRows ? null : (await GetRecords(reader, cancellationToken)).FirstOrDefault();
+    }
+
+    public static async Task<Guid> GetGuidAsync(int id, IntColumnSelect columnSelect, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        var isColumnSelectValid = command.IsIntColumnValidated(columnSelect,
+        [
+            IntColumnSelect.Id,
+            IntColumnSelect.SheetId,
+        ]);
+
+        if (!isColumnSelectValid)
+        {
+            return Guid.Empty;
+        }
+
+        command.CommandText = columnSelect switch
+        {
+            IntColumnSelect.Id => "SELECT Guid FROM Tanime WHERE Id = $Id",
+            IntColumnSelect.SheetId => "SELECT Guid FROM Tanime WHERE SheetId = $Id",
+            _ => throw new ArgumentOutOfRangeException(nameof(columnSelect), columnSelect, null)
+        };
+
+        command.Parameters.Clear();
+
+        command.AddExplicitContentFilter(DbStartFilterMode.And, "Tanime.IsAdultContent", "Tanime.IsExplicitContent", null, null);
+
+        command.Parameters.AddWithValue("$Id", id);
+
+        var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
+        if (result is string stringGuid)
+            return Guid.Parse(stringGuid);
+        return Guid.Empty;
+    }
+
+    public static async Task<Guid> GetGuidAsync(Uri sheetUri, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        command.CommandText = "SELECT Guid FROM Tanime WHERE Url = $Url COLLATE NOCASE";
+        command.Parameters.Clear();
+
+        command.AddExplicitContentFilter(DbStartFilterMode.And, "Tanime.IsAdultContent", "Tanime.IsExplicitContent", null, null);
+        command.Parameters.AddWithValue("$Url", sheetUri.ToString());
+
+        var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
+        if (result is string stringGuid)
+            return Guid.Parse(stringGuid);
+        return Guid.Empty;
     }
 
     #endregion
