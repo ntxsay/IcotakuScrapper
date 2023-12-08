@@ -89,6 +89,8 @@ public class TanimeBase
     /// Obtient ou définit l'url de l'image de l'anime.
     /// </summary>
     public string? ThumbnailUrl { get; set; }
+    
+    public string? ThumbnailPath => GetThumbnailPath();
 
     /// <summary>
     /// Obtient ou définit la liste des  catégories de l'anime (genre et thèmes).
@@ -160,10 +162,133 @@ public class TanimeBase
 
     public static string? GetFolderPath(Guid itemGuid)
     {
-        if (!InputOutput.ExistsItemDirectory(IcotakuDefaultFolder.Animes, itemGuid))
-            return null;
-        return InputOutput.GetItemPath(IcotakuDefaultFolder.Animes, itemGuid);
+        return !InputOutput.IsDirectoryExists(IcotakuDefaultFolder.Animes, itemGuid) 
+            ? null 
+            : InputOutput.GetDirectoryPath(IcotakuDefaultFolder.Animes, itemGuid);
     }
+
+    #region Thumbnail operations
+
+    public async Task<string?> GetOrDownloadThumbnailAsync(CancellationToken? cancellationToken = null)
+    {
+        var thumbnailPath = GetThumbnailPath();
+        if (thumbnailPath != null)
+            return thumbnailPath;
+
+        thumbnailPath = await DownloadThumbnailAsync(cancellationToken);
+        return thumbnailPath ?? null;
+    }
+    
+    /// <summary>
+    /// Retourne le chemin d'accès vers l'affiche de l'anime.
+    /// </summary>
+    /// <returns></returns>
+    public string? GetThumbnailPath()
+    {
+        return GetThumbnailPath(Guid);
+    }
+    
+    public async Task<string?> DownloadThumbnailAsync(CancellationToken? cancellationToken = null)
+    {
+        if (ThumbnailUrl == null || ThumbnailUrl.IsStringNullOrEmptyOrWhiteSpace())
+            return null;
+        
+        if (!Uri.TryCreate(ThumbnailUrl, UriKind.Absolute, out var uri))
+            return null;
+        
+        return await DownloadThumbnailAsync(Guid, uri, cancellationToken ?? CancellationToken.None);
+    }
+
+    public static async Task<string?> GetOrDownloadThumbnailAsync(Uri sheetUri, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        var itemGuid = await GetGuidAsync(sheetUri, cancellationToken ?? CancellationToken.None);
+        if (itemGuid == Guid.Empty)
+            return null;
+
+        var thumbnailPath = GetThumbnailPath(itemGuid);
+        if (thumbnailPath != null)
+            return thumbnailPath;
+
+        thumbnailPath = await DownloadThumbnailAsync(sheetUri, cancellationToken, cmd);
+        return thumbnailPath ?? null;
+    }
+    
+    /// <summary>
+    /// Retourne le chemin d'accès vers l'affiche de l'anime.
+    /// </summary>
+    /// <param name="sheetUri"></param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
+    public static async Task<string?> DownloadThumbnailAsync(Uri sheetUri, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        command.CommandText = 
+            """
+            SELECT 
+                Guid, 
+                ThumbnailUrl 
+            FROM Tanime 
+            WHERE Url = $Url COLLATE NOCASE
+            """;
+        
+        command.Parameters.Clear();
+        
+        command.Parameters.AddWithValue("$Url", sheetUri.ToString());
+        
+        var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
+        if (!reader.HasRows)
+            return null;
+        
+        await reader.ReadAsync(cancellationToken ?? CancellationToken.None);
+        var itemGuid = reader.GetGuid(reader.GetOrdinal("Guid"));
+        var thumbnailUrl = reader.IsDBNull(reader.GetOrdinal("ThumbnailUrl")) 
+            ? null 
+            : reader.GetString(reader.GetOrdinal("ThumbnailUrl"));
+        
+        if (itemGuid == Guid.Empty || thumbnailUrl == null || thumbnailUrl.IsStringNullOrEmptyOrWhiteSpace())
+            return null;
+        
+        return await DownloadThumbnailAsync(itemGuid, new Uri(thumbnailUrl), cancellationToken ?? CancellationToken.None);
+    }
+    
+    public static async Task<string?> DownloadThumbnailAsync(Guid itemGuid, Uri thumbnailUri, CancellationToken? cancellationToken = null)
+    {
+        return await IcotakuWebHelpers.DownloadThumbnailAsync(IcotakuSheetType.Anime, itemGuid, thumbnailUri, false, cancellationToken ?? CancellationToken.None);
+    }
+    
+    /// <summary>
+    /// Retourne le chemin d'accès vers l'affiche de l'anime.
+    /// </summary>
+    /// <param name="sheetUri"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static async Task<string?> GetThumbnailPathAsync(Uri sheetUri, CancellationToken? cancellationToken = null)
+    {
+        var itemGuid = await GetGuidAsync(sheetUri, cancellationToken ?? CancellationToken.None);
+        return itemGuid == Guid.Empty 
+            ? null 
+            : GetThumbnailPath(itemGuid);
+    }
+    
+    /// <summary>
+    /// Retourne le chemin d'accès vers l'affiche de l'anime.
+    /// </summary>
+    /// <param name="itemGuid"></param>
+    /// <returns></returns>
+    public static string? GetThumbnailPath(Guid itemGuid)
+    {
+        var folderPath = InputOutput.GetDirectoryPath(IcotakuDefaultFolder.Animes, itemGuid, IcotakuDefaultSubFolder.Sheet);
+        if (folderPath == null)
+            return null;
+        
+        var path = Directory.EnumerateFiles(folderPath, "affiche_*", SearchOption.TopDirectoryOnly)
+            .FirstOrDefault(f => !Path.GetFileNameWithoutExtension(f).Contains("mini", StringComparison.OrdinalIgnoreCase));
+
+        return path;
+    } 
+
+    #endregion
 
 
     #region Count
@@ -522,11 +647,11 @@ public class TanimeBase
         List<TanimeBase> records = [];
         while (await reader.ReadAsync(cancellationToken ?? CancellationToken.None))
         {
-            var idPlanning = reader.GetInt32(reader.GetOrdinal("BaseId"));
-            var record = records.Find(f => f.Id == idPlanning);
+            var baseId = reader.GetInt32(reader.GetOrdinal("BaseId"));
+            var record = records.Find(f => f.Id == baseId);
             if (record == null)
             {
-                record = new TanimeBase(reader.GetInt32(reader.GetOrdinal("IdAnime")))
+                record = new TanimeBase(baseId)
                 {
                     Guid = reader.GetGuid(reader.GetOrdinal("AnimeGuid")),
                     Name = reader.GetString(reader.GetOrdinal("AnimeName")),
@@ -607,6 +732,10 @@ public class TanimeBase
             Tanime.Id AS BaseId,
             Tanime.Guid AS AnimeGuid,
             Tanime.Name AS AnimeName,
+            Tanime.IdFormat,
+            Tanime.IdTarget,
+            Tanime.IdOrigine,
+            Tanime.IdSeason,
             Tanime.IsAdultContent AS AnimeIsAdultContent,
             Tanime.IsExplicitContent AS AnimeIsExplicitContent,
             Tanime.Note AS AnimeNote,
@@ -614,6 +743,7 @@ public class TanimeBase
             Tanime.Url AS AnimeUrl,
             Tanime.SheetId AS AnimeSheetId,
             Tanime.DiffusionState,
+            Tanime.EpisodeCount,
             Tanime.ThumbnailUrl AS AnimeThumbnailUrl,
             Tanime.Description AS AnimeDescription,
             

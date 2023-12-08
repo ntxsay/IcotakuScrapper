@@ -1,4 +1,6 @@
-﻿using IcotakuScrapper.Common;
+﻿using System.ComponentModel;
+using System.Runtime.CompilerServices;
+using IcotakuScrapper.Common;
 using IcotakuScrapper.Extensions;
 using Microsoft.Data.Sqlite;
 

@@ -140,6 +140,37 @@ public partial class Tanime : TanimeBase
 
     #region Single
 
+    /// <summary>
+    /// Retournes un anime via son id SQLite.
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
+    public new static async Task<Tanime?> SingleByIdAsync(int id, CancellationToken? cancellationToken = null,
+        SqliteCommand? cmd = null)
+        => await SingleAsync(id, IntColumnSelect.Id, cancellationToken, cmd);
+    
+    /// <summary>
+    /// Retournes un anime via son id de fiche icotaku.
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
+    public new static async Task<Tanime?> SingleBySheetIdAsync(int id, CancellationToken? cancellationToken = null,
+        SqliteCommand? cmd = null)
+        => await SingleAsync(id, IntColumnSelect.SheetId, cancellationToken, cmd);
+    
+    /// <summary>
+    /// Retournes un anime
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="columnSelect"></param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentOutOfRangeException"></exception>
     public new static async Task<Tanime?> SingleAsync(int id, IntColumnSelect columnSelect, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
@@ -172,6 +203,13 @@ public partial class Tanime : TanimeBase
         return !reader.HasRows ? null : (await GetRecords(reader, cancellationToken)).FirstOrDefault();
     }
     
+    /// <summary>
+    /// Retournes un anime via son nom.
+    /// </summary>
+    /// <param name="name"></param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
     public new static async Task<Tanime?> SingleAsync(string name, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {

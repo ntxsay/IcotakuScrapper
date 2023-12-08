@@ -85,6 +85,28 @@ public partial class TanimeSeasonalPlanning
         ThumbnailUrl = model.ThumbnailUrl;
     }
 
+    /// <summary>
+    /// Retourne le chemin d'accès vers l'affiche de l'anime.
+    /// </summary>
+    /// <returns></returns>
+    public async Task<string?> GetThumbnailPathAsync(CancellationToken? cancellationToken = null)
+    {
+        if (!Uri.TryCreate(Url, UriKind.Absolute, out var uri) || !uri.IsAbsoluteUri)
+            return null;
+        return await TanimeBase.GetThumbnailPathAsync(uri, cancellationToken);
+    }
+    
+    /// <summary>
+    /// Télécharge l'affiche de l'anime et/ou retourne le chemin d'accès local à l'affiche.
+    /// </summary>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public async Task<string?> GetOrDownloadThumbnailAsync(CancellationToken? cancellationToken = null)
+    {
+        if (!Uri.TryCreate(Url, UriKind.Absolute, out var uri) || !uri.IsAbsoluteUri)
+            return null;
+        return await TanimeBase.GetOrDownloadThumbnailAsync(uri, cancellationToken);
+    }
 
     #region Count
 
@@ -121,12 +143,24 @@ public partial class TanimeSeasonalPlanning
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        var iscolumnValidated = command.IsIntColumnValidated(columnSelect, [
+            IntColumnSelect.Id,
+            IntColumnSelect.SheetId,
+            IntColumnSelect.IdSeason,
+            IntColumnSelect.IdOrigine,
+            IntColumnSelect.SeasonNumber,
+        ]);
+
+        if (!iscolumnValidated)
+            return 0;
+        
         command.CommandText = columnSelect switch
         {
             IntColumnSelect.Id => "SELECT COUNT(Id) FROM TanimeSeasonalPlanning WHERE Id = $Id",
             IntColumnSelect.SheetId => "SELECT COUNT(Id) FROM TanimeSeasonalPlanning WHERE SheetId = $Id",
             IntColumnSelect.IdSeason => "SELECT COUNT(Id) FROM TanimeSeasonalPlanning WHERE IdSeason = $Id",
             IntColumnSelect.IdOrigine => "SELECT COUNT(Id) FROM TanimeSeasonalPlanning WHERE IdOrigine = $Id",
+            IntColumnSelect.SeasonNumber => "SELECT COUNT(Id) FROM TanimeSeasonalPlanning WHERE IdSeason = (SELECT Id FROM Tseason WHERE SeasonNumber = $Id)",
             _ => null
         };
 
@@ -209,7 +243,7 @@ public partial class TanimeSeasonalPlanning
         if (intSeason == 0)
             return 0;
 
-        return await CountAsync((int)intSeason, IntColumnSelect.IdSeason, cancellationToken, cmd);
+        return await CountAsync((int)intSeason, IntColumnSelect.SeasonNumber, cancellationToken, cmd);
     }
 
     public static async Task<int?> GetIdOfAsync(Uri sheetUri,

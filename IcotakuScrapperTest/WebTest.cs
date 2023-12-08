@@ -8,7 +8,7 @@ namespace IcotakuScrapperTest
         [Test]
         public void DownloadFileTest()
         {
-            var url = IcotakuWebHelpers.GetDownloadFolderUrl(IcotakuSheetType.Anime, 10, IcotakuDownloadType.Episod, 1);
+            var url = IcotakuWebHelpers.GetDownloadFolderUrl(IcotakuSheetType.Anime, 10, IcotakuDefaultSubFolder.Episod, 1);
             Assert.IsNotEmpty(url);
         }
 

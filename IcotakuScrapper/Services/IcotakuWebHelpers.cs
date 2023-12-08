@@ -73,7 +73,8 @@ public static class IcotakuWebHelpers
         if (host == null)
             return false;
 
-        return string.Equals(uri.Host, host, StringComparison.OrdinalIgnoreCase) || uri.Host.Contains(host, StringComparison.OrdinalIgnoreCase);
+        return string.Equals(uri.Host, host, StringComparison.OrdinalIgnoreCase) ||
+               uri.Host.Contains(host, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -105,12 +106,13 @@ public static class IcotakuWebHelpers
     /// <returns></returns>
     public static int GetSheetId(Uri sheetUri)
     {
-        var splitUrl = sheetUri.Segments.Select(s => s.Trim('/')).Where(w => !w.IsStringNullOrEmptyOrWhiteSpace()).ToArray();
+        var splitUrl = sheetUri.Segments.Select(s => s.Trim('/')).Where(w => !w.IsStringNullOrEmptyOrWhiteSpace())
+            .ToArray();
         if (splitUrl.Length == 0)
             return -1;
 
         var sheetId = splitUrl.FirstOrDefault(f =>
-                   !f.Any(a => char.IsLetter(a) || a == '-' || a == '_'));
+            !f.Any(a => char.IsLetter(a) || a == '-' || a == '_'));
 
         if (sheetId.IsStringNullOrEmptyOrWhiteSpace())
             return -1;
@@ -232,7 +234,8 @@ public static class IcotakuWebHelpers
         return null;
     }
 
-    public static string? GetDownloadFolderUrl(IcotakuSheetType sheetType, int sheetId, IcotakuDownloadType type, int episodeNumber = 0)
+    public static string? GetDownloadFolderUrl(IcotakuSheetType sheetType, int sheetId, IcotakuDefaultSubFolder type,
+        int episodeNumber = 0)
     {
         var url = GetDownloadFolderUrl(sheetType, sheetId);
         if (url == null)
@@ -240,10 +243,10 @@ public static class IcotakuWebHelpers
 
         url += type switch
         {
-            IcotakuDownloadType.Episod => $"/episodes/episode_{episodeNumber}",
-            IcotakuDownloadType.Tome => $"/tomes/tome_{episodeNumber}",
-            IcotakuDownloadType.Sheet => $"/fiche",
-            IcotakuDownloadType.None => string.Empty,
+            IcotakuDefaultSubFolder.Episod => $"/episodes/episode_{episodeNumber}",
+            IcotakuDefaultSubFolder.Tome => $"/tomes/tome_{episodeNumber}",
+            IcotakuDefaultSubFolder.Sheet => $"/fiche",
+            IcotakuDefaultSubFolder.None => string.Empty,
             _ => null
         };
 
@@ -251,6 +254,18 @@ public static class IcotakuWebHelpers
             return uri.ToString();
 
         return null;
+    }
+
+    public static string? GetSubFolderName(IcotakuDefaultSubFolder type, int episodeNumber = 0)
+    {
+        return type switch
+        {
+            IcotakuDefaultSubFolder.Episod => $"/episodes/episode_{episodeNumber}",
+            IcotakuDefaultSubFolder.Tome => $"/tomes/tome_{episodeNumber}",
+            IcotakuDefaultSubFolder.Sheet => "/fiche",
+            IcotakuDefaultSubFolder.None => string.Empty,
+            _ => null
+        };
     }
 
     /// <summary>
@@ -261,7 +276,8 @@ public static class IcotakuWebHelpers
     /// <param name="username">Nom d'utilisateur du compte Icotaku</param>
     /// <param name="password">Mot de passe du compe Icotaku</param>
     /// <returns></returns>
-    internal static async Task<string?> GetRestrictedHtmlAsync(IcotakuSection section, Uri sheetUri, string username, string password)
+    internal static async Task<string?> GetRestrictedHtmlAsync(IcotakuSection section, Uri sheetUri, string username,
+        string password)
     {
         try
         {
@@ -275,10 +291,8 @@ public static class IcotakuWebHelpers
                 UseCookies = true
             };
 
-            using var client = new HttpClient(handler)
-            {
-                BaseAddress = new Uri(baseUrl)
-            };
+            using var client = new HttpClient(handler);
+            client.BaseAddress = new Uri(baseUrl);
 
             client.DefaultRequestHeaders.Accept.Clear();
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("text/html"));
@@ -324,13 +338,14 @@ public static class IcotakuWebHelpers
             }
 
             // Se connecter
-            using var loginResult = await client.PostAsync("/login.html", new FormUrlEncodedContent(new Dictionary<string, string>
-            {
-                {"_csrf_token", csrfToken},
-                {"login", username},
-                {"password", password},
-                {"referer", "/" }
-            }));
+            using var loginResult = await client.PostAsync("/login.html", new FormUrlEncodedContent(
+                new Dictionary<string, string>
+                {
+                    { "_csrf_token", csrfToken },
+                    { "login", username },
+                    { "password", password },
+                    { "referer", "/" }
+                }));
 
             loginResult.EnsureSuccessStatusCode();
 
@@ -341,7 +356,6 @@ public static class IcotakuWebHelpers
 
             var sheetContent = await sheetResult.Content.ReadAsStringAsync();
             return sheetContent;
-
         }
         catch (Exception e)
         {
@@ -353,13 +367,67 @@ public static class IcotakuWebHelpers
 
     #region Download
 
+    internal static async Task<string?> DownloadThumbnailAsync(IcotakuSheetType sheetType, Guid itemGuid,
+        Uri thumbnailUri, bool deleteIfExists, CancellationToken cancellationToken)
+    {
+        if (itemGuid == Guid.Empty)
+        {
+            LogServices.LogDebug($"Impossible de récupérer le Guid de l'item {sheetType}");
+            return null;
+        }
+
+        var defaultFolder = sheetType.ConvertToDefaultFolder();
+
+        var partialSubFolderName = GetSubFolderName(IcotakuDefaultSubFolder.Sheet);
+        if (partialSubFolderName == null)
+            return null;
+
+        var baseFolderPath = InputOutput.CreateItemDirectory(defaultFolder, itemGuid);
+        if (baseFolderPath == null || baseFolderPath.IsStringNullOrEmptyOrWhiteSpace())
+            return null;
+
+        var partialPaths = partialSubFolderName
+            .Split('/', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToList();
+        partialPaths.Insert(0, baseFolderPath);
+        
+        var folderPath = Path.Combine(partialPaths.ToArray());
+        if (!Directory.Exists(folderPath))
+            Directory.CreateDirectory(folderPath);
+
+        var fileName = Path.GetFileName(thumbnailUri.LocalPath);
+        if (fileName.IsStringNullOrEmptyOrWhiteSpace() || !Path.HasExtension(fileName))
+            return null;
+
+        var thumbnailPath = Path.Combine(folderPath, fileName);
+        if (!Path.IsPathFullyQualified(thumbnailPath))
+            return null;
+        
+        if (File.Exists(thumbnailPath))
+        {
+            if (!deleteIfExists)
+                return thumbnailPath;
+            
+            File.Delete(thumbnailPath);
+        }
+
+        var isSuccess = await WebServices.DownloadFileAsync(thumbnailUri, thumbnailPath, cancellationToken);
+        if (!isSuccess || !File.Exists(thumbnailPath))
+            return null;
+
+        return thumbnailPath;
+    }
+
+
     /// <summary>
     /// Télécharge le dossier complet de la fiche comprendant les fichiers et les sous dossiers
     /// </summary>
     /// <param name="sheetType"></param>
     /// <param name="sheetId"></param>
+    /// <param name="itemGuid"></param>
+    /// <param name="cancellationToken"></param>
     /// <returns>Retourne le chemin d'accès complet du dossier</returns>
-    internal static async Task<bool> DownloadFullSheetFolderAsync(IcotakuSheetType sheetType, int sheetId, Guid itemGuid, CancellationToken cancellationToken)
+    internal static async Task<bool> DownloadFullSheetFolderAsync(IcotakuSheetType sheetType, int sheetId,
+        Guid itemGuid, CancellationToken cancellationToken)
     {
         if (itemGuid == Guid.Empty)
         {
@@ -370,7 +438,8 @@ public static class IcotakuWebHelpers
         var defaultFolder = sheetType.ConvertToDefaultFolder();
 
         var directoryUrl = GetDownloadFolderUrl(sheetType, sheetId);
-        if (directoryUrl == null || directoryUrl.IsStringNullOrEmptyOrWhiteSpace() || (!Uri.TryCreate(directoryUrl, UriKind.Absolute, out var url) || !url.IsAbsoluteUri))
+        if (directoryUrl == null || directoryUrl.IsStringNullOrEmptyOrWhiteSpace() ||
+            (!Uri.TryCreate(directoryUrl, UriKind.Absolute, out var url) || !url.IsAbsoluteUri))
             return false;
 
         var baseFolderPath = InputOutput.CreateItemDirectory(defaultFolder, itemGuid);
@@ -472,5 +541,4 @@ public static class IcotakuWebHelpers
     }
 
     #endregion
-
 }

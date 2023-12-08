@@ -14,35 +14,35 @@ namespace IcotakuScrapperTest
         [Test]
         public void GetSectionPathTest()
         {
-            var path = InputOutput.GetSectionPath(IcotakuDefaultFolder.Animes);
+            var path = InputOutput.GetDirectoryPath(IcotakuDefaultFolder.Animes);
             Assert.IsNotEmpty(path);
         }
 
         [Test]
         public void GetItemPathTest()
         {
-            var path = InputOutput.GetItemPath(IcotakuDefaultFolder.Animes, Guid.NewGuid());
+            var path = InputOutput.GetDirectoryPath(IcotakuDefaultFolder.Animes, Guid.NewGuid());
             Assert.IsNotEmpty(path);
         }
 
         [Test]
         public void GetSpecifiedPathTest()
         {
-            var path = InputOutput.GetSpecifiedPath(IcotakuDefaultFolder.Animes, "test", "test2", "test3");
+            var path = InputOutput.GetDirectoryPath(IcotakuDefaultFolder.Animes, "test", "test2", "test3");
             Assert.IsNotEmpty(path);
         }
 
         [Test]
         public void GetSpecifiedPathTest2()
         {
-            var path = InputOutput.GetSpecifiedPath(IcotakuDefaultFolder.Animes, Guid.NewGuid(), "test", "test2", "test3");
+            var path = InputOutput.GetDirectoryPath(IcotakuDefaultFolder.Animes, Guid.NewGuid(), "test", "test2", "test3");
             Assert.IsNotEmpty(path);
         }
 
         [Test]
         public void GetSpecifiedPathTest3()
         {
-            var path = InputOutput.GetSpecifiedPath("test", "test2", "test3");
+            var path = InputOutput.GetDirectoryPath("test", "test2", "test3");
             Assert.IsNotEmpty(path);
         }
     }

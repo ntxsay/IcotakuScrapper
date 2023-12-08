@@ -30,6 +30,8 @@ public enum IntColumnSelect
     /// Représente la colonne "IdSeason".
     /// </summary>
     IdSeason,
+    
+    SeasonNumber,
 
     /// <summary>
     /// Représente la colonne "IdTarget".
@@ -99,7 +101,7 @@ public enum IcotakuSection : byte
     Community,
 }
 
-public enum IcotakuDownloadType : byte
+public enum IcotakuDefaultSubFolder : byte
 {
     /// <summary>
     /// Si le type de téléchargement est inconnu ou inexistant.
