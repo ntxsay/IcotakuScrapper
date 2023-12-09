@@ -10,7 +10,8 @@ namespace IcotakuScrapper.Extensions
         /// </summary>
         /// <param name="command"></param>
         /// <returns></returns>
-        internal static async Task<int> GetLastInsertRowIdAsync(this SqliteCommand command) => await DbHelpers.GetLastInsertRowIdAsync(command);
+        internal static async Task<int> GetLastInsertRowIdAsync(this SqliteCommand command) 
+            => await DbHelpers.GetLastInsertRowIdAsync(command);
 
         internal static void AddPagination(this SqliteCommand command, uint currentPage = 1, uint maxContentByPage = 20)
             => DbHelpers.AddPagination(command, currentPage, maxContentByPage);

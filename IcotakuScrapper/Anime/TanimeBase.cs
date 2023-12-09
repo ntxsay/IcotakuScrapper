@@ -1,4 +1,5 @@
-﻿using IcotakuScrapper.Common;
+﻿using System.Globalization;
+using IcotakuScrapper.Common;
 using IcotakuScrapper.Extensions;
 using IcotakuScrapper.Services.IOS;
 using Microsoft.Data.Sqlite;
@@ -22,6 +23,19 @@ public class TanimeBase
     /// Obtient ou définit l'id de la fiche Icotaku de l'anime.
     /// </summary>
     public int SheetId { get; set; }
+    
+    /// <summary>
+    /// Obtient ou définit la date de sortie de l'anime au format yyyy-MM-dd.
+    /// </summary>
+    public string? ReleaseDate { get; set; }
+
+    public DateOnly? ReleaseDateAsDateOnly => GetReleaseDate();
+    public string? ReleaseDateAsLiteral => ReleaseDateAsDateOnly?.ToString("dddd dd MMMM yyyy");
+
+    /// <summary>
+    /// Obtient ou définit la date de fin de l'anime.
+    /// </summary>
+    public string? EndDate { get; set; }
 
     /// <summary>
     /// Obtient ou définit la note de l'anime sur 10.
@@ -57,6 +71,11 @@ public class TanimeBase
     /// Obtient ou définit le nombre d'épisodes de l'anime.
     /// </summary>
     public ushort EpisodesCount { get; set; }
+    
+    /// <summary>
+    /// Obtient ou définit la durée d'un épisode de l'anime (en minutes).
+    /// </summary>
+    public TimeSpan Duration { get; set; } = TimeSpan.Zero;
 
     /// <summary>
     /// Obtient ou définit le format de l'anime (Série Tv, Oav).
@@ -113,6 +132,34 @@ public class TanimeBase
     }
 
     public override string ToString() => $"{Name} ({Id}/{SheetId})";
+    
+    /// <summary>
+    /// Retourne la date de sortie de l'anime via l'objet <see cref="DateOnly"/>.
+    /// </summary>
+    /// <returns></returns>
+    public DateOnly? GetReleaseDate()
+    {
+        if (ReleaseDate == null || ReleaseDate.IsStringNullOrEmptyOrWhiteSpace())
+            return null;
+
+        var date = ReleaseDate.Split('-');
+        if (date.Length != 3)
+            return null;
+
+        if (!ushort.TryParse(date[0], out var year))
+            return null;
+
+        if (!ushort.TryParse(date[1], out var month))
+            return null;
+
+        if (!ushort.TryParse(date[2], out var day))
+            return null;
+
+        if (DateOnly.TryParse($"{year}-{month}-{day}", CultureInfo.DefaultThreadCurrentCulture, out var result))
+            return result;
+        
+        return null;
+    }
 
     /// <summary>
     /// Télécharge le dossier complet de la fiche comprendant les fichiers et les sous dossiers
@@ -662,6 +709,13 @@ public class TanimeBase
                     SheetId = reader.GetInt32(reader.GetOrdinal("AnimeSheetId")),
                     DiffusionState = (DiffusionStateKind)reader.GetByte(reader.GetOrdinal("DiffusionState")),
                     EpisodesCount = (ushort)reader.GetInt16(reader.GetOrdinal("EpisodeCount")),
+                    Duration = TimeSpan.FromMinutes(reader.GetInt32(reader.GetOrdinal("EpisodeDuration"))),
+                    ReleaseDate = reader.IsDBNull(reader.GetOrdinal("ReleaseDate"))
+                        ? null
+                        : reader.GetString(reader.GetOrdinal("ReleaseDate")),
+                    EndDate = reader.IsDBNull(reader.GetOrdinal("EndDate"))
+                        ? null
+                        : reader.GetString(reader.GetOrdinal("EndDate")),
                     Note = reader.IsDBNull(reader.GetOrdinal("AnimeNote"))
                         ? null
                         : reader.GetDouble(reader.GetOrdinal("AnimeNote")),
@@ -736,6 +790,8 @@ public class TanimeBase
             Tanime.IdTarget,
             Tanime.IdOrigine,
             Tanime.IdSeason,
+            Tanime.ReleaseDate,
+            Tanime.EndDate,
             Tanime.IsAdultContent AS AnimeIsAdultContent,
             Tanime.IsExplicitContent AS AnimeIsExplicitContent,
             Tanime.Note AS AnimeNote,
@@ -744,6 +800,7 @@ public class TanimeBase
             Tanime.SheetId AS AnimeSheetId,
             Tanime.DiffusionState,
             Tanime.EpisodeCount,
+            Tanime.EpisodeDuration,
             Tanime.ThumbnailUrl AS AnimeThumbnailUrl,
             Tanime.Description AS AnimeDescription,
             

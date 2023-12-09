@@ -176,6 +176,21 @@ CREATE TABLE IF NOT EXISTS Tcontact
 );
 -- endregion
 
+-- region Table TcontactWebSite
+/*
+ Création de la table TcontactWebSite qui permet 
+ d'enregistrer les sites web d'une fiche fiche contact
+ */
+DROP TABLE IF EXISTS TcontactWebSite;
+CREATE TABLE IF NOT EXISTS TcontactWebSite
+(
+    Id          INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
+    IdContact     INTEGER NOT NULL REFERENCES Tcontact (Id) ON DELETE CASCADE,
+    Url         TEXT    NOT NULL,
+    Description TEXT    NULL
+);
+-- endregion
+    
 -- region Table Tanime
 /*
  Création de la table Tanime qui permet 

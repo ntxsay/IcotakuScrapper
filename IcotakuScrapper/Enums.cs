@@ -44,14 +44,15 @@ public enum IntColumnSelect
     IdStudio,
 
     /// <summary>
-    /// Représente la colonne "IdDistributor".
+    /// Représente la colonne Id pointant vers un contact.
     /// </summary>
-    IdDistributor,
+    IdContact,
 
     /// <summary>
     /// Représente la colonne "IdLicenseType".
     /// </summary>
     IdLicenseType,
+    IdRole,
 }
 
 /// <summary>
@@ -72,11 +73,7 @@ public enum SelectCountIdIdAnimeKind
     IdAnime,
 }
 
-public enum DbScriptMode : byte
-{
-    Select,
-    Count,
-}
+
 
 /// <summary>
 /// Enumération des sections du site icotaku.com et exploité par l'API.
@@ -220,23 +217,10 @@ public enum ContactType : byte
     Distributor,
 }
 
-
-
-public enum MoisKind
+public enum RoleType : byte
 {
-    Unknow,
-    Janvier,
-    Février,
-    Mars,
-    Avril,
-    Mai,
-    Juin,
-    Juillet,
-    Août,
-    Septembre,
-    Octobre,
-    Novembre,
-    Décembre
+    Staff,
+    Character,
 }
 
 /// <summary>
@@ -280,5 +264,11 @@ public enum DbStartFilterMode
     Where,
     And,
     Or,
+}
+
+public enum DbScriptMode : byte
+{
+    Select,
+    Count,
 }
 

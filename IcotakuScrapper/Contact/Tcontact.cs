@@ -14,7 +14,7 @@ public enum ContactSortBy
 /// <summary>
 /// Représente un contact avec des informations détaillées.
 /// </summary>
-public class Tcontact : TcontactBase
+public partial class Tcontact : TcontactBase
 {
     /// <summary>
     /// Obtient ou définit le genre du contact.
@@ -45,6 +45,11 @@ public class Tcontact : TcontactBase
     /// Obtient ou définit l'âge du contact.
     /// </summary>
     public uint? Age { get; set; }
+    
+    /// <summary>
+    /// Obtient ou définit la liste des sites web de l'anime.
+    /// </summary>
+    public HashSet<TcontactWebSite> WebSites { get; } = [];
 
     public Tcontact() { }
 
@@ -119,10 +124,10 @@ public class Tcontact : TcontactBase
         return !reader.HasRows ? null : (await GetRecords(reader, cancellationToken)).FirstOrDefault();
     }
     
-    public new static async Task<Tcontact?> SingleAsync(string name, CancellationToken? cancellationToken = null,
+    public new static async Task<Tcontact?> SingleAsync(string displayName, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
-        if (name.IsStringNullOrEmptyOrWhiteSpace())
+        if (displayName.IsStringNullOrEmptyOrWhiteSpace())
             return null;
         
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
@@ -132,7 +137,7 @@ public class Tcontact : TcontactBase
         
         command.Parameters.Clear();
         
-        command.Parameters.AddWithValue("$DisplayName", name);
+        command.Parameters.AddWithValue("$DisplayName", displayName);
         
         var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         return !reader.HasRows ? null : (await GetRecords(reader, cancellationToken)).FirstOrDefault();
@@ -154,6 +159,26 @@ public class Tcontact : TcontactBase
         return !reader.HasRows ? null : (await GetRecords(reader, cancellationToken)).FirstOrDefault();
     }
 
+    public new static async Task<Tcontact?> SingleAsync(string displayName, int sheetId, ContactType contactType, CancellationToken? cancellationToken = null,
+        SqliteCommand? cmd = null)
+    {
+        if (displayName.IsStringNullOrEmptyOrWhiteSpace())
+            return null;
+        
+        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        command.CommandText = SqlSelectScript + Environment.NewLine;
+        
+        command.CommandText += "WHERE Tcontact.DisplayName = $DisplayName COLLATE NOCASE AND Tcontact.Type = $Type AND Tcontact.SheetId = $SheetId";
+        
+        command.Parameters.Clear();
+        
+        command.Parameters.AddWithValue("$DisplayName", displayName);
+        command.Parameters.AddWithValue("$Type", (byte)contactType);
+        command.Parameters.AddWithValue("$SheetId", sheetId);
+        
+        var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
+        return !reader.HasRows ? null : (await GetRecords(reader, cancellationToken)).FirstOrDefault();
+    }
     #endregion
     
     #region Insert
@@ -173,7 +198,7 @@ public class Tcontact : TcontactBase
             return new OperationState<int>(false, "L'id de la fiche du contact ne peut pas être vide");
         
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        if (await ExistsAsync(DisplayName, SheetId, uri, cancellationToken, command))
+        if (await ExistsAsync(DisplayName, SheetId, Type, cancellationToken, command))
             return new OperationState<int>(false, "Le contact existe déjà dans la base de données");
         
         command.CommandText = 
@@ -202,7 +227,7 @@ public class Tcontact : TcontactBase
         {
             var result = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
             if (result == 0)
-                return new OperationState<int>(false, "Une erreur est survenue lors de l'insertion du contact");
+                return new OperationState<int>(false, "Aucun contact n'a été inséré dans la base de données");
 
             Id = await command.GetLastInsertRowIdAsync();
 
@@ -210,11 +235,43 @@ public class Tcontact : TcontactBase
         }
         catch (Exception e)
         {
-            Debug.WriteLine(e.Message);
+            LogServices.LogDebug(e.Message);
             return new OperationState<int>(false, "Une erreur est survenue lors de l'insertion du contact");
         }
     }
     
+    /// <summary>
+    /// Retourne un contact existant ou crée un nouveau contact.
+    /// </summary>
+    /// <param name="value"></param>
+    /// <param name="reloadIfExist"></param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
+    public static async Task<Tcontact?> SingleOrCreateAsync(Tcontact value, bool reloadIfExist= false, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        command.Parameters.Clear();
+        if (!reloadIfExist)
+        {
+            var id = await GetIdOfAsync(value.DisplayName, value.SheetId, value.Type, cancellationToken, command);
+            if (id.HasValue)
+            {
+                value.Id = id.Value;
+                return value;
+            }
+            
+            var result2 = await value.InsertAync(cancellationToken, command);
+            return !result2.IsSuccess ? null : value;
+        }
+
+        var record = await SingleAsync(new Uri(value.Url), cancellationToken, command);
+        if (record != null)
+            return record;
+
+        var result = await value.InsertAync(cancellationToken, command);
+        return !result.IsSuccess ? null : value;
+    }
     #endregion
 
     #region Update
@@ -238,7 +295,7 @@ public class Tcontact : TcontactBase
             return new OperationState(false, "L'id de la fiche du contact ne peut pas être vide");
         
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        var existingId = await GetIdOfAsync(DisplayName, SheetId, uri, cancellationToken, command);
+        var existingId = await GetIdOfAsync(DisplayName, SheetId, Type, cancellationToken, command);
         if (existingId.HasValue && existingId.Value != Id)
             return new OperationState(false, "Le contact existe déjà dans la base de données");
         
@@ -283,7 +340,7 @@ public class Tcontact : TcontactBase
         }
         catch (Exception e)
         {
-            Debug.WriteLine(e.Message);
+            LogServices.LogDebug(e.Message);
             return new OperationState(false, "Une erreur est survenue lors de la mise à jour du contact");
         }
     }
@@ -300,73 +357,69 @@ public class Tcontact : TcontactBase
             var record = recordList.FirstOrDefault(x => x.Id == id);
             if (record == null)
             {
-                record = GetRecord(reader,
-                    idIndex: reader.GetOrdinal("BaseId"),
-                    sheetIdIndex: reader.GetOrdinal("SheetId"),
-                    displayNameIndex: reader.GetOrdinal("DisplayName"),
-                    presentationIndex: reader.GetOrdinal("Presentation"),
-                    urlIndex: reader.GetOrdinal("Url"),
-                    birthNameIndex: reader.GetOrdinal("BirthName"),
-                    firstNameIndex: reader.GetOrdinal("FirstName"),
-                    originalNameIndex: reader.GetOrdinal("OriginalName"),
-                    birthDateIndex: reader.GetOrdinal("BirthDate"),
-                    ageIndex: reader.GetOrdinal("Age"),
-                    thumbnailIndex: reader.GetOrdinal("ThumbnailUrl"),
-                    contactTypeIndex: reader.GetOrdinal("Type"),
-                    idGenreIndex: reader.GetOrdinal("IdGenre"),
-                    genreNameIndex: reader.GetOrdinal("GenreName"),
-                    genreDescriptionIndex: reader.GetOrdinal("GenreDescription"));
+
+                record = new Tcontact()
+                {
+                    Id = id,
+                    Guid = reader.GetGuid(reader.GetOrdinal("BaseGuid")),
+                    SheetId = reader.GetInt32(reader.GetOrdinal("SheetId")),
+                    DisplayName = reader.GetString(reader.GetOrdinal("DisplayName")),
+                    Url = reader.GetString(reader.GetOrdinal("Url")),
+                    Presentation = reader.IsDBNull(reader.GetOrdinal("Presentation"))
+                        ? null
+                        : reader.GetString(reader.GetOrdinal("Presentation")),
+                    BirthName = reader.IsDBNull(reader.GetOrdinal("BirthName"))
+                        ? null
+                        : reader.GetString(reader.GetOrdinal("BirthName")),
+                    FirstName = reader.IsDBNull(reader.GetOrdinal("FirstName"))
+                        ? null
+                        : reader.GetString(reader.GetOrdinal("FirstName")),
+                    OriginalName = reader.IsDBNull(reader.GetOrdinal("OriginalName"))
+                        ? null
+                        : reader.GetString(reader.GetOrdinal("OriginalName")),
+                    BirthDate = reader.IsDBNull(reader.GetOrdinal("BirthDate"))
+                        ? null
+                        : reader.GetString(reader.GetOrdinal("BirthDate")),
+                    Age = reader.IsDBNull(reader.GetOrdinal("Age"))
+                        ? null
+                        : reader.GetByte(reader.GetOrdinal("Age")),
+                    ThumbnailUrl = reader.IsDBNull(reader.GetOrdinal("ThumbnailUrl"))
+                        ? null
+                        : reader.GetString(reader.GetOrdinal("ThumbnailUrl")),
+                    Type = (ContactType)reader.GetByte(reader.GetOrdinal("Type")),
+                    Genre = reader.IsDBNull(reader.GetOrdinal("IdGenre"))
+                        ? null
+                        : TcontactGenre.GetRecord(reader,
+                            idIndex: reader.GetOrdinal("IdGenre"),
+                            nameIndex: reader.GetOrdinal("GenreName"),
+                            descriptionIndex: reader.GetOrdinal("GenreDescription"))
+
+                };
                 
                 recordList.Add(record);
+            }
+            
+            if (!reader.IsDBNull(reader.GetOrdinal("WebSiteId")))
+            {
+                var webSiteId = reader.GetInt32(reader.GetOrdinal("WebSiteId"));
+                var webSite = record.WebSites.FirstOrDefault(x => x.Id == webSiteId);
+                if (webSite == null)
+                {
+                    webSite = new TcontactWebSite(webSiteId, id)
+                    {
+                        Url = reader.GetString(reader.GetOrdinal("WebSiteUrl")),
+                        Description = reader.IsDBNull(reader.GetOrdinal("WebSiteDescription"))
+                            ? null
+                            : reader.GetString(reader.GetOrdinal("WebSiteDescription"))
+                    };
+                    record.WebSites.Add(webSite);
+                }
             }
         }
         
         return recordList.ToArray();
     }
     
-    public static Tcontact GetRecord(SqliteDataReader reader, int idIndex, int sheetIdIndex, int displayNameIndex, int presentationIndex, int urlIndex, 
-        int birthNameIndex, int firstNameIndex, int originalNameIndex, int birthDateIndex, int ageIndex, int contactTypeIndex, int thumbnailIndex,
-        int idGenreIndex, int genreNameIndex, int genreDescriptionIndex)
-    {
-        var record = new Tcontact()
-        {
-            Id = reader.GetInt32(idIndex),
-            Guid = reader.GetGuid(reader.GetOrdinal("BaseGuid")),
-            SheetId = reader.GetInt32(sheetIdIndex),
-            DisplayName = reader.GetString(displayNameIndex),
-            Presentation = reader.IsDBNull(presentationIndex)
-                ? null
-                : reader.GetString(presentationIndex),
-            Url = reader.GetString(urlIndex),
-            BirthName = reader.IsDBNull(birthNameIndex)
-                ? null
-                : reader.GetString(birthNameIndex),
-            FirstName = reader.IsDBNull(firstNameIndex)
-                ? null
-                : reader.GetString(firstNameIndex),
-            OriginalName = reader.IsDBNull(originalNameIndex)
-                ? null
-                : reader.GetString(originalNameIndex),
-            BirthDate = reader.IsDBNull(birthDateIndex)
-                ? null
-                : reader.GetString(birthDateIndex),
-            Age = reader.IsDBNull(ageIndex)
-                ? null
-                : reader.GetByte(ageIndex),
-            ThumbnailUrl = reader.IsDBNull(thumbnailIndex)
-                ? null
-                : reader.GetString(thumbnailIndex),
-            Type = (ContactType)reader.GetByte(contactTypeIndex),
-            Genre = reader.IsDBNull(idGenreIndex)
-                ? null
-                : TcontactGenre.GetRecord(reader,
-                    idIndex: idGenreIndex,
-                    nameIndex: genreNameIndex,
-                    descriptionIndex: genreDescriptionIndex)
-        };
-        
-        return record;
-    }
 
     private const string SqlSelectScript =
         """
@@ -387,10 +440,15 @@ public class Tcontact : TcontactBase
             Tcontact.ThumbnailUrl,
             
             TcontactGenre.Name AS GenreName,
-            TcontactGenre.Description AS GenreDescription
+            TcontactGenre.Description AS GenreDescription,
+            
+            TcontactWebSite.Id AS WebSiteId,
+            TcontactWebSite.Url AS WebSiteUrl,
+            TcontactWebSite.Description AS WebSiteDescription
         
         FROM Tcontact
         LEFT JOIN main.TcontactGenre on TcontactGenre.Id = Tcontact.IdGenre
+        LEFT JOIN main.TcontactWebSite on Tcontact.Id = TcontactWebSite.IdContact
         """;
     
     

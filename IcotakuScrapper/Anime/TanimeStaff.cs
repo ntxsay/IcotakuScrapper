@@ -5,34 +5,33 @@ using Microsoft.Data.Sqlite;
 
 namespace IcotakuScrapper.Anime;
 
-
-public class TanimeLicense
+public class TanimeStaff
 {
     public int Id { get; protected set; }
     public int IdAnime { get; set; }
 
-    public TlicenseType Type { get; set; } = new();
-    public TcontactBase Distributor { get; set; } = new ();
+    public ToeuvreRole Type { get; set; } = new();
+    public TcontactBase Person { get; set; } = new ();
     
-    public TanimeLicense()
+    public TanimeStaff()
     {
     }
 
-    public TanimeLicense(int id)
+    public TanimeStaff(int id)
     {
         Id = id;
     }
     
-    public TanimeLicense(int idAnime, Tcontact distributor)
+    public TanimeStaff(int idAnime, Tcontact person)
     {
         IdAnime = idAnime;
-        Distributor = distributor;
+        Person = person;
     }
     
      #region Count
 
     /// <summary>
-    /// Compte le nombre d'entrées dans la table TanimeLicense
+    /// Compte le nombre d'entrées dans la table TanimeStaff
     /// </summary>
     /// <param name="cancellationToken"></param>
     /// <param name="cmd"></param>
@@ -40,7 +39,7 @@ public class TanimeLicense
     public static async Task<int> CountAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "SELECT COUNT(Id) FROM TanimeLicense";
+        command.CommandText = "SELECT COUNT(Id) FROM TanimeStaff";
 
         if (command.Parameters.Count > 0)
             command.Parameters.Clear();
@@ -52,7 +51,7 @@ public class TanimeLicense
     }
 
     /// <summary>
-    /// Compte le nombre d'entrées dans la table TanimeLicense ayant l'identifiant spécifié
+    /// Compte le nombre d'entrées dans la table TanimeStaff ayant l'identifiant spécifié
     /// </summary>
     /// <param name="id"></param>
     /// <param name="cancellationToken"></param>
@@ -62,7 +61,7 @@ public class TanimeLicense
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "SELECT COUNT(Id) FROM TanimeLicense WHERE Id = $Id";
+        command.CommandText = "SELECT COUNT(Id) FROM TanimeStaff WHERE Id = $Id";
 
         command.Parameters.Clear();
 
@@ -74,7 +73,7 @@ public class TanimeLicense
     }
 
     /// <summary>
-    /// Compte le nombre d'entrées dans la table TanimeLicense ayant le nom spécifié
+    /// Compte le nombre d'entrées dans la table TanimeStaff ayant le nom spécifié
     /// </summary>
     /// <param name="idContact"></param>
     /// <param name="idLicenseType"></param>
@@ -86,7 +85,7 @@ public class TanimeLicense
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "SELECT COUNT(Id) FROM TanimeLicense WHERE IdAnime = $IdAnime AND IdDistributor = $IdDistributor AND IdLicenseType = $IdLicenseType";
+        command.CommandText = "SELECT COUNT(Id) FROM TanimeStaff WHERE IdAnime = $IdAnime AND IdIndividu = $IdDistributor AND IdRole = $IdLicenseType";
 
         command.Parameters.Clear();
         
@@ -103,7 +102,7 @@ public class TanimeLicense
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "SELECT Id FROM TanimeLicense WHERE IdAnime = $IdAnime AND IdDistributor = $IdDistributor AND IdLicenseType = $IdLicenseType";
+        command.CommandText = "SELECT Id FROM TanimeStaff WHERE IdAnime = $IdAnime AND IdIndividu = $IdDistributor AND IdRole = $IdLicenseType";
 
         command.Parameters.Clear();
         
@@ -132,7 +131,7 @@ public class TanimeLicense
 
     #region Select
 
-    public static async Task<TanimeLicense[]> SelectAsync(int id, IntColumnSelect columnSelect, OrderBy orderBy = OrderBy.Asc, uint limit = 0, uint skip = 0 , CancellationToken? cancellationToken = null,
+    public static async Task<TanimeStaff[]> SelectAsync(int id, IntColumnSelect columnSelect, OrderBy orderBy = OrderBy.Asc, uint limit = 0, uint skip = 0 , CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
@@ -141,7 +140,7 @@ public class TanimeLicense
             IntColumnSelect.Id,
             IntColumnSelect.IdAnime,
             IntColumnSelect.IdContact,
-            IntColumnSelect.IdLicenseType,
+            IntColumnSelect.IdRole,
         ]);
         
         if (!isColumnSelectValid)
@@ -151,10 +150,10 @@ public class TanimeLicense
 
         command.CommandText = SqlSelectScript + Environment.NewLine + columnSelect switch
         {
-            IntColumnSelect.Id => "WHERE TanimeLicense.Id = $Id",
-            IntColumnSelect.IdAnime => "WHERE TanimeLicense.IdAnime = $Id",
-            IntColumnSelect.IdContact => "WHERE TanimeLicense.IdDistributor = $Id",
-            IntColumnSelect.IdLicenseType => "WHERE TanimeLicense.IdLicenseType = $Id",
+            IntColumnSelect.Id => "WHERE TanimeStaff.Id = $Id",
+            IntColumnSelect.IdAnime => "WHERE TanimeStaff.IdAnime = $Id",
+            IntColumnSelect.IdContact => "WHERE TanimeStaff.IdIndividu = $Id",
+            IntColumnSelect.IdRole => "WHERE TanimeStaff.IdRole = $Id",
             _ => throw new ArgumentOutOfRangeException(nameof(columnSelect), columnSelect, null)
         };
         
@@ -175,11 +174,11 @@ public class TanimeLicense
 
     #region Single
 
-    public static async Task<TanimeLicense?> SingleAsync(int id, CancellationToken? cancellationToken = null,
+    public static async Task<TanimeStaff?> SingleAsync(int id, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE TanimeLicense.Id = $Id";
+        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE TanimeStaff.Id = $Id";
         
         command.Parameters.Clear();
         
@@ -190,11 +189,11 @@ public class TanimeLicense
         return await GetRecords(reader, cancellationToken).FirstOrDefaultAsync(cancellationToken ?? CancellationToken.None);
     }
     
-    public static async Task<TanimeLicense?> SingleAsync(int idAnime, int idContact, CancellationToken? cancellationToken = null,
+    public static async Task<TanimeStaff?> SingleAsync(int idAnime, int idContact, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE TanimeLicense.IdAnime = $IdAnime AND TanimeLicense.IdDistributor = $IdDistributor";
+        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE TanimeStaff.IdAnime = $IdAnime AND TanimeStaff.IdIndividu = $IdDistributor";
         
         command.Parameters.Clear();
         
@@ -218,21 +217,21 @@ public class TanimeLicense
         if (IdAnime <= 0 || !await TanimeBase.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken, command))
             return new OperationState<int>(false, "L'anime n'existe pas.");
         
-        if (Distributor.Id <= 0 || !await TcontactBase.ExistsAsync(Distributor.Id, IntColumnSelect.Id, cancellationToken, command))
+        if (Person.Id <= 0 || !await TcontactBase.ExistsAsync(Person.Id, IntColumnSelect.Id, cancellationToken, command))
             return new OperationState<int>(false, "Le distributor n'existe pas.");
         
-        if (Type.Id <= 0 || !await TlicenseType.ExistsAsync(Type.Id, cancellationToken, command))
+        if (Type.Id <= 0 || !await ToeuvreRole.ExistsAsync(Type.Id, cancellationToken, command))
             return new OperationState<int>(false, "Le type de licence n'existe pas.");
         
-        if (await ExistsAsync(IdAnime, Distributor.Id, Type.Id, cancellationToken, command))
+        if (await ExistsAsync(IdAnime, Person.Id, Type.Id, cancellationToken, command))
             return new OperationState<int>(false, "Le lien existe déjà.");
         
-        command.CommandText = "INSERT INTO TanimeLicense (IdAnime, IdDistributor, IdLicenseType) VALUES ($IdAnime, $IdDistributor, $IdLicenseType);";
+        command.CommandText = "INSERT INTO TanimeStaff (IdAnime, IdIndividu, IdRole) VALUES ($IdAnime, $IdDistributor, $IdLicenseType);";
         
         command.Parameters.Clear();
         
         command.Parameters.AddWithValue("$IdAnime", IdAnime);
-        command.Parameters.AddWithValue("$IdDistributor", Distributor.Id);
+        command.Parameters.AddWithValue("$IdDistributor", Person.Id);
         command.Parameters.AddWithValue("$IdLicenseType", Type.Id);
         
         try
@@ -250,7 +249,7 @@ public class TanimeLicense
         }
     }
 
-    public static async Task<OperationState> InsertAsync(int idAnime, IReadOnlyCollection<TanimeLicense> values,
+    public static async Task<OperationState> InsertAsync(int idAnime, IReadOnlyCollection<TanimeStaff> values,
         DbInsertMode insertMode = DbInsertMode.InsertOrReplace, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
@@ -262,13 +261,13 @@ public class TanimeLicense
             return new OperationState(false, "L'anime n'existe pas.");
         
         command.StartWithInsertMode(insertMode);
-        command.CommandText += " INTO TanimeLicense (IdAnime, IdDistributor, IdLicenseType) VALUES";
+        command.CommandText += " INTO TanimeStaff (IdAnime, IdIndividu, IdRole) VALUES";
         command.Parameters.Clear();
         
         for (var i = 0; i < values.Count; i++)
         {
             var value = values.ElementAt(i);
-            if (value.Distributor.Id <= 0)
+            if (value.Person.Id <= 0)
             {
                 LogServices.LogDebug($"L'identifiant  du distributor ne peut pas être égal ou inférieur à 0.");
                 continue;
@@ -281,7 +280,7 @@ public class TanimeLicense
             }
             
             command.CommandText += Environment.NewLine + $"($IdAnime, $IdDistributor{i}, $IdLicenseType{i})";
-            command.Parameters.AddWithValue($"$IdDistributor{i}", value.Distributor.Id);
+            command.Parameters.AddWithValue($"$IdDistributor{i}", value.Person.Id);
             command.Parameters.AddWithValue($"$IdLicenseType{i}", value.Type.Id);
             
             if (i == values.Count - 1)
@@ -318,22 +317,22 @@ public class TanimeLicense
         if (IdAnime <= 0 || !await TanimeBase.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken, command))
             return new OperationState(false, "L'anime n'existe pas.");
         
-        if (Distributor.Id <= 0 || !await TcontactBase.ExistsAsync(Distributor.Id, IntColumnSelect.Id, cancellationToken, command))
+        if (Person.Id <= 0 || !await TcontactBase.ExistsAsync(Person.Id, IntColumnSelect.Id, cancellationToken, command))
             return new OperationState(false, "Le distributor n'existe pas.");
         
-        if (Type.Id <= 0 || !await TlicenseType.ExistsAsync(Type.Id, cancellationToken, command))
+        if (Type.Id <= 0 || !await ToeuvreRole.ExistsAsync(Type.Id, cancellationToken, command))
             return new OperationState(false, "Le type de licence n'existe pas.");
         
-        var existingId = await GetIdOfAsync(IdAnime, Distributor.Id, Type.Id, cancellationToken, command);
+        var existingId = await GetIdOfAsync(IdAnime, Person.Id, Type.Id, cancellationToken, command);
         if (existingId is not null && existingId != Id)
             return new OperationState(false, "Le lien existe déjà.");
         
         command.CommandText = 
             """
-            UPDATE TanimeLicense SET 
+            UPDATE TanimeStaff SET 
                 IdAnime = $IdAnime, 
-                IdDistributor = $IdDistributor,
-                IdLicenseType = $IdLicenseType
+                IdIndividu = $IdDistributor,
+                IdRole = $IdLicenseType
             WHERE Id = $Id;
             """;
         
@@ -341,7 +340,7 @@ public class TanimeLicense
         
         command.Parameters.AddWithValue("$Id", Id);
         command.Parameters.AddWithValue("$IdAnime", IdAnime);
-        command.Parameters.AddWithValue("$IdDistributor", Distributor.Id);
+        command.Parameters.AddWithValue("$IdDistributor", Person.Id);
         command.Parameters.AddWithValue("$IdLicenseType", Type.Id);
         
         try
@@ -368,7 +367,7 @@ public class TanimeLicense
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "DELETE FROM TanimeLicense WHERE Id = $Id";
+        command.CommandText = "DELETE FROM TanimeStaff WHERE Id = $Id";
         
         command.Parameters.Clear();
         
@@ -388,30 +387,30 @@ public class TanimeLicense
 
     #endregion
 
-    private static async IAsyncEnumerable<TanimeLicense> GetRecords(SqliteDataReader reader,
+    private static async IAsyncEnumerable<TanimeStaff> GetRecords(SqliteDataReader reader,
         CancellationToken? cancellationToken = null)
     {
         while (await reader.ReadAsync(cancellationToken ?? CancellationToken.None))
         {
-            var record = new TanimeLicense()
+            var record = new TanimeStaff()
             {
                 Id = reader.GetInt32(reader.GetOrdinal("BaseId")),
                 IdAnime = reader.GetInt32(reader.GetOrdinal("IdAnime")),
-                Type = new TlicenseType(reader.GetInt32(reader.GetOrdinal("IdLicenseType")))
+                Type = new ToeuvreRole(reader.GetInt32(reader.GetOrdinal("IdRole")))
                 {
-                    Name = reader.GetString(reader.GetOrdinal("LicenceTypeName")),
-                    Description = reader.IsDBNull(reader.GetOrdinal("LicenceTypeDescription")) ? null : reader.GetString(reader.GetOrdinal("LicenceTypeDescription")),
-                    Section = (IcotakuSection)reader.GetByte(reader.GetOrdinal("LicenceTypeSection"))
+                    Name = reader.GetString(reader.GetOrdinal("RoleName")),
+                    Description = reader.IsDBNull(reader.GetOrdinal("RoleDescription")) ? null : reader.GetString(reader.GetOrdinal("RoleDescription")),
+                    Type = (RoleType)reader.GetByte(reader.GetOrdinal("RoleType"))
                 }
             };
             
-            var idContact = reader.GetInt32(reader.GetOrdinal("IdDistributor"));
+            var idContact = reader.GetInt32(reader.GetOrdinal("IdIndividu"));
             var contact = await TcontactBase.SingleAsync(idContact, IntColumnSelect.Id, cancellationToken);
             if (contact == null)
                 continue;
             
-            record.Distributor = contact;
-
+            record.Person = contact;
+            
             yield return record;
         }
     }
@@ -419,15 +418,15 @@ public class TanimeLicense
     private const string SqlSelectScript =
         """
         SELECT
-            TanimeLicense.Id AS BaseId,
-            TanimeLicense.IdAnime,
-            TanimeLicense.IdDistributor,
-            TanimeLicense.IdLicenseType,
+            TanimeStaff.Id AS BaseId,
+            TanimeStaff.IdAnime,
+            TanimeStaff.IdIndividu,
+            TanimeStaff.IdRole,
             
-            TlicenseType.Name AS LicenceTypeName,
-            TlicenseType.Description AS LicenceTypeDescription,
-            TlicenseType.Section AS LicenceTypeSection
-        FROM TanimeLicense
-            LEFT JOIN main.TlicenseType ON TanimeLicense.IdLicenseType = TlicenseType.Id
+            ToeuvreRole.Name AS RoleName,
+            ToeuvreRole.Description AS RoleDescription,
+            ToeuvreRole.Type AS RoleType
+        FROM TanimeStaff
+            LEFT JOIN main.ToeuvreRole ON TanimeStaff.IdRole = ToeuvreRole.Id
         """;
 }

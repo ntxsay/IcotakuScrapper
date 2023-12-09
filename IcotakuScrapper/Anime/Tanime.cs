@@ -24,26 +24,6 @@ public enum AnimeSortBy
 
 public partial class Tanime : TanimeBase
 {
-    
-
-    /// <summary>
-    /// Obtient ou définit la date de sortie de l'anime au format yyyy-MM-dd.
-    /// </summary>
-    public string? ReleaseDate { get; set; }
-
-    public DateOnly? ReleaseDateAsDateOnly => GetReleaseDate();
-    public string? ReleaseDateAsLiteral => ReleaseDateAsDateOnly?.ToString("dddd dd MMMM yyyy");
-
-    /// <summary>
-    /// Obtient ou définit la date de fin de l'anime.
-    /// </summary>
-    public string? EndDate { get; set; }
-
-    /// <summary>
-    /// Obtient ou définit la durée d'un épisode de l'anime (en minutes).
-    /// </summary>
-    public TimeSpan Duration { get; set; } = TimeSpan.Zero;
-    
     /// <summary>
     /// Obtient ou définit la liste des titres alternatifs de l'anime.
     /// </summary>
@@ -65,35 +45,7 @@ public partial class Tanime : TanimeBase
     public HashSet<TanimeEpisode> Episodes { get; } = [];
     
     public HashSet<TanimeLicense> Licenses { get; } = [];
-
-
-    /// <summary>
-    /// Retourne la date de sortie de l'anime via l'objet <see cref="DateOnly"/>.
-    /// </summary>
-    /// <returns></returns>
-    public DateOnly? GetReleaseDate()
-    {
-        if (ReleaseDate == null || ReleaseDate.IsStringNullOrEmptyOrWhiteSpace())
-            return null;
-
-        var date = ReleaseDate.Split('-');
-        if (date.Length != 3)
-            return null;
-
-        if (!ushort.TryParse(date[0], out var year))
-            return null;
-
-        if (!ushort.TryParse(date[1], out var month))
-            return null;
-
-        if (!ushort.TryParse(date[2], out var day))
-            return null;
-
-        if (DateOnly.TryParse($"{year}-{month}-{day}", CultureInfo.DefaultThreadCurrentCulture, out var result))
-            return result;
-        
-        return null;
-    }
+    
 
     public Tanime()
     {

@@ -51,6 +51,8 @@ public partial class TanimeSeasonalPlanning
     public string GroupName { get; set; } = string.Empty;
     public uint ReleaseMonth { get; set; }
     public string? ReleaseMonthLiteral => DateHelpers.GetYearMonthLiteral(ReleaseMonth);
+    public string? MinimalReleaseMonthLiteral => DateHelpers.GetYearMonthLiteral(ReleaseMonth, "MMM yyyy");
+    public ushort ReleaseYear => DateHelpers.GetYear(ReleaseMonth);
     public HashSet<string> Studios { get; protected set; } = [];
     public HashSet<string> Distributors { get; protected set; } = [];
     public string? Description { get; set; }

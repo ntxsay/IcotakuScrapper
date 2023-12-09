@@ -128,12 +128,53 @@ public static class DateHelpers
         
         if (!uint.TryParse(yearString, out var year))
             return null;
-        
-        if (!byte.TryParse(monthString, out var month))
-            return null;
+
+        if (!byte.TryParse(monthString, out var month) || month is < 1 or > 12)
+            return year.ToString();
         
         var monthName = GetMonthName(month);
-        return monthName == null ? null : $"{monthName} {year}";
+        if (monthName == null || monthName.IsStringNullOrEmptyOrWhiteSpace())
+            return year.ToString();
+        
+        monthName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(monthName);
+
+        return $"{monthName} {year}";
+    }
+    
+    public static string? GetYearMonthLiteral(uint intDate, string format)
+    {
+        if (intDate == 0)
+            return null;
+        var stringIntDate = intDate.ToString();
+        if (stringIntDate.Length != 6)//2308 -//202304
+            return null;
+        var yearString = stringIntDate[..4];
+        var monthString = stringIntDate.Substring(4, 2);
+        
+        if (!uint.TryParse(yearString, out var year) || year < DateOnly.MinValue.Year || year > DateOnly.MaxValue.Year)
+            return null;
+
+        if (!byte.TryParse(monthString, out var month) || month is < 1 or > 12)
+            return year.ToString();
+        
+        var value = new DateOnly((int)year, month, 1).ToString(format, CultureInfo.CurrentCulture);
+        return CultureInfo.CurrentCulture.TextInfo.ToTitleCase(value);
+    }
+
+    public static ushort GetYear(uint intDate)
+    {
+        
+        if (intDate == 0)
+            return 0;
+        var stringIntDate = intDate.ToString();
+        if (stringIntDate.Length != 6)//2308 -//202304
+            return 0;
+        var yearString = stringIntDate[..4];
+        
+        if (!ushort.TryParse(yearString, out var year))
+            return 0;
+        
+        return year;
     }
     
     public static uint GetYearMonthInt(DateOnly date)

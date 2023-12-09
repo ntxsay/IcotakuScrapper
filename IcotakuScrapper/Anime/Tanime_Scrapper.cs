@@ -861,6 +861,33 @@ public partial class Tanime
 
     #endregion
 
+    #region Staff
+
+    private static async IAsyncEnumerable<TanimeStaff> ScrapStaffAsync(HtmlNode documentNode,
+        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        var htmlNodes = documentNode.SelectNodes(
+            "//table[contains(@class, 'staff')]/tbody/tr")?.ToArray();
+        if (htmlNodes == null || htmlNodes.Length == 0)
+            yield break;
+
+        foreach (var node in htmlNodes)
+        {
+            var contactNode = node.SelectSingleNode("./td[1]/a");
+            if (contactNode == null)
+                continue;
+            
+            var roleNode = node.SelectSingleNode("./td[2]/text()");
+            if (roleNode == null)
+                continue;
+            
+            
+        }
+    }
+
+
+    #endregion
+
     #region Thumbnail
 
     /// <summary>

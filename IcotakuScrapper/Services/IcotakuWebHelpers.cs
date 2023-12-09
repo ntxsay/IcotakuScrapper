@@ -122,6 +122,32 @@ public static class IcotakuWebHelpers
 
         return sheetIdInt;
     }
+    
+    /// <summary>
+    /// Retourne le type de contact à partir de l'url de la fiche du contact (personne, personnage, studio, éditeur, etc...)
+    /// </summary>
+    /// <param name="sheetUri"></param>
+    /// <returns></returns>
+    public static ContactType? GetContactType(Uri sheetUri)
+    {
+        var splitUrl = sheetUri.Segments.Select(s => s.Trim('/')).Where(w => !w.IsStringNullOrEmptyOrWhiteSpace())
+            .ToArray();
+        if (splitUrl.Length == 0)
+            return null;
+
+        var contactType = splitUrl[0].ToLower() switch
+        {
+            "studio" => ContactType.Studio,
+            "editeur" => ContactType.Distributor,
+            "individu" => ContactType.Person,
+            "personnage" => ContactType.Character,
+            _ => ContactType.Unknown
+        };
+            
+        return contactType != ContactType.Unknown 
+            ? contactType 
+            : null;
+    }
 
     /// <summary>
     /// Retourne l'url absolue de l'image à partir de l'attribut src du noeud img
@@ -142,6 +168,18 @@ public static class IcotakuWebHelpers
         //https://anime.icotaku.com/uploads/animes/anime_229/fiche/affiche_umzrcyl4lhodbB8.jpg
         bool isUri = Uri.TryCreate(value, UriKind.Absolute, out var uri);
         return isUri && uri != null ? uri : null;
+    }
+    
+    public static string? GetStartImgSrcByContactType(ContactType contactType)
+    {
+        return contactType switch
+        {
+            ContactType.Studio => null,
+            ContactType.Distributor => null,
+            ContactType.Person => "/uploads/individus/",
+            ContactType.Character => "/uploads/personnages/",
+            _ => null
+        };
     }
 
     /// <summary>
