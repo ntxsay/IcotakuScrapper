@@ -39,7 +39,7 @@ public partial class TsheetIndex
     /// <summary>
     /// Obtient ou définit le type de la fiche (anime, manga, personnage, studio, etc.)
     /// </summary>
-    public IcotakuSheetType Type { get; set; }
+    public IcotakuSheetType SheetType { get; set; }
 
     /// <summary>
     /// Obtient ou définit l'url de la fiche
@@ -49,7 +49,7 @@ public partial class TsheetIndex
     /// <summary>
     /// Obtient ou définit le nom de la fiche
     /// </summary>
-    public string Name { get; set; } = string.Empty;
+    public string SheetName { get; set; } = string.Empty;
 
     /// <summary>
     /// Obtient ou définit le numéro de page où l'url a été trouvée
@@ -277,16 +277,16 @@ public partial class TsheetIndex
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = SqlSelectScript + Environment.NewLine;
+        command.CommandText = IcotakuSqlSelectScript + Environment.NewLine;
 
         command.CommandText += sortBy switch
         {
             SheetSortBy.Id => " ORDER BY Id",
             SheetSortBy.SheetId => " ORDER BY SheetId",
-            SheetSortBy.Type => " ORDER BY ItemType",
+            SheetSortBy.Type => " ORDER BY SheetType",
             SheetSortBy.Url => " ORDER BY Url",
             SheetSortBy.FoundedPage => " ORDER BY FoundedPage",
-            SheetSortBy.Name => " ORDER BY ItemName",
+            SheetSortBy.Name => " ORDER BY SheetName",
             SheetSortBy.Section => " ORDER BY Section",
             _ => throw new ArgumentOutOfRangeException(nameof(sortBy), sortBy, null)
         };
@@ -327,13 +327,13 @@ public partial class TsheetIndex
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = SqlSelectScript + Environment.NewLine;
+        command.CommandText = IcotakuSqlSelectScript + Environment.NewLine;
         if (command.Parameters.Count > 0)
             command.Parameters.Clear();
 
         if (sections.Count > 0)
         {
-            command.CommandText += Environment.NewLine + "WHERE Type IN (";
+            command.CommandText += Environment.NewLine + "WHERE Section IN (";
             for (var i = 0; i < sections.Count; i++)
             {
                 command.CommandText += i == 0 ? $"$Section{i}" : $", $Section{i}";
@@ -346,9 +346,9 @@ public partial class TsheetIndex
         if (sheetTypes.Count > 0)
         {
             if (sections.Count > 0)
-                command.CommandText += " AND Type IN (";
+                command.CommandText += " AND SheetType IN (";
             else
-                command.CommandText += Environment.NewLine + "WHERE Type IN (";
+                command.CommandText += Environment.NewLine + "WHERE SheetType IN (";
 
             for (var i = 0; i < sheetTypes.Count; i++)
             {
@@ -363,10 +363,10 @@ public partial class TsheetIndex
         {
             SheetSortBy.Id => " ORDER BY Id",
             SheetSortBy.SheetId => " ORDER BY SheetId",
-            SheetSortBy.Type => " ORDER BY ItemType",
+            SheetSortBy.Type => " ORDER BY SheetType",
             SheetSortBy.Url => " ORDER BY Url",
             SheetSortBy.FoundedPage => " ORDER BY FoundedPage",
-            SheetSortBy.Name => " ORDER BY ItemName",
+            SheetSortBy.Name => " ORDER BY SheetName",
             SheetSortBy.Section => " ORDER BY Section",
             _ => throw new ArgumentOutOfRangeException(nameof(sortBy), sortBy, null)
         };
@@ -413,7 +413,7 @@ public partial class TsheetIndex
             return null;
         }
 
-        command.CommandText = SqlSelectScript + Environment.NewLine + columnSelect switch
+        command.CommandText = IcotakuSqlSelectScript + Environment.NewLine + columnSelect switch
         {
             IntColumnSelect.Id => " WHERE Id = $Id",
             IntColumnSelect.SheetId => " WHERE SheetId = $Id",
@@ -438,7 +438,7 @@ public partial class TsheetIndex
             return null;
 
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = SqlSelectScript + " WHERE Url = $Url COLLATE NOCASE";
+        command.CommandText = IcotakuSqlSelectScript + " WHERE Url = $Url COLLATE NOCASE";
 
         command.Parameters.Clear();
 
@@ -463,7 +463,7 @@ public partial class TsheetIndex
     /// <returns></returns>
     public async Task<OperationState<int>> InsertAsync(CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
-        => await InsertAsync(Section, Type, Name, Url, SheetId, FoundedPage, cancellationToken, cmd);
+        => await InsertAsync(Section, SheetType, SheetName, Url, SheetId, FoundedPage, cancellationToken, cmd);
 
     /// <summary>
     /// Insère un enregistrement dans la table TsheetIndex
@@ -499,9 +499,9 @@ public partial class TsheetIndex
         command.CommandText =
             """
             INSERT INTO TsheetIndex 
-                (SheetId, Url, Section, ItemType, ItemName, FoundedPage) 
+                (SheetId, Url, Section, SheetType, SheetName, FoundedPage) 
             VALUES 
-                ($SheetId, $Url, $Section, $ItemType, $ItemName, $FoundedPage)
+                ($SheetId, $Url, $Section, $SheetType, $SheetName, $FoundedPage)
             """;
 
         command.Parameters.Clear();
@@ -509,8 +509,8 @@ public partial class TsheetIndex
         command.Parameters.AddWithValue("$SheetId", sheetId);
         command.Parameters.AddWithValue("$Url", uri.ToString());
         command.Parameters.AddWithValue("$Section", (byte)section);
-        command.Parameters.AddWithValue("$ItemType", (byte)sheetType);
-        command.Parameters.AddWithValue("$ItemName", name);
+        command.Parameters.AddWithValue("$SheetType", (byte)sheetType);
+        command.Parameters.AddWithValue("$SheetName", name);
         command.Parameters.AddWithValue("$FoundedPage", foundedPage);
         
 
@@ -536,35 +536,36 @@ public partial class TsheetIndex
     /// <param name="cmd"></param>
     /// <returns></returns>
     public static async Task<OperationState> InsertAsync(IReadOnlyCollection<TsheetIndex> records,
-        CancellationToken? cancellationToken = null,
+        DbInsertMode insertMode = DbInsertMode.InsertOrReplace, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
         if (records.Count == 0)
             return new OperationState(false, "La liste ne peut pas être vide.");
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
 
-        command.CommandText = "INSERT OR IGNORE INTO TsheetIndex (SheetId, Url, Section, ItemType, ItemName, FoundedPage)" + Environment.NewLine;
+        command.StartWithInsertMode(insertMode);
+        command.CommandText += " INTO TsheetIndex (SheetId, Url, Section, SheetType, SheetName, FoundedPage)" + Environment.NewLine;
 
         command.Parameters.Clear();
 
         for (uint i = 0; i < records.Count; i++)
         {
             var record = records.ElementAt((int)i);
-            if (record.Url.IsStringNullOrEmptyOrWhiteSpace())
-                return new OperationState(false, "L'url ne peut pas être vide.");
+            if (record.Url.IsStringNullOrEmptyOrWhiteSpace() || !Uri.TryCreate(record.Url, UriKind.Absolute, out var uri) || !uri.IsAbsoluteUri)
+                return new OperationState(false, "L'url n'est pas valide.");
 
             command.CommandText += i == 0 ? "VALUES" : "," + Environment.NewLine;
-            command.CommandText += $"($SheetId{i}, $Url{{i}}, $Section{i}, $ItemType{i}, $ItemName{i}, $FoundedPage{i})";
+            command.CommandText += $"($SheetId{i}, $Url{i}, $Section{i}, $SheetType{i}, $SheetName{i}, $FoundedPage{i})";
             
             command.Parameters.AddWithValue($"$SheetId{i}", record.SheetId);
-            command.Parameters.AddWithValue($"$Url{i}", record.Url);
+            command.Parameters.AddWithValue($"$Url{i}", uri.ToString());
             command.Parameters.AddWithValue($"$Section{i}", (byte)record.Section);
-            command.Parameters.AddWithValue($"$ItemType{i}", (byte)record.Type);
-            command.Parameters.AddWithValue($"$ItemName{i}", record.Name);
+            command.Parameters.AddWithValue($"$SheetType{i}", (byte)record.SheetType);
+            command.Parameters.AddWithValue($"$SheetName{i}", record.SheetName);
             command.Parameters.AddWithValue($"$FoundedPage{i}", record.FoundedPage);
 
             Debug.WriteLine(
-                $"SheetId: {record.SheetId}, Type: {record.Section}, Url: {record.Url}, FoundedPage: {record.FoundedPage}, Name: {record.Name}");
+                $"SheetId: {record.SheetId}, Type: {record.Section}, Url: {record.Url}, FoundedPage: {record.FoundedPage}, Name: {record.SheetName}");
         }
 
 
@@ -589,7 +590,7 @@ public partial class TsheetIndex
 
     public async Task<OperationState> UpdateAsync(CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
-        => await UpdateAsync(Id, Section, Type, Name, Url, SheetId, FoundedPage, cancellationToken, cmd);
+        => await UpdateAsync(Id, Section, SheetType, SheetName, Url, SheetId, FoundedPage, cancellationToken, cmd);
 
     public static async Task<OperationState> UpdateAsync(int id,IcotakuSection section, IcotakuSheetType sheetType, string name, string url,
         int sheetId, uint foundedPage,
@@ -622,8 +623,8 @@ public partial class TsheetIndex
             SET
                 SheetId = $SheetId,
                 Section = $Section,
-                ItemType = $ItemType,
-                ItemName = $ItemName,
+                SheetType = $SheetType,
+                SheetName = $SheetName,
                 Url = $Url,
                 FoundedPage = $FoundedPage
             WHERE
@@ -637,8 +638,8 @@ public partial class TsheetIndex
         command.Parameters.AddWithValue("$Section", (byte)section);
         command.Parameters.AddWithValue("$Url", uri.ToString());
         command.Parameters.AddWithValue("$FoundedPage", foundedPage);
-        command.Parameters.AddWithValue("$ItemType", (byte)sheetType);
-        command.Parameters.AddWithValue("$ItemName", name);
+        command.Parameters.AddWithValue("$SheetType", (byte)sheetType);
+        command.Parameters.AddWithValue("$SheetName", name);
 
         try
         {
@@ -738,12 +739,12 @@ public partial class TsheetIndex
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
 
-        command.CommandText = "DELETE FROM TsheetIndex WHERE Section = $Section AND ItemType = $ItemType";
+        command.CommandText = "DELETE FROM TsheetIndex WHERE Section = $Section AND SheetType = $SheetType";
 
         command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$Section", (byte)section);
-        command.Parameters.AddWithValue("$ItemType", (byte)sheetType);
+        command.Parameters.AddWithValue("$SheetType", (byte)sheetType);
 
         try
         {
@@ -767,9 +768,9 @@ public partial class TsheetIndex
                 idIndex: reader.GetOrdinal("Id"),
                 sheetIdIndex: reader.GetOrdinal("SheetId"),
                 sectionIndex: reader.GetOrdinal("Section"),
-                typeIndex: reader.GetOrdinal("ItemType"),
+                typeIndex: reader.GetOrdinal("SheetType"),
                 urlIndex: reader.GetOrdinal("Url"),
-                nameIndex: reader.GetOrdinal("ItemName"),
+                nameIndex: reader.GetOrdinal("SheetName"),
                 foundedPageIndex: reader.GetOrdinal("FoundedPage"));
         }
     }
@@ -795,24 +796,24 @@ public partial class TsheetIndex
             Id = reader.GetInt32(idIndex),
             SheetId = reader.GetInt32(sheetIdIndex),
             Section = (IcotakuSection)reader.GetByte(sectionIndex),
-            Type = (IcotakuSheetType)reader.GetByte(typeIndex),
+            SheetType = (IcotakuSheetType)reader.GetByte(typeIndex),
             Url = reader.GetString(urlIndex),
-            Name = reader.GetString(nameIndex),
+            SheetName = reader.GetString(nameIndex),
             FoundedPage = (uint)reader.GetInt32(foundedPageIndex)
         };
 
         return record;
     }
 
-    private const string SqlSelectScript =
+    private const string IcotakuSqlSelectScript =
         """
         SELECT
             Id,
             SheetId,
             Url,
             Section,
-            ItemName,
-            ItemType,
+            SheetName,
+            SheetType,
             FoundedPage
         FROM TsheetIndex
         """;

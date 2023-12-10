@@ -32,7 +32,7 @@ public partial class Tanime : TanimeBase
     /// <summary>
     /// Obtient ou définit la liste des sites web de l'anime.
     /// </summary>
-    public HashSet<TanimeWebSite> WebSites { get; } = [];
+    public HashSet<TanimeWebSite> Websites { get; } = [];
     
     /// <summary>
     /// Obtient ou définit la liste des studios de l'anime.
@@ -45,6 +45,8 @@ public partial class Tanime : TanimeBase
     public HashSet<TanimeEpisode> Episodes { get; } = [];
     
     public HashSet<TanimeLicense> Licenses { get; } = [];
+    
+    public HashSet<TanimeStaff> Staffs { get; } = [];
     
 
     public Tanime()
@@ -197,7 +199,7 @@ public partial class Tanime : TanimeBase
 
     #region Insert
 
-    public async Task<OperationState<int>> InsertAync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public async Task<OperationState<int>> InsertAync(bool disableExistenceVerification = false, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         if (Name.IsStringNullOrEmptyOrWhiteSpace())
             return new OperationState<int>(false, "Le nom de l'anime ne peut pas être vide");
@@ -213,7 +215,7 @@ public partial class Tanime : TanimeBase
         
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
         
-        if (await ExistsAsync(Name, SheetId, uri, cancellationToken, command))
+        if (!disableExistenceVerification && await ExistsAsync(Name, SheetId, uri, cancellationToken, command))
             return new OperationState<int>(false, "L'anime existe déjà");
         
         
@@ -250,29 +252,16 @@ public partial class Tanime : TanimeBase
         {
             var result = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
             if (result <= 0)
-                return new OperationState<int>(false, "Une erreur est survenue lors de l'ajout de l'anime");
+                return new OperationState<int>(false, "L'anime n'a pas été ajouté");
             Id = await command.GetLastInsertRowIdAsync();
             
-            await this.AddAlternativeTitlesAsync(cancellationToken, command);
-            
-            if (WebSites.Count > 0)
-                foreach (var webSite in WebSites)
-                {
-                    webSite.IdAnime = Id;
-                    _ = await webSite.InsertAsync(cancellationToken, command);
-                }
-            
-            if (Studios.Count > 0)
-                _ = await TanimeStudio.InsertAsync(Id, Studios.Select(s => s.Id).ToArray(), DbInsertMode.InsertOrReplace, cancellationToken, command);
-
-            if (Categories.Count > 0)
-                _ = await TanimeCategory.InsertAsync(Id, Categories.Select(s => s.Id).ToArray(), cancellationToken, command);
-
-            if (Episodes.Count > 0)
-                _ = await TanimeEpisode.InsertAsync(Id, Episodes.DistinctBy(d => d.EpisodeNumber).ToArray(), cancellationToken, command);
-
-            if (Licenses.Count > 0)
-                _ = await TanimeLicense.InsertAsync(Id, Licenses.ToArray(), DbInsertMode.InsertOrReplace, cancellationToken, command);
+            await this.AddOrReplaceAlternativeTitlesAsync(cancellationToken, command);
+            await this.AddOrReplaceWebsitesAsync(cancellationToken, command);
+            await this.AddOrReplaceStudiosAsync(cancellationToken, command);
+            await this.AddOrReplaceCategoriesAsync(cancellationToken, command);
+            await this.AddOrReplaceEpisodesAsync(cancellationToken, command);
+            await this.AddOrReplaceLicensesAsync(cancellationToken, command);
+            await this.AddOrReplaceStaffsAsync(cancellationToken, command);
             
             return new OperationState<int>(true, "L'anime a été ajouté avec succès", Id);
 
@@ -288,7 +277,7 @@ public partial class Tanime : TanimeBase
 
     #region Update
 
-    public async Task<OperationState> UpdateAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public async Task<OperationState> UpdateAsync(bool disableExistenceVerification = false, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         if (Name.IsStringNullOrEmptyOrWhiteSpace())
             return new OperationState(false, "Le nom de l'anime ne peut pas être vide");
@@ -303,12 +292,15 @@ public partial class Tanime : TanimeBase
             return new OperationState(false, "L'url de la fiche de l'anime n'est pas valide");
 
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        if (Id <= 0 || !await ExistsAsync(Id, IntColumnSelect.Id, cancellationToken, command))
+        if (Id <= 0 || (!disableExistenceVerification && !await ExistsAsync(Id, IntColumnSelect.Id, cancellationToken, command)))
             return new OperationState(false, "L'id de l'anime ne peut pas être inférieur ou égal à 0");
-        
-        var existingId = await GetIdOfAsync(Name, SheetId, uri, cancellationToken, command);
-        if (existingId.HasValue && existingId.Value != Id)
-            return new OperationState(false, "L'url de la fiche de l'anime existe déjà");
+
+        if (!disableExistenceVerification)
+        {
+            var existingId = await GetIdOfAsync(Name, SheetId, uri, cancellationToken, command);
+            if (existingId.HasValue && existingId.Value != Id)
+                return new OperationState(false, "L'url de la fiche de l'anime existe déjà");
+        }
         
         command.CommandText = 
             """
@@ -360,9 +352,16 @@ public partial class Tanime : TanimeBase
         {
             var result = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
 
-            await this.AddOrUpdateRangeAsync(AlternativeTitles, cancellationToken, command);
+            await this.UpdateAlternativeTitlesAsync(cancellationToken, command);
+            await this.UpdateWebsitesAsync(cancellationToken, command);
+            await this.UpdateStudiosAsync(cancellationToken, command);
+            await this.UpdateCategoriesAsync(cancellationToken, command);
+            await this.UpdateEpisodesAsync(cancellationToken, command);
+            await this.UpdateLicensesAsync(cancellationToken, command);
+            await this.UpdateStaffsAsync(cancellationToken, command);
+            
             return result > 0 
-                ? new OperationState(true, "L'anime a été modifié avec succès") 
+                ? new OperationState(true, "L'anime a été mis à jour avec succès") 
                 : new OperationState(false, "Une erreur est survenue lors de la modification de l'anime");
         }
         catch (Exception e)
@@ -370,6 +369,52 @@ public partial class Tanime : TanimeBase
             Debug.WriteLine(e.Message);
             return new OperationState(false, "Une erreur est survenue lors de la modification de l'anime");
         }
+    }
+
+    #endregion
+
+    #region Add or Update or Single
+
+    public async Task<OperationState<int>> AddOrUpdateAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        => await AddOrUpdateAsync(this, cancellationToken, cmd);
+    public static async Task<OperationState<int>> AddOrUpdateAsync(Tanime value,
+        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        //Si la validation échoue, on retourne le résultat de la validation
+        if (value.Name.IsStringNullOrEmptyOrWhiteSpace())
+            return new OperationState<int>(false, "Le nom de l'anime ne peut pas être vide");
+        
+        if (value.Url.IsStringNullOrEmptyOrWhiteSpace())
+            return new OperationState<int>(false, "L'url de la fiche de l'anime ne peut pas être vide");
+        
+        if (value.SheetId <= 0)
+            return new OperationState<int>(false, "L'id de la fiche de l'anime Icotaku n'est pas valide");
+        
+        if (!Uri.TryCreate(value.Url, UriKind.Absolute, out var uri) || !uri.IsAbsoluteUri)
+            return new OperationState<int>(false, "L'url de la fiche de l'anime n'est pas valide");
+
+        //Vérifie si l'item existe déjà
+        var existingId = await GetIdOfAsync(value.Name, value.SheetId, uri, cancellationToken, cmd);
+        
+        //Si l'item existe déjà
+        if (existingId.HasValue)
+        {
+            //Si l'id n'appartient pas à l'item alors l'enregistrement existe déjà on annule l'opération
+            if (value.Id > 0 && existingId.Value != value.Id)
+                return new OperationState<int>(false, "Le nom de l'item existe déjà");
+            
+            //Si l'id appartient à l'item alors on met à jour l'enregistrement
+            if (existingId.Value != value.Id)
+                value.Id = existingId.Value;
+            return (await value.UpdateAsync(true, cancellationToken, cmd)).ToGenericState(value.Id);
+        }
+
+        //Si l'item n'existe pas, on l'ajoute
+        var addResult = await value.InsertAync(true, cancellationToken, cmd);
+        if (addResult.IsSuccess)
+            value.Id = addResult.Data;
+        
+        return addResult;
     }
 
     #endregion
@@ -468,7 +513,7 @@ public partial class Tanime : TanimeBase
             if (!reader.IsDBNull(reader.GetOrdinal("WebSiteId")))
             {
                 var webSiteId = reader.GetInt32(reader.GetOrdinal("WebSiteId"));
-                var webSite = anime.WebSites.FirstOrDefault(x => x.Id == webSiteId);
+                var webSite = anime.Websites.FirstOrDefault(x => x.Id == webSiteId);
                 if (webSite == null)
                 {
                     webSite = new TanimeWebSite(webSiteId, animeId)
@@ -478,7 +523,7 @@ public partial class Tanime : TanimeBase
                             ? null
                             : reader.GetString(reader.GetOrdinal("WebSiteDescription"))
                     };
-                    anime.WebSites.Add(webSite);
+                    anime.Websites.Add(webSite);
                 }
             }
             
@@ -524,6 +569,17 @@ public partial class Tanime : TanimeBase
                 }
             }
 
+            if (!reader.IsDBNull(reader.GetOrdinal("StaffId")))
+            {
+                var staffId = reader.GetInt32(reader.GetOrdinal("StaffId"));
+                var staff = anime.Staffs.FirstOrDefault(x => x.Id == staffId);
+                if (staff == null)
+                {
+                    staff = await TanimeStaff.SingleAsync(staffId, cancellationToken);
+                    if (staff != null)
+                        anime.Staffs.Add(staff);
+                }
+            }
             
         }
         
@@ -590,7 +646,7 @@ public partial class Tanime : TanimeBase
             Tseason.SeasonNumber as SeasonNumber,
             
             TanimeAlternativeTitle.Id AS AlternativeTitleId,
-            TanimeAlternativeTitle.Name AS AlternativeTitle,
+            TanimeAlternativeTitle.Title AS AlternativeTitle,
             TanimeAlternativeTitle.Description AS AlternativeTitleDescription,
             
             TanimeWebSite.Id AS WebSiteId,
@@ -598,7 +654,8 @@ public partial class Tanime : TanimeBase
             TanimeWebSite.Description AS WebSiteDescription,
             
             TanimeStudio.IdStudio AS StudioId,
-            TanimeLicense.IdLicenseType AS LicenseId,
+            TanimeLicense.Id AS LicenseId,
+            TanimeStaff.Id AS StaffId,
             
             TanimeCategory.IdCategory AS CategoryId,
             Tcategory.SheetId AS CategorySheetId,
@@ -619,5 +676,6 @@ public partial class Tanime : TanimeBase
         LEFT JOIN main.Tcategory on Tcategory.Id = TanimeCategory.IdCategory
         LEFT JOIN main.TanimeStudio on Tanime.Id = TanimeStudio.IdAnime
         LEFT JOIN main.TanimeLicense on Tanime.Id = TanimeLicense.IdAnime
+        LEFT JOIN main.TanimeStaff on Tanime.Id = TanimeStaff.IdAnime
         """;
 }

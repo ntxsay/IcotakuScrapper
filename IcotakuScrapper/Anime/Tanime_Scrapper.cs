@@ -33,7 +33,7 @@ public partial class Tanime
     /// <summary>
     /// Récupère les informations de l'anime via l'url de la fiche
     /// </summary>
-    /// <param name="sheetId">Id Icotaku de la fiche</param>
+    /// <param name="sheetUri"></param>
     /// <param name="userName"></param>
     /// <param name="passWord"></param>
     /// <param name="cancellationToken"></param>
@@ -85,14 +85,14 @@ public partial class Tanime
         if (anime == null)
             return new OperationState<int>(false, "Une erreur est survenue lors de la récupération de l'anime");
 
-        if (anime.Url == null || anime.Url.IsStringNullOrEmptyOrWhiteSpace())
+        if (anime.Url.IsStringNullOrEmptyOrWhiteSpace())
             return new OperationState<int>(false, "L'url de la fiche de l'anime est introuvable.");
 
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
 
         _ = await CreateIndexAsync(anime.Name, anime.Url, anime.SheetId, cancellationToken, command);
 
-        return await anime.InsertAync(cancellationToken, command);
+        return await anime.AddOrUpdateAsync(cancellationToken, command);
     }
 
     private static async Task<OperationState<Tanime?>> ScrapAnimeAsync(string htmlContent, Uri sheetUri, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
@@ -115,8 +115,10 @@ public partial class Tanime
     /// Récupère les informations de la fiche anime à partir de son url
     /// </summary>
     /// <param name="uri">Url de la fiche de l'animé</param>
+    /// <param name="sheetUri"></param>
     /// <param name="cancellationToken"></param>
     /// <param name="cmd"></param>
+    /// <param name="documentNode"></param>
     /// <returns></returns>
     private static async Task<OperationState<Tanime?>> ScrapAnimeAsync(HtmlNode documentNode, Uri sheetUri, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
@@ -155,7 +157,7 @@ public partial class Tanime
                 Season = await ScrapSeason(documentNode, cancellationToken, command),
                 ReleaseDate = ScrapBeginDate(documentNode),
                 Description = ScrapDescription(documentNode),
-                ThumbnailUrl = SCrapFullThumbnail(documentNode),
+                ThumbnailUrl = ScrapFullThumbnail(documentNode),
             };
 
             //Titres alternatifs
@@ -177,9 +179,9 @@ public partial class Tanime
             {
                 foreach (var url in websites)
                 {
-                    if (!anime.WebSites.Any(a => string.Equals(a.Url, url.Url, StringComparison.OrdinalIgnoreCase)))
+                    if (!anime.Websites.Any(a => string.Equals(a.Url, url.Url, StringComparison.OrdinalIgnoreCase)))
                     {
-                        anime.WebSites.Add(url);
+                        anime.Websites.Add(url);
                     }
                 }
             }
@@ -232,6 +234,17 @@ public partial class Tanime
                 {
                     var endDate = episodes.Max(m => m.ReleaseDate);
                     anime.EndDate = endDate.ToString("yyyy-MM-dd");
+                }
+            }
+            
+            //Staff
+            var staff = await ScrapStaffAsync(documentNode, cancellationToken, command).ToArrayAsync();
+            if (staff.Length > 0)
+            {
+                foreach (var tanimeStaff in staff)
+                {
+                    if (!anime.Staffs.Any(a => a.Role.Id == tanimeStaff.Role.Id && a.Person.Id == tanimeStaff.Person.Id))
+                        anime.Staffs.Add(tanimeStaff);
                 }
             }
 
@@ -867,21 +880,53 @@ public partial class Tanime
         CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         var htmlNodes = documentNode.SelectNodes(
-            "//table[contains(@class, 'staff')]/tbody/tr")?.ToArray();
+            "//table[contains(@class, 'staff')]//tr")?.ToArray();
         if (htmlNodes == null || htmlNodes.Length == 0)
             yield break;
 
         foreach (var node in htmlNodes)
         {
             var contactNode = node.SelectSingleNode("./td[1]/a");
-            if (contactNode == null)
+
+            var contactHref = contactNode?.Attributes["href"]?.Value;
+            if (contactHref == null || contactHref.IsStringNullOrEmptyOrWhiteSpace())
                 continue;
             
+            var contactUri = IcotakuWebHelpers.GetFullHrefFromHtmlNode(contactNode, IcotakuSection.Anime);
+            if (contactUri == null)
+                continue;
+
+            var contact = await Tcontact.ScrapFromUriAsync(contactUri);
+            if (contact == null)
+                continue;
+            
+            contact = await Tcontact.SingleOrCreateAsync(contact, false, cancellationToken, cmd);
+            if (contact == null)
+                continue;
+            
+            //Récupère le rôle du contact
             var roleNode = node.SelectSingleNode("./td[2]/text()");
-            if (roleNode == null)
+
+            var roleText = HttpUtility.HtmlDecode(roleNode?.InnerText?.Trim());
+            if (roleText == null || roleText.IsStringNullOrEmptyOrWhiteSpace())
                 continue;
+
+            ToeuvreRole? role = new()
+            {
+                Name = roleText,
+                Type = RoleType.Staff,
+            };
             
-            
+            role = await ToeuvreRole.SingleOrCreateAsync(role, true, cancellationToken, cmd);
+            if (role == null)
+                continue;
+
+            yield return new TanimeStaff()
+            {
+                Person = contact,
+                Role = role
+            };
+
         }
     }
 
@@ -901,10 +946,10 @@ public partial class Tanime
         HtmlWeb web = new();
         var htmlDocument = web.Load(ficheAnimeUri.OriginalString);
 
-        return SCrapFullThumbnail(htmlDocument.DocumentNode);
+        return ScrapFullThumbnail(htmlDocument.DocumentNode);
     }
 
-    public static string? SCrapFullThumbnail(HtmlNode htmlNode)
+    public static string? ScrapFullThumbnail(HtmlNode htmlNode)
     {
 
         //Récupère le noeud de l'image de la vignette

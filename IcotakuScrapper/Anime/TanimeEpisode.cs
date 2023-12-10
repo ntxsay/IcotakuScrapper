@@ -21,7 +21,7 @@ public partial class TanimeEpisode
     public int Id { get; set; }
     public int IdAnime { get; set; }
     public DateOnly ReleaseDate { get; set; }
-    public ushort EpisodeNumber { get; set; }
+    public ushort NoEpisode { get; set; }
     public string? EpisodeName { get; set; }
     public DayOfWeek Day { get; set; }
     public string? Description { get; set; }
@@ -40,14 +40,20 @@ public partial class TanimeEpisode
         Id = id;
         IdAnime = idAnime;
     }
+    
+    public TanimeEpisode(int idAnime, ushort noEpisode)
+    {
+        IdAnime = idAnime;
+        NoEpisode = noEpisode;
+    }
 
-    public TanimeEpisode(int id, int idAnime, DateOnly releaseDate, ushort episodeNumber, string episodeName,
+    public TanimeEpisode(int id, int idAnime, DateOnly releaseDate, ushort noEpisode, string episodeName,
         DayOfWeek day, string? description)
     {
         Id = id;
         IdAnime = idAnime;
         ReleaseDate = releaseDate;
-        EpisodeNumber = episodeNumber;
+        NoEpisode = noEpisode;
         EpisodeName = episodeName;
         Day = day;
         Description = description;
@@ -83,15 +89,25 @@ public partial class TanimeEpisode
     /// <param name="cancellationToken"></param>
     /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<int> CountAsync(int id, SelectCountIdIdAnimeKind columnSelect,
+    public static async Task<int> CountAsync(int id, IntColumnSelect columnSelect,
         CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        var isColumnSelectValid = command.IsIntColumnValidated(columnSelect,
+        [
+            IntColumnSelect.Id,
+            IntColumnSelect.IdAnime,
+        ]);
+
+        if (!isColumnSelectValid)
+        {
+            return 0;
+        }
         command.CommandText = columnSelect switch
         {
-            SelectCountIdIdAnimeKind.Id => "SELECT COUNT(Id) FROM TanimeEpisode WHERE Id = $Id",
-            SelectCountIdIdAnimeKind.IdAnime => "SELECT COUNT(Id) FROM TanimeEpisode WHERE IdAnime = $Id",
+            IntColumnSelect.Id => "SELECT COUNT(Id) FROM TanimeEpisode WHERE Id = $Id",
+            IntColumnSelect.IdAnime => "SELECT COUNT(Id) FROM TanimeEpisode WHERE IdAnime = $Id",
             _ => throw new ArgumentOutOfRangeException(nameof(columnSelect), columnSelect,
                 "La valeur spécifiée est invalide")
         };
@@ -177,7 +193,7 @@ public partial class TanimeEpisode
 
     #region Exists
 
-    public static async Task<bool> ExistsAsync(int id, SelectCountIdIdAnimeKind columnSelect,
+    public static async Task<bool> ExistsAsync(int id, IntColumnSelect columnSelect,
         CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
         => await CountAsync(id, columnSelect, cancellationToken, cmd) > 0;
@@ -336,17 +352,17 @@ public partial class TanimeEpisode
 
     #region Insert
 
-    public async Task<OperationState<int>> InsertAsync(CancellationToken? cancellationToken = null,
+    public async Task<OperationState<int>> InsertAsync(bool disableExistenceVerification = false, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
-        if (EpisodeNumber <= 0)
+        if (NoEpisode <= 0)
             return new OperationState<int>(false, "Le numéro de l'épisode ne peut pas être inférieur ou égal à 0");
 
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        if (IdAnime <= 0 || !await TanimeBase.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken, command))
+        if (IdAnime <= 0 || (!disableExistenceVerification && !await TanimeBase.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken, command)))
             return new OperationState<int>(false, "L'identifiant de l'anime est invalide");
 
-        if (await ExistsAsync(IdAnime, EpisodeNumber, cancellationToken, command))
+        if (!disableExistenceVerification && await ExistsAsync(IdAnime, NoEpisode, cancellationToken, command))
             return new OperationState<int>(false, "L'épisode existe déjà");
 
         command.CommandText =
@@ -362,7 +378,7 @@ public partial class TanimeEpisode
 
         command.Parameters.AddWithValue("$IdAnime", IdAnime);
         command.Parameters.AddWithValue("$ReleaseDate", ReleaseDate.ToString(ReleaseDateFormat));
-        command.Parameters.AddWithValue("$NoEpisode", EpisodeNumber);
+        command.Parameters.AddWithValue("$NoEpisode", NoEpisode);
         command.Parameters.AddWithValue("$EpisodeName", EpisodeName ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$NoDay", (byte)Day);
         command.Parameters.AddWithValue("$Description", Description ?? (object)DBNull.Value);
@@ -383,90 +399,29 @@ public partial class TanimeEpisode
         }
     }
 
-    public static async Task<OperationState> InsertAsync(int idAnime, IReadOnlyCollection<TanimeEpisode> values,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-    {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        if (idAnime <= 0 || !await TanimeBase.ExistsAsync(idAnime, IntColumnSelect.Id, cancellationToken, command))
-            return new OperationState(false, "L'anime n'existe pas.");
-
-        if (values.Count == 0)
-            return new OperationState(false, "Aucun studio n'a été sélectionné.");
-
-        List<OperationState<int>> results =  [];
-        command.CommandText =
-            "INSERT OR REPLACE INTO TanimeEpisode (IdAnime, ReleaseDate, NoEpisode, EpisodeName, NoDay, Description) VALUES";
-        command.Parameters.Clear();
-
-        for (var i = 0; i < values.Count; i++)
-        {
-            var episode = values.ElementAt(i);
-            if (episode.EpisodeNumber <= 0)
-            {
-                results.Add(
-                    new OperationState<int>(false, $"Un des épisode sélectionnés n'est pas valide ({episode})."));
-                continue;
-            }
-
-            command.CommandText += Environment.NewLine +
-                                   $"($IdAnime, $ReleaseDate{i}, $NoEpisode{i}, $EpisodeName{i}, $NoDay{i}, $Description{i})";
-
-            command.Parameters.AddWithValue($"$ReleaseDate{i}", episode.ReleaseDate.ToString(ReleaseDateFormat));
-            command.Parameters.AddWithValue($"$NoEpisode{i}", episode.EpisodeNumber);
-            command.Parameters.AddWithValue($"$EpisodeName{i}", episode.EpisodeName ?? (object)DBNull.Value);
-            command.Parameters.AddWithValue($"$NoDay{i}", (byte)episode.Day);
-            command.Parameters.AddWithValue($"$Description{i}", episode.Description ?? (object)DBNull.Value);
-
-            if (i == values.Count - 1)
-                command.CommandText += ";";
-            else
-                command.CommandText += ",";
-        }
-
-        if (command.Parameters.Count == 0)
-            return new OperationState(false, "Aucun épisode n'est à ajouter.");
-
-        command.Parameters.AddWithValue("$IdAnime", idAnime);
-
-        try
-        {
-            if (await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None) <= 0)
-                return new OperationState(false, "Une erreur est survenue lors de l'insertion");
-
-            if (results.All(a => a.IsSuccess))
-                return new OperationState(true, "Insertion réussie");
-            if (results.All(a => !a.IsSuccess))
-                return new OperationState(false, "Aucun épisode n'a été inséré");
-            return new OperationState(true, "Certains épisodes n'ont pas été insérés");
-        }
-        catch (Exception e)
-        {
-            Debug.WriteLine(e.Message);
-            return new OperationState(false, "Une erreur est survenue lors de l'insertion");
-        }
-    }
-
     #endregion
 
     #region Update
 
-    public async Task<OperationState> UpdateAsync(CancellationToken? cancellationToken = null,
+    public async Task<OperationState> UpdateAsync(bool disableExistenceVerification = false, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
-        if (EpisodeNumber <= 0)
+        if (NoEpisode <= 0)
             return new OperationState(false, "Le numéro de l'épisode ne peut pas être inférieur ou égal à 0");
 
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        if (Id <= 0 || !await ExistsAsync(Id, SelectCountIdIdAnimeKind.Id, cancellationToken, command))
+        if (Id <= 0 || (!disableExistenceVerification && !await ExistsAsync(Id, IntColumnSelect.Id, cancellationToken, command)))
             return new OperationState(false, "L'identifiant de l'épisode est invalide");
 
-        if (IdAnime <= 0 || !await TanimeBase.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken, command))
+        if (IdAnime <= 0 || (!disableExistenceVerification && !await TanimeBase.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken, command)))
             return new OperationState(false, "L'identifiant de l'anime est invalide");
 
-        var existingId = await GetIdOfAsync(IdAnime, EpisodeNumber, cancellationToken, command);
-        if (existingId.HasValue && existingId.Value != Id)
-            return new OperationState(false, "L'épisode existe déjà");
+        if (!disableExistenceVerification)
+        {
+            var existingId = await GetIdOfAsync(IdAnime, NoEpisode, cancellationToken, command);
+            if (existingId.HasValue && existingId.Value != Id)
+                return new OperationState(false, "L'épisode existe déjà");
+        }
 
         command.CommandText =
             """
@@ -485,7 +440,7 @@ public partial class TanimeEpisode
 
         command.Parameters.AddWithValue("$IdAnime", IdAnime);
         command.Parameters.AddWithValue("$ReleaseDate", ReleaseDate.ToString(ReleaseDateFormat));
-        command.Parameters.AddWithValue("$NoEpisode", EpisodeNumber);
+        command.Parameters.AddWithValue("$NoEpisode", NoEpisode);
         command.Parameters.AddWithValue("$EpisodeName", EpisodeName ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$NoDay", (byte)Day);
         command.Parameters.AddWithValue("$Description", Description ?? (object)DBNull.Value);
@@ -506,9 +461,145 @@ public partial class TanimeEpisode
     }
 
     #endregion
+    
+    #region AddOrUpdate
+    
+    public static async Task<OperationState> InsertOrReplaceAsync(int idAnime, IReadOnlyCollection<TanimeEpisode> values,
+        DbInsertMode insertMode = DbInsertMode.InsertOrReplace, CancellationToken? cancellationToken = null,
+        SqliteCommand? cmd = null)
+    {
+        if (values.Count == 0)
+            return new OperationState(false, "Aucun épisode n'a été trouvé.");
+
+        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        if (idAnime <= 0 || !await TanimeBase.ExistsAsync(idAnime, IntColumnSelect.Id, cancellationToken, command))
+            return new OperationState(false, "L'anime n'existe pas.");
+        
+        command.StartWithInsertMode(insertMode);
+        command.CommandText += " INTO TanimeEpisode (IdAnime, ReleaseDate, NoEpisode, EpisodeName, NoDay, Description) VALUES";
+        command.Parameters.Clear();
+
+        for (var i = 0; i < values.Count; i++)
+        {
+            var episode = values.ElementAt(i);
+            if (episode.NoEpisode <= 0)
+            {
+                LogServices.LogDebug($"Un des épisode sélectionnés n'est pas valide ({episode}).");
+                continue;
+            }
+
+            command.CommandText += Environment.NewLine +
+                                   $"($IdAnime, $ReleaseDate{i}, $NoEpisode{i}, $EpisodeName{i}, $NoDay{i}, $Description{i})";
+
+            command.Parameters.AddWithValue($"$ReleaseDate{i}", episode.ReleaseDate.ToString(ReleaseDateFormat));
+            command.Parameters.AddWithValue($"$NoEpisode{i}", episode.NoEpisode);
+            command.Parameters.AddWithValue($"$EpisodeName{i}", episode.EpisodeName ?? (object)DBNull.Value);
+            command.Parameters.AddWithValue($"$NoDay{i}", (byte)episode.Day);
+            command.Parameters.AddWithValue($"$Description{i}", episode.Description ?? (object)DBNull.Value);
+
+            if (i == values.Count - 1)
+                command.CommandText += ";";
+            else
+                command.CommandText += ",";
+        }
+
+        if (command.Parameters.Count == 0)
+            return new OperationState(false, "Aucun épisode n'a été trouvé.");
+
+        command.Parameters.AddWithValue("$IdAnime", idAnime);
+
+        try
+        {
+            var count = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
+            return new OperationState(count > 0, $"{count} enregistrement(s) sur {values.Count} ont été insérés avec succès.");
+        }
+        catch (Exception e)
+        {
+            Debug.WriteLine(e.Message);
+            return new OperationState(false, "Une erreur est survenue lors de l'insertion");
+        }
+    }
+    
+    public async Task<OperationState> AddOrUpdateAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        => await AddOrUpdateAsync(this, cancellationToken, cmd);
+    
+    public static async Task<OperationState> AddOrUpdateAsync(TanimeEpisode value,
+        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        //Si la validation échoue, on retourne le résultat de la validation
+        if (!await TanimeBase.ExistsAsync(value.IdAnime, IntColumnSelect.Id, cancellationToken, cmd))
+            return new OperationState(false, "L'anime n'existe pas.");
+        
+        //Vérifie si l'item existe déjà
+        var existingId = await GetIdOfAsync(value.IdAnime, value.NoEpisode, cancellationToken, cmd);
+        
+        //Si l'item existe déjà
+        if (existingId.HasValue)
+        {
+            //Si l'id n'appartient pas à l'item alors l'enregistrement existe déjà on annule l'opération
+            if (value.Id > 0 && existingId.Value != value.Id)
+                return new OperationState(false, "Le nom de l'item existe déjà");
+            
+            //Si l'id appartient à l'item alors on met à jour l'enregistrement
+            if (existingId.Value != value.Id)
+                value.Id = existingId.Value;
+            return await value.UpdateAsync(true, cancellationToken, cmd);
+        }
+
+        //Si l'item n'existe pas, on l'ajoute
+        var addResult = await value.InsertAsync(true, cancellationToken, cmd);
+        if (addResult.IsSuccess)
+            value.Id = addResult.Data;
+        
+        return addResult.ToBaseState();
+    }
+    #endregion
 
     #region Delete
 
+    /// <summary>
+    /// Supprime les enregistrements de la table TanimeEpisode qui ne sont pas dans la liste spécifiée
+    /// </summary>
+    /// <param name="actualValues">valeurs actuellement utilisées</param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
+    public static async Task<OperationState> DeleteUnusedAsync(HashSet<(ushort noEpisode, int idAnime)> actualValues, CancellationToken? cancellationToken = null,
+        SqliteCommand? cmd = null)
+    {
+        
+        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        command.CommandText = "DELETE FROM TanimeEpisode WHERE NoEpisode NOT IN (";
+        command.Parameters.Clear();
+        var i = 0;
+        foreach (var (noEpisode, _) in actualValues)
+        {
+            command.CommandText += i == 0 ? $"$NoEpisode{i}" : $", $NoEpisode{i}";
+            command.Parameters.AddWithValue($"$NoEpisode{i}", noEpisode);
+            i++;
+        }
+        command.CommandText += ") AND IdAnime NOT IN (";
+        i = 0;
+        foreach (var (_, idAnime) in actualValues)
+        {
+            command.CommandText += i == 0 ? $"$IdAnime{i}" : $", $IdAnime{i}";
+            command.Parameters.AddWithValue($"$IdAnime{i}", (byte)idAnime);
+            i++;
+        }
+        command.CommandText += ")";
+
+        try
+        {
+            var count = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
+            return new OperationState(true, $"{count} enregistrement(s) ont été supprimés.");
+        }
+        catch (Exception e)
+        {
+            LogServices.LogDebug(e.Message);
+            return new OperationState(false, "Une erreur est survenue lors de la suppression");
+        }
+    }
+    
     public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
         => await DeleteAsync(Id, cancellationToken, cmd);
@@ -517,7 +608,7 @@ public partial class TanimeEpisode
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        if (id <= 0 || !await ExistsAsync(id, SelectCountIdIdAnimeKind.Id, cancellationToken, command))
+        if (id <= 0 || !await ExistsAsync(id, IntColumnSelect.Id, cancellationToken, command))
             return new OperationState(false, "L'identifiant de l'épisode est invalide");
 
         command.CommandText = "DELETE FROM TanimeEpisode WHERE Id = $Id";
@@ -551,7 +642,7 @@ public partial class TanimeEpisode
                 Id = reader.GetInt32(reader.GetOrdinal("BaseId")),
                 IdAnime = reader.GetInt32(reader.GetOrdinal("IdAnime")),
                 ReleaseDate = DateHelpers.GetDateOnly(reader.GetString(reader.GetOrdinal("ReleaseDate")), ReleaseDateFormat),
-                EpisodeNumber = (ushort)reader.GetInt16(reader.GetOrdinal("NoEpisode")),
+                NoEpisode = (ushort)reader.GetInt16(reader.GetOrdinal("NoEpisode")),
                 EpisodeName = reader.IsDBNull(reader.GetOrdinal("EpisodeName"))
                     ? null
                     : reader.GetString(reader.GetOrdinal("EpisodeName")),

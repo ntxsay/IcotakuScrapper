@@ -6,7 +6,7 @@ namespace IcotakuScrapperWebApi
 {
     public class Program
     {
-        private static readonly string[] configureOptions = ["en-US", "fr-GP", "fr"];
+        private static readonly string[] configureOptions = ["en-US", "fr-GP", "fr", "fr-FR"];
 
         public static void Main(string[] args)
         {
@@ -22,7 +22,7 @@ namespace IcotakuScrapperWebApi
             builder.Services.Configure<RequestLocalizationOptions>(options =>
             {
                 var supportedCultures = configureOptions;
-                options.SetDefaultCulture(supportedCultures[2])
+                options.SetDefaultCulture(supportedCultures[3])
                     .AddSupportedCultures(supportedCultures)
                     .AddSupportedUICultures(supportedCultures);
             });

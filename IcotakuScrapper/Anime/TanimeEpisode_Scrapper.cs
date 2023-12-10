@@ -72,7 +72,7 @@ public partial class TanimeEpisode
 
             yield return new TanimeEpisode()
             {
-                EpisodeNumber = episodeNumber,
+                NoEpisode = episodeNumber,
                 EpisodeName = episodeName,
                 ReleaseDate = releaseDate.Value,
                 Day = releaseDate.Value.DayOfWeek,

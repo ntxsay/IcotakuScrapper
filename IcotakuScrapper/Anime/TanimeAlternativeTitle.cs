@@ -103,7 +103,7 @@ public class TanimeAlternativeTitle
             return 0;
 
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "SELECT COUNT(Id) FROM TanimeAlternativeTitle WHERE IdAnime = $IdAnime AND Name = $Name COLLATE NOCASE";
+        command.CommandText = "SELECT COUNT(Id) FROM TanimeAlternativeTitle WHERE IdAnime = $IdAnime AND Title = $Name COLLATE NOCASE";
 
         command.Parameters.Clear();
 
@@ -122,7 +122,7 @@ public class TanimeAlternativeTitle
             return null;
 
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "SELECT Id FROM TanimeAlternativeTitle WHERE IdAnime = $IdAnime AND Name = $Name COLLATE NOCASE";
+        command.CommandText = "SELECT Id FROM TanimeAlternativeTitle WHERE IdAnime = $IdAnime AND Title = $Name COLLATE NOCASE";
 
         command.Parameters.Clear();
 
@@ -160,7 +160,7 @@ public class TanimeAlternativeTitle
 
         command.Parameters.AddWithValue("$IdAnime", idAnime);
         command.CommandText += Environment.NewLine;
-        command.CommandText += $" ORDER BY Name {orderBy}";
+        command.CommandText += $" ORDER BY Title {orderBy}";
 
         command.AddLimitOffset(limit, skip);
 
@@ -199,7 +199,7 @@ public class TanimeAlternativeTitle
             return null;
 
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = SqlSelectScript + Environment.NewLine + " WHERE IdAnime = $IdAnime AND Name = $Name COLLATE NOCASE";
+        command.CommandText = SqlSelectScript + Environment.NewLine + " WHERE IdAnime = $IdAnime AND Title = $Name COLLATE NOCASE";
 
         command.Parameters.Clear();
 
@@ -217,22 +217,23 @@ public class TanimeAlternativeTitle
     
     #region Insert
     
-    public async Task<OperationState<int>> InsertAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public async Task<OperationState<int>> InsertAsync(bool disableExistenceVerification = false, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         if (Title.IsStringNullOrEmptyOrWhiteSpace())
             return new OperationState<int>(false, "Le titre est invalide.");
         
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        if (IdAnime <= 0 || !await TanimeBase.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken, command))
+        
+        if (IdAnime <= 0 || (!disableExistenceVerification && !await TanimeBase.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken, command)))
             return new OperationState<int>(false, "L'anime n'existe pas.");
         
-        if (await ExistsAsync(IdAnime, Title, cancellationToken, command))
+        if (!disableExistenceVerification && await ExistsAsync(IdAnime, Title, cancellationToken, command))
             return new OperationState<int>(false, "Le titre existe déjà.");
         
         command.CommandText = 
             """
             INSERT INTO TanimeAlternativeTitle 
-                (IdAnime, Name, Description) 
+                (IdAnime, Title, Description) 
             VALUES 
                 ($IdAnime, $Name, $Description)
             """;
@@ -257,63 +258,13 @@ public class TanimeAlternativeTitle
             return new OperationState<int>(false, "Une erreur inconnue est survenue.");
         }
     }
-
-    public static async Task<OperationState> InsertAsync(int idAnime, IReadOnlyCollection<TanimeAlternativeTitle> values,
-        DbInsertMode insertMode = DbInsertMode.InsertOrReplace, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-    {
-        if (values.Count == 0)
-            return new OperationState(false, "Il n'existe aucune valeur à insérer.");
-
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        if (idAnime <= 0 || !await TanimeBase.ExistsAsync(idAnime, IntColumnSelect.Id, cancellationToken, command))
-            return new OperationState(false, "L'anime n'existe pas.");
-
-        command.StartWithInsertMode(insertMode);
-        command.CommandText += " INTO TanimeAlternativeTitle (IdAnime, Name, Description) VALUES";
-        command.Parameters.Clear();
-
-        for (var i = 0; i < values.Count; i++)
-        {
-            var value = values.ElementAt(i);
-            if (value.Title.IsStringNullOrEmptyOrWhiteSpace())
-            {
-                LogServices.LogDebug($"Le nom du titre ne doit pas être vide ou ne contenir que des espaces blancs.");
-                continue;
-            }
-
-            command.CommandText += Environment.NewLine + $"($IdAnime, $Name{i}, $Description{i})";
-            command.Parameters.AddWithValue($"$Name{i}", value.Title);
-            command.Parameters.AddWithValue($"$Description{i}", value.Description ?? (object)DBNull.Value);
-
-            if (i == values.Count - 1)
-                command.CommandText += ";";
-            else
-                command.CommandText += ",";
-        }
-
-        if (command.Parameters.Count == 0)
-            return new OperationState(false, "Il n'existe aucune valeur à insérer.");
-
-        command.Parameters.AddWithValue("$IdAnime", idAnime);
-
-        try
-        {
-            var count = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
-            return new OperationState(count > 0, $"{count} enregistrement(s) sur {values.Count} ont été insérés avec succès.");
-        }
-        catch (Exception e)
-        {
-            LogServices.LogDebug(e);
-            return new OperationState(false, "Une erreur est survenue lors de l'insertion");
-        }
-    }
+    
     #endregion
 
 
     #region Update
 
-    public async Task<OperationState> UpdateAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public async Task<OperationState> UpdateAsync(bool disableExistenceVerification = false, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         if (Id <= 0)
             return new OperationState(false, "L'id est invalide.");
@@ -322,19 +273,22 @@ public class TanimeAlternativeTitle
             return new OperationState(false, "Le titre est invalide.");
         
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        if (IdAnime <= 0 || !await TanimeBase.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken, command))
+        if (IdAnime <= 0 || (!disableExistenceVerification && !await TanimeBase.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken, command)))
             return new OperationState(false, "L'anime n'existe pas.");
-        
-        var existingId = await GetIdOfAsync(IdAnime, Title, cancellationToken, command);
-        if (existingId != null && existingId != Id)
-            return new OperationState(false, "Le titre existe déjà.");
+
+        if (!disableExistenceVerification)
+        {
+            var existingId = await GetIdOfAsync(IdAnime, Title, cancellationToken, command);
+            if (existingId != null && existingId != Id)
+                return new OperationState(false, "Le titre existe déjà.");
+        }
         
         command.CommandText = 
             """
             UPDATE TanimeAlternativeTitle 
             SET 
                 IdAnime = $IdAnime, 
-                Name = $Name, 
+                Title = $Name, 
                 Description = $Description
             WHERE Id = $Id
             """;
@@ -361,8 +315,139 @@ public class TanimeAlternativeTitle
     }
     
     #endregion
+
+    #region AddOrUpdateOrSingle
+       
+    public static async Task<OperationState> InsertOrReplaceAsync(int idAnime, IReadOnlyCollection<TanimeAlternativeTitle> values,
+        DbInsertMode insertMode = DbInsertMode.InsertOrReplace, CancellationToken? cancellationToken = null,
+        SqliteCommand? cmd = null)
+    {
+        if (values.Count == 0)
+            return new OperationState(false, "Il n'existe aucune valeur à insérer.");
+
+        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        if (idAnime <= 0 || !await TanimeBase.ExistsAsync(idAnime, IntColumnSelect.Id, cancellationToken, command))
+            return new OperationState(false, "L'anime n'existe pas.");
+
+        command.StartWithInsertMode(insertMode);
+        command.CommandText += " INTO TanimeAlternativeTitle (IdAnime, Title, Description) VALUES";
+        command.Parameters.Clear();
+
+        for (var i = 0; i < values.Count; i++)
+        {
+            var value = values.ElementAt(i);
+            if (value.Title.IsStringNullOrEmptyOrWhiteSpace())
+            {
+                LogServices.LogDebug($"Le nom du titre ne doit pas être vide ou ne contenir que des espaces blancs.");
+                continue;
+            }
+
+            command.CommandText += Environment.NewLine + $"($IdAnime, $Title{i}, $Description{i})";
+            command.Parameters.AddWithValue($"$Title{i}", value.Title);
+            command.Parameters.AddWithValue($"$Description{i}", value.Description ?? (object)DBNull.Value);
+
+            if (i == values.Count - 1)
+                command.CommandText += ";";
+            else
+                command.CommandText += ",";
+        }
+
+        if (command.Parameters.Count == 0)
+            return new OperationState(false, "Il n'existe aucune valeur à insérer.");
+
+        command.Parameters.AddWithValue("$IdAnime", idAnime);
+
+        try
+        {
+            var count = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
+            return new OperationState(count > 0, $"{count} enregistrement(s) sur {values.Count} ont été insérés avec succès.");
+        }
+        catch (Exception e)
+        {
+            LogServices.LogDebug(e);
+            return new OperationState(false, "Une erreur est survenue lors de l'insertion");
+        }
+    }
+    
+    public async Task<OperationState> AddOrUpdateAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        => await AddOrUpdateAsync(this, cancellationToken, cmd);
+    
+    public static async Task<OperationState> AddOrUpdateAsync(TanimeAlternativeTitle value,
+        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        //Si la validation échoue, on retourne le résultat de la validation
+        if (value.Title.IsStringNullOrEmptyOrWhiteSpace())
+            return new OperationState(false, "Le nom de l'item ne peut pas être vide");
+
+        //Vérifie si l'item existe déjà
+        var existingId = await GetIdOfAsync(value.IdAnime, value.Title, cancellationToken, cmd);
+        
+        //Si l'item existe déjà
+        if (existingId.HasValue)
+        {
+            //Si l'id n'appartient pas à l'item alors l'enregistrement existe déjà on annule l'opération
+            if (value.Id > 0 && existingId.Value != value.Id)
+                return new OperationState(false, "Le nom de l'item existe déjà");
+            
+            //Si l'id appartient à l'item alors on met à jour l'enregistrement
+            if (existingId.Value != value.Id)
+                value.Id = existingId.Value;
+            return await value.UpdateAsync(true, cancellationToken, cmd);
+        }
+
+        //Si l'item n'existe pas, on l'ajoute
+        var addResult = await value.InsertAsync(true, cancellationToken, cmd);
+        if (addResult.IsSuccess)
+            value.Id = addResult.Data;
+        
+        return addResult.ToBaseState();
+    }
+    #endregion
     
     #region Delete
+    
+    /// <summary>
+    /// Supprime les enregistrements de la table TanimeAlternativeTitle qui ne sont pas dans la liste spécifiée
+    /// </summary>
+    /// <param name="actualValues">valeurs actuellement utilisées</param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
+    public static async Task<OperationState> DeleteUnusedAsync(HashSet<(string title, int idAnime)> actualValues, CancellationToken? cancellationToken = null,
+        SqliteCommand? cmd = null)
+    {
+        
+        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        command.CommandText = "DELETE FROM TanimeAlternativeTitle WHERE Title NOT IN (";
+        command.Parameters.Clear();
+        var i = 0;
+        foreach (var (title, _) in actualValues)
+        {
+            command.CommandText += i == 0 ? $"$Title{i}" : $", $Title{i}";
+            command.Parameters.AddWithValue($"$Title{i}", title);
+            i++;
+        }
+        command.CommandText += ") AND IdAnime NOT IN (";
+        i = 0;
+        foreach (var (_, idAnime) in actualValues)
+        {
+            command.CommandText += i == 0 ? $"$IdAnime{i}" : $", $IdAnime{i}";
+            command.Parameters.AddWithValue($"$IdAnime{i}", (byte)idAnime);
+            i++;
+        }
+        command.CommandText += ")";
+
+        try
+        {
+            var count = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
+            return new OperationState(true, $"{count} enregistrement(s) ont été supprimés.");
+        }
+        catch (Exception e)
+        {
+            LogServices.LogDebug(e.Message);
+            return new OperationState(false, "Une erreur est survenue lors de la suppression");
+        }
+    }
     
     public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
         => await DeleteAsync(Id, cancellationToken, cmd);
@@ -414,7 +499,7 @@ public class TanimeAlternativeTitle
             yield return GetRecord(reader, 
                 idIndex: reader.GetOrdinal("Id"),
                 idAnimeIndex: reader.GetOrdinal("IdAnime"),
-                titleIndex: reader.GetOrdinal("Name"),
+                titleIndex: reader.GetOrdinal("Title"),
                 descriptionIndex: reader.GetOrdinal("Description"));
         }
     }
@@ -425,7 +510,7 @@ public class TanimeAlternativeTitle
         SELECT
             Id,
             IdAnime,
-            Name,
+            Title,
             Description
         FROM TanimeAlternativeTitle
         """;

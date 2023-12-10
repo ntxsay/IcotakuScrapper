@@ -409,13 +409,14 @@ public partial class ToeuvreRole
                 value.Id = id.Value;
                 return value;
             }
+            
+            var result2 = await value.InsertAsync(cancellationToken, command);
+            return !result2.IsSuccess ? null : value;
         }
-        else
-        {
-            var record = await SingleAsync(value.Name, value.Type, cancellationToken, command);
-            if (record != null)
-                return record;
-        }
+        
+        var record = await SingleAsync(value.Name, value.Type, cancellationToken, command);
+        if (record != null)
+            return record;
 
         var result = await value.InsertAsync(cancellationToken, command);
         return !result.IsSuccess ? null : value;

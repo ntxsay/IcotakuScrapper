@@ -224,7 +224,7 @@ public partial class TanimeDailyPlanning
 
         planning.IsAdultContent = Tanime.ScrapIsAdultContent(htmlDocument.DocumentNode);
         planning.IsExplicitContent = planning.IsAdultContent || Tanime.ScrapIsExplicitContent(htmlDocument.DocumentNode);
-        planning.ThumbnailUrl = Tanime.SCrapFullThumbnail(htmlDocument.DocumentNode);
+        planning.ThumbnailUrl = Tanime.ScrapFullThumbnail(htmlDocument.DocumentNode);
 
         additionalContentList.Add((planning.SheetId, planning.IsAdultContent, planning.IsExplicitContent, planning.ThumbnailUrl));
     }

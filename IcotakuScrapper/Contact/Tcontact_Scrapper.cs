@@ -7,7 +7,7 @@ namespace IcotakuScrapper.Contact;
 
 public partial class Tcontact
 {
-    public static async Task<Tcontact?> ScrapFromUri(Uri sheetUri)
+    public static async Task<Tcontact?> ScrapFromUriAsync(Uri sheetUri)
     {
         var contactType = IcotakuWebHelpers.GetContactType(sheetUri);
         if (contactType is null or ContactType.Unknown)
@@ -68,6 +68,8 @@ public partial class Tcontact
         
         var birthDateNode = documentNode.SelectSingleNode("//div[contains(@class, 'fiche-mini')]//b[starts-with(text(), 'Date de naissance :')]/following-sibling::text()[1]");
         var birthDate = HttpUtility.HtmlDecode(birthDateNode?.InnerText.Trim());
+        if (birthDate == "?") birthDate = null;
+        
         DateOnly date =  default;
         var hasBirthDate = birthDate != null && !birthDate.IsStringEmptyOrWhiteSpace() &&
                            DateOnly.TryParseExact(birthDate, "dd MMMM yyyy", new CultureInfo("fr-FR"),
@@ -75,6 +77,8 @@ public partial class Tcontact
         
         var ageNode = documentNode.SelectSingleNode("//div[contains(@class, 'fiche-mini')]//b[starts-with(text(), 'Âge :')]/following-sibling::text()[1]");
         var age = HttpUtility.HtmlDecode(ageNode?.InnerText.Trim());
+        if (age == "?") age = null;
+        
         uint intAge = 0;
         var hasAge = age != null && !age.IsStringEmptyOrWhiteSpace() && uint.TryParse(age, out intAge);
         

@@ -19,6 +19,11 @@ public readonly struct OperationState
     public bool IsSuccess { get; init; }
     public string? Title { get; init; }
     public string? Message { get; init; }
+    
+    public OperationState<T> ToGenericState<T>(T? result = default)
+    {
+        return new OperationState<T>(IsSuccess, Title, Message, result);
+    }
 }
 
 public readonly struct OperationState<T>

@@ -188,22 +188,27 @@ public class TanimeCategory
 
     #region Insert
 
-    public async Task<OperationState<int>> InsertAsync(CancellationToken? cancellationToken = null,
+    public async Task<OperationState<int>> InsertAsync(bool disableExistenceVerification = false, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
         if (IdAnime <= 0 || !await TanimeBase.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken, command))
             return new OperationState<int>(false, "L'anime n'existe pas.", 0);
-
-
+        
         if (Category.Id <= 0 ||
-            !await Tcategory.ExistsAsync(Category.Id, IntColumnSelect.Id, cancellationToken, command))
-            return new OperationState<int>(false, "Le studio n'existe pas.", 0);
+            (!disableExistenceVerification && !await Tcategory.ExistsAsync(Category.Id, IntColumnSelect.Id, cancellationToken, command)))
+            return new OperationState<int>(false, "La catégorie n'existe pas.", 0);
 
-        if (await ExistsAsync(IdAnime, Category.Id, cancellationToken, command))
+        if (!disableExistenceVerification && await ExistsAsync(IdAnime, Category.Id, cancellationToken, command))
             return new OperationState<int>(false, "Le lien existe déjà.", 0);
 
-        command.CommandText = "INSERT INTO TanimeCategory (IdAnime, IdCategory) VALUES ($IdAnime, $IdCategory);";
+        command.CommandText = 
+            """
+            INSERT INTO TanimeCategory 
+                (IdAnime, IdCategory) 
+            VALUES 
+                ($IdAnime, $IdCategory);
+            """;
 
         command.Parameters.Clear();
 
@@ -225,67 +230,11 @@ public class TanimeCategory
         }
     }
 
-    public static async Task<OperationState> InsertAsync(int idAnime, IReadOnlyCollection<int> idCategoryValues,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-    {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        if (idAnime <= 0 || !await TanimeBase.ExistsAsync(idAnime, IntColumnSelect.Id, cancellationToken, command))
-            return new OperationState(false, "L'anime n'existe pas.");
-
-        if (idCategoryValues.Count == 0)
-            return new OperationState(false, "Aucun studio n'a été sélectionné.");
-
-        List<OperationState<int>> results = [];
-        command.CommandText = "INSERT OR IGNORE INTO TanimeCategory (IdAnime, IdCategory) VALUES";
-        command.Parameters.Clear();
-
-        for (var i = 0; i < idCategoryValues.Count; i++)
-        {
-            var idCategory = idCategoryValues.ElementAt(i);
-            if (idCategory <= 0)
-            {
-                results.Add(new OperationState<int>(false, $"Une des catégories sélectionnées n'existe pas ({idCategory})."));
-                continue;
-            }
-
-            command.CommandText += Environment.NewLine + $"($IdAnime, $IdCategory{i})";
-            command.Parameters.AddWithValue($"$IdCategory{i}", idCategory);
-
-            if (i == idCategoryValues.Count - 1)
-                command.CommandText += ";";
-            else
-                command.CommandText += ",";
-        }
-
-        if (command.Parameters.Count == 0)
-            return new OperationState(false, "Aucun studio n'a été sélectionné.");
-
-        command.Parameters.AddWithValue("$IdAnime", idAnime);
-
-        try
-        {
-            if (await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None) <= 0)
-                return new OperationState(false, "Une erreur est survenue lors de l'insertion");
-
-            if (results.All(a => a.IsSuccess))
-                return new OperationState(true, "Insertion réussie");
-            if (results.All(a => !a.IsSuccess))
-                return new OperationState(false, "Aucun studio n'a été inséré");
-            return new OperationState(true, "Certains studios n'ont pas été insérés");
-        }
-        catch (Exception e)
-        {
-            Debug.WriteLine(e.Message);
-            return new OperationState(false, "Une erreur est survenue lors de l'insertion");
-        }
-    }
-
     #endregion
 
     #region Update
 
-    public async Task<OperationState> UpdateAsync(CancellationToken? cancellationToken = null,
+    public async Task<OperationState> UpdateAsync(bool disableExistenceVerification = false, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
@@ -294,14 +243,24 @@ public class TanimeCategory
             return new OperationState(false, "L'anime n'existe pas.");
 
         if (Category.Id <= 0 ||
-            !await Tcategory.ExistsAsync(Category.Id, IntColumnSelect.Id, cancellationToken, command))
-            return new OperationState(false, "Le studio n'existe pas.");
+            (!disableExistenceVerification && !await Tcategory.ExistsAsync(Category.Id, IntColumnSelect.Id, cancellationToken, command)))
+            return new OperationState(false, "La catégorie n'existe pas.");
 
-        var existingId = await GetIdOfAsync(IdAnime, Category.Id, cancellationToken, command);
-        if (existingId is not null && existingId != Id)
-            return new OperationState(false, "Le lien existe déjà.");
+        if (!disableExistenceVerification)
+        {
+            var existingId = await GetIdOfAsync(IdAnime, Category.Id, cancellationToken, command);
+            if (existingId is not null && existingId != Id)
+                return new OperationState(false, "Le lien existe déjà.");
+        }
 
-        command.CommandText = "UPDATE TanimeCategory SET IdAnime = $IdAnime, IdCategory = $IdCategory WHERE Id = $Id;";
+        command.CommandText = 
+            """
+            UPDATE TanimeCategory 
+            SET 
+                IdAnime = $IdAnime, 
+                IdCategory = $IdCategory 
+            WHERE Id = $Id;
+            """;
 
         command.Parameters.Clear();
 
@@ -324,9 +283,142 @@ public class TanimeCategory
     }
 
     #endregion
+    
+    #region InsertOrUpdate
+    
+    public static async Task<OperationState> InsertOrReplaceAsync(int idAnime, IReadOnlyCollection<int> idCategoryArray,
+        DbInsertMode insertMode = DbInsertMode.InsertOrReplace, CancellationToken? cancellationToken = null,
+        SqliteCommand? cmd = null)
+    {
+        if (idCategoryArray.Count == 0)
+            return new OperationState(false, "Aucune catégorie n'a été trouvée.");
+
+        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        if (idAnime <= 0 || !await TanimeBase.ExistsAsync(idAnime, IntColumnSelect.Id, cancellationToken, command))
+            return new OperationState(false, "L'anime n'existe pas.");
+        
+        command.StartWithInsertMode(insertMode);
+        command.CommandText += " INTO TanimeCategory (IdAnime, IdCategory) VALUES";
+        command.Parameters.Clear();
+
+        for (var i = 0; i < idCategoryArray.Count; i++)
+        {
+            var idCategory = idCategoryArray.ElementAt(i);
+            if (idCategory <= 0)
+            {
+                LogServices.LogDebug($"Une des catégories sélectionnées n'existe pas ({idCategory}).");
+                continue;
+            }
+
+            command.CommandText += Environment.NewLine + $"($IdAnime, $IdCategory{i})";
+            command.Parameters.AddWithValue($"$IdCategory{i}", idCategory);
+
+            if (i == idCategoryArray.Count - 1)
+                command.CommandText += ";";
+            else
+                command.CommandText += ",";
+        }
+
+        if (command.Parameters.Count == 0)
+            return new OperationState(false, "Aucune catégorie n'a été trouvée.");
+
+        command.Parameters.AddWithValue("$IdAnime", idAnime);
+
+        try
+        {
+            var count = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
+            return new OperationState(count > 0, $"{count} enregistrement(s) sur {idCategoryArray.Count} ont été insérés avec succès.");
+        }
+        catch (Exception e)
+        {
+            Debug.WriteLine(e.Message);
+            return new OperationState(false, "Une erreur est survenue lors de l'insertion");
+        }
+    }
+    
+    public async Task<OperationState> AddOrUpdateAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        => await AddOrUpdateAsync(this, cancellationToken, cmd);
+    
+    public static async Task<OperationState> AddOrUpdateAsync(TanimeCategory value,
+        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        //Si la validation échoue, on retourne le résultat de la validation
+        if (!await TanimeBase.ExistsAsync(value.IdAnime, IntColumnSelect.Id, cancellationToken, cmd))
+            return new OperationState(false, "L'anime n'existe pas.");
+        
+        if (!await Tcategory.ExistsAsync(value.Category.Id, IntColumnSelect.Id, cancellationToken, cmd))
+            return new OperationState(false, "La catégorie n'existe pas.");
+
+        //Vérifie si l'item existe déjà
+        var existingId = await GetIdOfAsync(value.IdAnime, value.Category.Id, cancellationToken, cmd);
+        
+        //Si l'item existe déjà
+        if (existingId.HasValue)
+        {
+            //Si l'id n'appartient pas à l'item alors l'enregistrement existe déjà on annule l'opération
+            if (value.Id > 0 && existingId.Value != value.Id)
+                return new OperationState(false, "Le nom de l'item existe déjà");
+            
+            //Si l'id appartient à l'item alors on met à jour l'enregistrement
+            if (existingId.Value != value.Id)
+                value.Id = existingId.Value;
+            return await value.UpdateAsync(true, cancellationToken, cmd);
+        }
+
+        //Si l'item n'existe pas, on l'ajoute
+        var addResult = await value.InsertAsync(true, cancellationToken, cmd);
+        if (addResult.IsSuccess)
+            value.Id = addResult.Data;
+        
+        return addResult.ToBaseState();
+    }
+    #endregion
 
     #region Delete
 
+    /// <summary>
+    /// Supprime les enregistrements de la table TanimeWebSite qui ne sont pas dans la liste spécifiée
+    /// </summary>
+    /// <param name="actualValues">valeurs actuellement utilisées</param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
+    public static async Task<OperationState> DeleteUnusedAsync(HashSet<(int idCategory, int idAnime)> actualValues, CancellationToken? cancellationToken = null,
+        SqliteCommand? cmd = null)
+    {
+        
+        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        command.CommandText = "DELETE FROM TanimeCategory WHERE IdCategory NOT IN (";
+        command.Parameters.Clear();
+        var i = 0;
+        foreach (var (idCategory, _) in actualValues)
+        {
+            command.CommandText += i == 0 ? $"$IdCategory{i}" : $", $IdCategory{i}";
+            command.Parameters.AddWithValue($"$IdCategory{i}", idCategory);
+            i++;
+        }
+        command.CommandText += ") AND IdAnime NOT IN (";
+        i = 0;
+        foreach (var (_, idAnime) in actualValues)
+        {
+            command.CommandText += i == 0 ? $"$IdAnime{i}" : $", $IdAnime{i}";
+            command.Parameters.AddWithValue($"$IdAnime{i}", (byte)idAnime);
+            i++;
+        }
+        command.CommandText += ")";
+
+        try
+        {
+            var count = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
+            return new OperationState(true, $"{count} enregistrement(s) ont été supprimés.");
+        }
+        catch (Exception e)
+        {
+            LogServices.LogDebug(e.Message);
+            return new OperationState(false, "Une erreur est survenue lors de la suppression");
+        }
+    }
+    
     public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
         => await DeleteAsync(Id, cancellationToken, cmd);

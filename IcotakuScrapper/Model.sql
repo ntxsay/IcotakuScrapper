@@ -10,8 +10,8 @@ CREATE TABLE IF NOT EXISTS TsheetIndex
     "SheetId"     INTEGER NOT NULL DEFAULT 0, -- Id de la fiche (anime, manga, etc)
     "Url"         TEXT    NOT NULL UNIQUE,    -- Url de la fiche (anime, manga, etc)
     "Section"     INTEGER NOT NULL,           -- Section de la fiche (ANime, Manga, etc)
-    "ItemName"    TEXT    NOT NULL,           -- Nom de la fiche (anime, manga, etc)
-    "ItemType"    INTEGER NOT NULL,           -- Type de la fiche (anime, manga, character, studios, individual, etc)
+    "SheetName"    TEXT    NOT NULL,           -- Nom de la fiche (anime, manga, etc)
+    "SheetType"    INTEGER NOT NULL,           -- Type de la fiche (anime, manga, character, studios, individual, etc)
     "FoundedPage" INTEGER NOT NULL DEFAULT 0  -- Page de recherche sur laquelle la fiche a été trouvée
 );
 -- endregion
@@ -234,7 +234,7 @@ CREATE TABLE IF NOT EXISTS TanimeAlternativeTitle
 (
     Id          INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
     IdAnime     INTEGER NOT NULL REFERENCES Tanime (Id) ON DELETE CASCADE,
-    Name        TEXT    NOT NULL,
+    Title        TEXT    NOT NULL,
     Description TEXT    NULL -- exemple : titre anglais, titre original, etc
 );
 -- endregion

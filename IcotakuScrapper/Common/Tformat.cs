@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using IcotakuScrapper.Extensions;
+﻿using IcotakuScrapper.Extensions;
 
 using Microsoft.Data.Sqlite;
 
@@ -185,7 +184,7 @@ public partial class Tformat
         CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = SqlSelectScript;
+        command.CommandText = IcotakuSqlSelectScript;
 
         command.CommandText += Environment.NewLine + $"ORDER BY {sortBy} {orderBy}";
 
@@ -209,7 +208,7 @@ public partial class Tformat
         CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Section = $Section";
+        command.CommandText = IcotakuSqlSelectScript + Environment.NewLine + "WHERE Section = $Section";
 
         command.CommandText += Environment.NewLine + $"ORDER BY {sortBy} {orderBy}";
 
@@ -236,7 +235,7 @@ public partial class Tformat
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Id = $Id";
+        command.CommandText = IcotakuSqlSelectScript + Environment.NewLine + "WHERE Id = $Id";
 
         command.Parameters.Clear();
 
@@ -256,7 +255,7 @@ public partial class Tformat
             return null;
 
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Section = $Section AND Name = $Name COLLATE NOCASE";
+        command.CommandText = IcotakuSqlSelectScript + Environment.NewLine + "WHERE Section = $Section AND Name = $Name COLLATE NOCASE";
 
         command.Parameters.Clear();
 
@@ -279,13 +278,15 @@ public partial class Tformat
     /// </summary>
     /// <param name="cancellationToken"></param>
     /// <param name="cmd"></param>
+    /// <param name="disableExistenceVerification">Active ou désactive les opération de vérification de l'existence de l'item</param>
     /// <returns></returns>
-    public async Task<OperationState<int>> InsertAsync(CancellationToken? cancellationToken = null,
+    public async Task<OperationState<int>> InsertAsync(bool disableExistenceVerification = false, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
         if (Name.IsStringNullOrEmptyOrWhiteSpace())
             return new OperationState<int>(false, "Le nom de l'item ne peut pas être vide");
-        if (await ExistsAsync(Name, Section, cancellationToken, cmd))
+        
+        if (!disableExistenceVerification && await ExistsAsync(Name, Section, cancellationToken, cmd))
             return new OperationState<int>(false, "Le nom de l'item existe déjà");
 
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
@@ -317,9 +318,67 @@ public partial class Tformat
             return new OperationState<int>(false, "Une erreur est survenue lors de l'insertion");
         }
     }
+    
+    #endregion
 
-     public static async Task<OperationState> InsertOrReplaceAsync(IReadOnlyCollection<Tformat> values,
-         DbInsertMode insertMode = DbInsertMode.InsertOrReplace, CancellationToken? cancellationToken = null,
+    #region Update
+
+    /// <summary>
+    /// Met à jour cet enregistrement de la table Tformat
+    /// </summary>
+    /// <param name="disableExistenceVerification"></param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
+    public async Task<OperationState> UpdateAsync(bool disableExistenceVerification = false, CancellationToken? cancellationToken = null,
+        SqliteCommand? cmd = null)
+    {
+        if (Name.IsStringNullOrEmptyOrWhiteSpace())
+            return new OperationState(false, "Le nom de l'item ne peut pas être vide");
+
+        if (!disableExistenceVerification)
+        {
+            var existingId = await GetIdOfAsync(Name, Section, cancellationToken, cmd);
+            if (existingId.HasValue && existingId.Value != Id)
+                return new OperationState(false, "Le nom de l'item existe déjà");
+        }
+
+        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        command.CommandText =
+            """
+            UPDATE Tformat SET
+                Name = $Name,
+                Section = $Section,
+                Description = $Description
+            WHERE Id = $Id
+            """;
+
+        command.Parameters.Clear();
+
+        command.Parameters.AddWithValue("$Id", Id);
+        command.Parameters.AddWithValue("$Section", (byte)Section);
+        command.Parameters.AddWithValue("$Name", Name.Trim());
+        command.Parameters.AddWithValue("$Description", Description ?? (object)DBNull.Value);
+
+        try
+        {
+            return await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None) <= 0
+                ? new OperationState(false, "Aucune mise à jour n'a été effectuée.")
+                : new OperationState(true, "Mise à jour réussie");
+        }
+        catch (Exception e)
+        {
+            LogServices.LogDebug(e.Message);
+            return new OperationState(false, "Une erreur est survenue lors de la mise à jour");
+        }
+    }
+
+    #endregion
+
+    #region Single or Create or Update
+
+    public static async Task<OperationState> InsertOrReplaceAsync(IReadOnlyCollection<Tformat> values,
+        DbInsertMode insertMode = DbInsertMode.InsertOrReplace, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
         if (values.Count == 0)
@@ -391,63 +450,92 @@ public partial class Tformat
                 return record;
         }
 
-        var result = await value.InsertAsync(cancellationToken, command);
+        var result = await value.InsertAsync(false, cancellationToken, command);
         return !result.IsSuccess ? null : value;
     }
-    #endregion
 
-    #region Update
-
-    /// <summary>
-    /// Met à jour cet enregistrement de la table Tformat
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
-    /// <returns></returns>
-    public async Task<OperationState> UpdateAsync(CancellationToken? cancellationToken = null,
+    public async Task<OperationState> AddOrUpdateAsync(CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
+        => await AddOrUpdateAsync(this, cancellationToken, cmd);
+    
+    public static async Task<OperationState> AddOrUpdateAsync(Tformat value,
+        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
-        if (Name.IsStringNullOrEmptyOrWhiteSpace())
+        //Si la validation échoue, on retourne le résultat de la validation
+        if (value.Name.IsStringNullOrEmptyOrWhiteSpace())
             return new OperationState(false, "Le nom de l'item ne peut pas être vide");
 
-        var existingId = await GetIdOfAsync(Name, Section, cancellationToken, cmd);
-        if (existingId.HasValue && existingId.Value != Id)
-            return new OperationState(false, "Le nom de l'item existe déjà");
-
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText =
-            """
-            UPDATE Tformat SET
-                Name = $Name,
-                Section = $Section,
-                Description = $Description
-            WHERE Id = $Id
-            """;
-
-        command.Parameters.Clear();
-
-        command.Parameters.AddWithValue("$Id", Id);
-        command.Parameters.AddWithValue("$Section", (byte)Section);
-        command.Parameters.AddWithValue("$Name", Name.Trim());
-        command.Parameters.AddWithValue("$Description", Description ?? (object)DBNull.Value);
-
-        try
+        //Vérifie si l'item existe déjà
+        var existingId = await GetIdOfAsync(value.Name, value.Section, cancellationToken, cmd);
+        
+        //Si l'item existe déjà
+        if (existingId.HasValue)
         {
-            return await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None) <= 0
-                ? new OperationState(false, "Une erreur est survenue lors de la mise à jour")
-                : new OperationState(true, "Mise à jour réussie");
+            //Si l'id n'appartient pas à l'item alors l'enregistrement existe déjà on annule l'opération
+            if (existingId.Value != value.Id)
+                return new OperationState(false, "Le nom de l'item existe déjà");
+            
+            //Si l'id appartient à l'item alors on met à jour l'enregistrement
+            if (value.Id > 0 && existingId.Value != value.Id)
+                value.Id = existingId.Value;
+            return await value.UpdateAsync(true, cancellationToken, cmd);
         }
-        catch (Exception e)
-        {
-            LogServices.LogDebug(e.Message);
-            return new OperationState(false, "Une erreur est survenue lors de la mise à jour");
-        }
+
+        //Si l'item n'existe pas, on l'ajoute
+        var addResult = await value.InsertAsync(true, cancellationToken, cmd);
+        if (addResult.IsSuccess)
+            value.Id = addResult.Data;
+        
+        return addResult.ToBaseState();
     }
 
     #endregion
 
     #region Delete
 
+    /// <summary>
+    /// Supprime les enregistrements de la table Tformat qui ne sont pas dans la liste spécifiée
+    /// </summary>
+    /// <param name="actualValues">valeurs actuellement utilisées</param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
+    public static async Task<OperationState> DeleteUnusedAsync(HashSet<(string formatName, IcotakuSection formatSection)> actualValues, CancellationToken? cancellationToken = null,
+        SqliteCommand? cmd = null)
+    {
+        
+        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        command.CommandText = "DELETE FROM Tformat WHERE Name NOT IN (";
+        command.Parameters.Clear();
+        var i = 0;
+        foreach (var (formatName, _) in actualValues)
+        {
+            command.CommandText += i == 0 ? $"$Name{i}" : $", $Name{i}";
+            command.Parameters.AddWithValue($"$Name{i}", formatName);
+            i++;
+        }
+        command.CommandText += ") AND Section NOT IN (";
+        i = 0;
+        foreach (var (_, formatSection) in actualValues)
+        {
+            command.CommandText += i == 0 ? $"$Section{i}" : $", $Section{i}";
+            command.Parameters.AddWithValue($"$Section{i}", (byte)formatSection);
+            i++;
+        }
+        command.CommandText += ")";
+
+        try
+        {
+            var count = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
+            return new OperationState(true, $"{count} enregistrement(s) ont été supprimés.");
+        }
+        catch (Exception e)
+        {
+            LogServices.LogDebug(e.Message);
+            return new OperationState(false, "Une erreur est survenue lors de la suppression");
+        }
+    }
+    
     /// <summary>
     /// Supprime cet enregistrement de la table Tformat
     /// </summary>
@@ -536,7 +624,7 @@ public partial class Tformat
         }
     }
 
-    private const string SqlSelectScript =
+    private const string IcotakuSqlSelectScript =
         """
         SELECT
             Id,

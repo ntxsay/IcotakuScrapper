@@ -149,6 +149,72 @@ public static class IcotakuWebHelpers
             : null;
     }
 
+    #region Get Url
+
+    /// <summary>
+    /// Obtient l'url de la page de la liste des animes
+    /// </summary>
+    /// <param name="contentSection"></param>
+    /// <param name="sheetType"></param>
+    /// <param name="page"></param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentOutOfRangeException"></exception>
+    public static string? GetIcotakuFilterUrl(IcotakuSection contentSection, IcotakuSheetType sheetType, uint page = 1)
+    {
+        return contentSection switch
+        {
+            IcotakuSection.Anime => sheetType switch
+            {
+                IcotakuSheetType.Unknown => null,
+                IcotakuSheetType.Anime => $"https://anime.icotaku.com/animes.html?filter=all{(page == 0 ? "" : "&page=" + page)}",
+                IcotakuSheetType.Person => $"https://anime.icotaku.com/individus.html?filter=all{(page == 0 ? "" : "&page=" + page)}",
+                IcotakuSheetType.Character => $"https://anime.icotaku.com/personnages.html?filter=all{(page == 0 ? "" : "&page=" + page)}",
+                IcotakuSheetType.Studio => null,
+                IcotakuSheetType.Distributor => null,
+                _ => throw new ArgumentOutOfRangeException(nameof(sheetType), sheetType, "Ce type de fiche n'est pas pris en charge.")
+            },
+            IcotakuSection.Manga => null,
+            IcotakuSection.LightNovel => null,
+            IcotakuSection.Drama => null,
+            IcotakuSection.Community => null,
+            _ => throw new ArgumentOutOfRangeException(nameof(contentSection), contentSection, "Cette section du site Icotaku n'est pas prise en charge.")
+        };
+    }
+
+    /// <summary>
+    /// Obtient l'url de la page de la liste des animes
+    /// </summary>
+    /// <param name="letter"></param>
+    /// <param name="contentSection"></param>
+    /// <param name="sheetType"></param>
+    /// <param name="page"></param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentOutOfRangeException"></exception>
+    public static string? GetIcotakuFilterUrl(char letter, IcotakuSection contentSection, IcotakuSheetType sheetType, uint page = 1)
+    {
+        if (!char.IsLetter(letter))
+            return null;
+        
+        return contentSection switch
+        {
+            IcotakuSection.Anime =>sheetType switch
+            {
+                IcotakuSheetType.Unknown => null,
+                IcotakuSheetType.Anime => $"https://anime.icotaku.com/animes.html?filter={letter}{(page == 0 ? "" : "&page=" + page)}",
+                IcotakuSheetType.Person => $"https://anime.icotaku.com/individus.html?filter={{letter}}{(page == 0 ? "" : "&page=" + page)}",
+                IcotakuSheetType.Character => $"https://anime.icotaku.com/personnages.html?filter={{letter}}{(page == 0 ? "" : "&page=" + page)}",
+                IcotakuSheetType.Studio => null,
+                IcotakuSheetType.Distributor => null,
+                _ => throw new ArgumentOutOfRangeException(nameof(sheetType), sheetType, "Ce type de fiche n'est pas pris en charge.")
+            },
+            IcotakuSection.Manga => null,
+            IcotakuSection.LightNovel => null,
+            IcotakuSection.Drama => null,
+            IcotakuSection.Community => null,
+            _ => throw new ArgumentOutOfRangeException(nameof(contentSection), contentSection, "Cette section du site Icotaku n'est pas prise en charge.")
+        };
+    }
+    
     /// <summary>
     /// Retourne l'url absolue de l'image à partir de l'attribut src du noeud img
     /// </summary>
@@ -293,6 +359,8 @@ public static class IcotakuWebHelpers
 
         return null;
     }
+
+    #endregion
 
     public static string? GetSubFolderName(IcotakuDefaultSubFolder type, int episodeNumber = 0)
     {
