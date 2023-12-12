@@ -354,7 +354,7 @@ public class TanimeBase
         return 0;
     }
 
-    public static async Task<int> CountAsync(int id, IntColumnSelect columnSelect,
+    private static async Task<int> CountAsync(int id, IntColumnSelect columnSelect,
         CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
@@ -385,7 +385,7 @@ public class TanimeBase
         return 0;
     }
 
-    public static async Task<int> CountAsync(string name, CancellationToken? cancellationToken = null,
+    private static async Task<int> CountAsync(string name, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
         if (name.IsStringNullOrEmptyOrWhiteSpace())
@@ -404,7 +404,7 @@ public class TanimeBase
         return 0;
     }
 
-    public static async Task<int> CountAsync(Uri sheetUri, CancellationToken? cancellationToken = null,
+    private static async Task<int> CountAsync(Uri sheetUri, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
@@ -502,7 +502,18 @@ public class TanimeBase
 
     #region Exists
 
-    public static async Task<bool> ExistsAsync(int id, IntColumnSelect columnSelect,
+    public static async Task<bool> ExistsByIdAsync(int id,
+        CancellationToken? cancellationToken = null,
+        SqliteCommand? cmd = null)
+        => await CountAsync(id, IntColumnSelect.Id, cancellationToken, cmd) > 0;
+    
+    public static async Task<bool> ExistsBySheetIdAsync(int sheetId,
+        CancellationToken? cancellationToken = null,
+        SqliteCommand? cmd = null)
+        => await CountAsync(sheetId, IntColumnSelect.SheetId, cancellationToken, cmd) > 0;
+    
+    
+    internal static async Task<bool> ExistsAsync(int id, IntColumnSelect columnSelect,
         CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
         => await CountAsync(id, columnSelect, cancellationToken, cmd) > 0;

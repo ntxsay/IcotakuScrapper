@@ -148,6 +148,45 @@ namespace IcotakuScrapperTest
             Console.WriteLine(anime.Description);
         }
 
+        [Test]
+        public async Task CountAnimesAsync()
+        {
+            //Compte le nombre de fiches
+            int countAnimes = await TanimeBase.CountAsync();
+            
+            //Affiche le nombre de fiches
+            Console.WriteLine(countAnimes.ToString());
+        }
+        
+        [Test]
+        public async static Task IsAnimeExistsAsync()
+        {
+            //Vérifie si l'anime existe
+            bool isExists = await TanimeBase.ExistsByIdAsync(1);
+            
+            //Affiche le résultat
+            Console.WriteLine(isExists.ToString());
+        }
+        
+        [Test]
+        public async static Task IsAnimeExistsBySheetIdAsync()
+        {
+            //Vérifie si l'anime existe
+            bool isExists = await TanimeBase.ExistsBySheetIdAsync(1);
+            
+            //Affiche le résultat
+            Console.WriteLine(isExists.ToString());
+        }
+        
+        [Test]
+        public async static Task IsAnimeExistsByNameAsync()
+        {
+            //Vérifie si l'anime existe
+            bool isExists = await TanimeBase.ExistsAsync("Dr.STONE");
+            
+            //Affiche le résultat
+            Console.WriteLine(isExists.ToString());
+        }
 
         [Test]
         public async Task LoadThumbnailPath()
