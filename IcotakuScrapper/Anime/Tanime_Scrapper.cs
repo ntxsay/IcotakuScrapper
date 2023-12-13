@@ -536,23 +536,17 @@ public partial class Tanime
         if (intSeason == 0)
             return null;
 
-        var record = await Tseason.SingleAsync(intSeason, cancellationToken, cmd);
-        if (record != null)
-            return record;
-
         var seasonLiteral = DateHelpers.GetSeasonLiteral((WeatherSeasonKind)seasonNumber.Value, year.Value);
         if (seasonLiteral == null)
             return null;
 
-        record = new Tseason
+        var record = new Tseason
         {
             SeasonNumber = seasonNumber.Value,
             DisplayName = seasonLiteral,
         };
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        var result = await record.InsertAsync(cancellationToken, command);
-        return result.IsSuccess ? record : null;
+        return await Tseason.SingleOrCreateAsync(record, false ,cancellationToken, cmd);
     }
 
     /// <summary>

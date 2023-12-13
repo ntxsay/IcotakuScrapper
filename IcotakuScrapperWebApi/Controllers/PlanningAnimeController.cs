@@ -1,6 +1,7 @@
 ﻿using IcotakuScrapper;
 using IcotakuScrapper.Anime;
 using IcotakuScrapper.Common;
+using IcotakuScrapper.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IcotakuScrapperWebApi.Controllers
@@ -24,10 +25,20 @@ namespace IcotakuScrapperWebApi.Controllers
             [FromQuery] uint limit = 0, [FromQuery] uint skip = 0)
             => await TanimeSeasonalPlanning.SelectAsync(season, isAdultContent, isExplicitContent, sortBy, orderBy, limit, skip);
 
+        [HttpGet("Seasonal/ItemsGroupCount")]
+        public async Task<ItemGroupCountStruct[]> SelectAllSeasonalPlanningAsync([FromQuery] bool? isAdultContent, [FromQuery] bool? isExplicitContent, [FromQuery] SeasonalAnimePlanningGroupBy groupBy, [FromQuery] SeasonalAnimePlanningSortBy sortBy, [FromQuery] OrderBy orderBy = OrderBy.Asc)
+            => await TanimeSeasonalPlanning.GetItemsCount(groupBy, orderBy, isAdultContent, isExplicitContent).ToArrayAsync();
+        
         [HttpPost("Seasonal/Scrap")]
-        public async Task<OperationState> SaveDailyPlanningsync([FromQuery] WeatherSeason season)
+        public async Task<OperationState> SaveDailyPlanningsync([FromQuery] uint year, [FromQuery] WeatherSeasonKind season)
         {
-            return await TanimeSeasonalPlanning.ScrapAsync(season);
+            if (year < DateOnly.MinValue.Year || year > DateOnly.MaxValue.Year)
+                return new OperationState(false, "L'année n'est pas valide");
+            
+            if (season == WeatherSeasonKind.Unknown)
+                return new OperationState(false, "La saison n'est pas valide");
+            
+            return await TanimeSeasonalPlanning.ScrapAsync(new WeatherSeason(season, year));
         }
 
         //[HttpGet("Daily/String/Range")]

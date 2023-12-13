@@ -12,10 +12,6 @@ public enum SeasonSortBy
     /// </summary>
     Default = 0,
     /// <summary>
-    /// Tri par année
-    /// </summary>
-    Year = 1,
-    /// <summary>
     /// Tri par numéro de saison
     /// </summary>
     SeasonNumber = 2,
@@ -164,11 +160,10 @@ public partial class Tseason
     public static async Task<Tseason[]> SelectAsync(SeasonSortBy sortBy = SeasonSortBy.Default, OrderBy orderBy = OrderBy.Asc, uint limit = 0, uint skip = 0, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = SqlSelectScript + Environment.NewLine;
+        command.CommandText = IcotakuSqlSelectScript + Environment.NewLine;
         
         command.CommandText += sortBy switch
         {
-            SeasonSortBy.Year => $"ORDER BY Year {orderBy}",
             SeasonSortBy.SeasonNumber => $"ORDER BY SeasonNumber {orderBy}",
             SeasonSortBy.Name => $"ORDER BY DisplayName {orderBy}",
             SeasonSortBy.Default => $"ORDER BY Id {orderBy}",
@@ -186,41 +181,13 @@ public partial class Tseason
         return await GetRecords(reader, cancellationToken).ToArrayAsync(cancellationToken ?? CancellationToken.None);
     }
     
-    public static async Task<Tseason[]> SelectAsync(uint year, SeasonSortBy sortBy = SeasonSortBy.Default, OrderBy orderBy = OrderBy.Asc, uint limit = 0, uint skip = 0, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public static async Task<Tseason[]> SelectAsync(uint seasonNumber, SeasonSortBy sortBy = SeasonSortBy.Default, OrderBy orderBy = OrderBy.Asc, uint limit = 0, uint skip = 0, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Year = $Year";
+        command.CommandText = IcotakuSqlSelectScript + Environment.NewLine + "WHERE SeasonNumber = $SeasonNumber";
         
         command.CommandText += sortBy switch
         {
-            SeasonSortBy.Year => $"ORDER BY Year {orderBy}",
-            SeasonSortBy.SeasonNumber => $"ORDER BY SeasonNumber {orderBy}",
-            SeasonSortBy.Name => $"ORDER BY DisplayName {orderBy}",
-            SeasonSortBy.Default => $"ORDER BY Id {orderBy}",
-            _ => $"ORDER BY Id {orderBy}"
-        };
-        
-        command.AddLimitOffset(limit, skip);
-
-        command.Parameters.Clear();
-        
-        command.Parameters.AddWithValue("$Year", year);
-        
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
-        if (!reader.HasRows)
-            return [];
-        
-        return await GetRecords(reader, cancellationToken).ToArrayAsync(cancellationToken ?? CancellationToken.None);
-    }
-    
-    public static async Task<Tseason[]> SelectAsync(byte seasonNumber, SeasonSortBy sortBy = SeasonSortBy.Default, OrderBy orderBy = OrderBy.Asc, uint limit = 0, uint skip = 0, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
-    {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE SeasonNumber = $SeasonNumber";
-        
-        command.CommandText += sortBy switch
-        {
-            SeasonSortBy.Year => $"ORDER BY Year {orderBy}",
             SeasonSortBy.SeasonNumber => $"ORDER BY SeasonNumber {orderBy}",
             SeasonSortBy.Name => $"ORDER BY DisplayName {orderBy}",
             SeasonSortBy.Default => $"ORDER BY Id {orderBy}",
@@ -247,7 +214,7 @@ public partial class Tseason
     public static async Task<Tseason?> SingleAsync(int id, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Id = $Id";
+        command.CommandText = IcotakuSqlSelectScript + Environment.NewLine + "WHERE Id = $Id";
 
         command.Parameters.Clear();
 
@@ -267,7 +234,7 @@ public partial class Tseason
     public static async Task<Tseason?> SingleAsync(uint seasonNumber, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE SeasonNumber = $SeasonNumber";
+        command.CommandText = IcotakuSqlSelectScript + Environment.NewLine + "WHERE SeasonNumber = $SeasonNumber";
 
         command.Parameters.Clear();
         
@@ -290,7 +257,7 @@ public partial class Tseason
             return null;
         
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE DisplayName = $DisplayName COLLATE NOCASE";
+        command.CommandText = IcotakuSqlSelectScript + Environment.NewLine + "WHERE DisplayName = $DisplayName COLLATE NOCASE";
 
         command.Parameters.Clear();
         
@@ -311,7 +278,7 @@ public partial class Tseason
 
     #region Insert
 
-    public async Task<OperationState<int>> InsertAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public async Task<OperationState<int>> InsertAsync(bool disableExistenceVerification = false, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         if (!DateHelpers.IsSeasonValidated(SeasonNumber))
             return new OperationState<int>(false, "Le numéro de la saison est invalide");
@@ -320,7 +287,7 @@ public partial class Tseason
         
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
         
-        if (await ExistsAsync(SeasonNumber, cancellationToken, command))
+        if (!disableExistenceVerification && await ExistsAsync(SeasonNumber, cancellationToken, command))
             return new OperationState<int>(false, "Une saison avec le même nom existe déjà");
         
         command.CommandText = 
@@ -355,7 +322,7 @@ public partial class Tseason
     
     #region Update
     
-    public async Task<OperationState> UpdateAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public async Task<OperationState> UpdateAsync(bool disableExistenceVerification = false, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         if (Id <= 0)
             return new OperationState(false, "L'identifiant de la saison est invalide");
@@ -366,10 +333,13 @@ public partial class Tseason
             DisplayName = DateHelpers.GetSeasonLiteral(SeasonNumber) ?? string.Empty;
         
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        
-        var existingId = await GetIdOfAsync(SeasonNumber, cancellationToken, command);
-        if (existingId is not null && existingId != Id)
-            return new OperationState(false, "Une saison avec le même nom existe déjà");
+
+        if (!disableExistenceVerification)
+        {
+            var existingId = await GetIdOfAsync(SeasonNumber, cancellationToken, command);
+            if (existingId is not null && existingId != Id)
+                return new OperationState(false, "Une saison avec le même nom existe déjà");
+        }
         
         command.CommandText = 
             """
@@ -400,6 +370,133 @@ public partial class Tseason
     }
     
     #endregion
+    
+    #region Single or Create or Update
+
+    public static async Task<OperationState> InsertOrReplaceAsync(IReadOnlyCollection<Tseason> values,
+        DbInsertMode insertMode = DbInsertMode.InsertOrReplace, CancellationToken? cancellationToken = null,
+        SqliteCommand? cmd = null)
+    {
+        if (values.Count == 0)
+            return new OperationState(false, "La liste des valeurs ne peut pas être vide");
+
+        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        command.StartWithInsertMode(insertMode);
+        command.CommandText += " INTO Tseason (DisplayName, SeasonNumber) VALUES";
+
+        command.Parameters.Clear();
+
+        for (uint i = 0; i < values.Count; i++)
+        {
+            var value = values.ElementAt((int)i);
+
+            if (value.DisplayName.IsStringNullOrEmptyOrWhiteSpace())
+            {
+                LogServices.LogDebug($"L'item {i} n'a pas de nom, il sera ignoré.");
+                continue;
+            }
+            
+            if (!DateHelpers.IsSeasonValidated(value.SeasonNumber))
+            {
+                LogServices.LogDebug($"L'item {i} n'a pas de numéro de saison valide, il sera ignoré.");
+                continue;
+            }
+
+            command.CommandText += Environment.NewLine + $"($DisplayName{i}, $SeasonNumber{i})";
+
+            command.Parameters.AddWithValue($"$DisplayName{i}", value.DisplayName.Trim());
+            command.Parameters.AddWithValue($"$SeasonNumber{i}", value.SeasonNumber);
+            
+            if (i < values.Count - 1)
+                command.CommandText += ",";
+            else
+                command.CommandText += ";";
+        }
+
+        try
+        {
+            var count = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
+            return new OperationState(count > 0, $"{count} enregistrement(s) sur {values.Count} ont été insérés avec succès.");
+        }
+        catch (Exception e)
+        {
+            LogServices.LogDebug(e);
+            return new OperationState(false, "Une erreur est survenue lors de l'insertion");
+        }
+    }
+    
+    /// <summary>
+    /// Retourne l'enregistrement de la table Tseason ayant l'identifiant spécifié ou l'insert si l'enregistrement n'existe pas
+    /// </summary>
+    /// <param name="value"></param>
+    /// <param name="reloadIfExist"></param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
+    public static async Task<Tseason?> SingleOrCreateAsync(Tseason value, bool reloadIfExist= false, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        command.Parameters.Clear();
+        if (!reloadIfExist)
+        {
+            var id = await GetIdOfAsync(value.SeasonNumber, cancellationToken, command);
+            if (id.HasValue)
+            {
+                value.Id = id.Value;
+                return value;
+            }
+        }
+        else
+        {
+            var record = await SingleAsync(value.SeasonNumber, cancellationToken, command);
+            if (record != null)
+                return record;
+        }
+
+        var result = await value.InsertAsync(false, cancellationToken, command);
+        return !result.IsSuccess ? null : value;
+    }
+
+    public async Task<OperationState> AddOrUpdateAsync(CancellationToken? cancellationToken = null,
+        SqliteCommand? cmd = null)
+        => await AddOrUpdateAsync(this, cancellationToken, cmd);
+    
+    public static async Task<OperationState> AddOrUpdateAsync(Tseason value,
+        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        //Si la validation échoue, on retourne le résultat de la validation
+        if (value.DisplayName.IsStringNullOrEmptyOrWhiteSpace())
+            return new OperationState(false, "Le nom de l'item ne peut pas être vide");
+        
+        if (!DateHelpers.IsSeasonValidated(value.SeasonNumber))
+            return new OperationState(false, "Le numéro de la saison est invalide");
+
+        //Vérifie si l'item existe déjà
+        var existingId = await GetIdOfAsync(value.SeasonNumber, cancellationToken, cmd);
+        
+        //Si l'item existe déjà
+        if (existingId.HasValue)
+        {
+            //Si l'id n'appartient pas à l'item alors l'enregistrement existe déjà on annule l'opération
+            if (existingId.Value != value.Id)
+                return new OperationState(false, "Le nom de l'item existe déjà");
+            
+            //Si l'id appartient à l'item alors on met à jour l'enregistrement
+            if (value.Id > 0 && existingId.Value != value.Id)
+                value.Id = existingId.Value;
+            return await value.UpdateAsync(true, cancellationToken, cmd);
+        }
+
+        //Si l'item n'existe pas, on l'ajoute
+        var addResult = await value.InsertAsync(true, cancellationToken, cmd);
+        if (addResult.IsSuccess)
+            value.Id = addResult.Data;
+        
+        return addResult.ToBaseState();
+    }
+
+    #endregion
+
     
     #region Delete
     
@@ -476,7 +573,7 @@ public partial class Tseason
     }
 
     
-    private const string SqlSelectScript = 
+    private const string IcotakuSqlSelectScript = 
         """
         SELECT 
             Id, 

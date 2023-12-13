@@ -56,7 +56,7 @@ public partial class TanimeSeasonalPlanning
 
         HtmlWeb web = new();
         var htmlDocument = web.Load(uri.ToString());
-        var htmlNodes = htmlDocument.DocumentNode.SelectNodes("//div[contains(@class, 'planning_saison')]/div[contains(@class, 'categorie')]").ToArray();
+        var htmlNodes = htmlDocument.DocumentNode.SelectNodes("//div[contains(@class, 'planning_saison')]/div[contains(@class, 'categorie')]")?.ToArray();
 
         if (htmlNodes == null || htmlNodes.Length == 0)
             yield break;
@@ -73,7 +73,7 @@ public partial class TanimeSeasonalPlanning
             if (categoryName == null || categoryName.IsStringNullOrEmptyOrWhiteSpace())
                 continue;
 
-            var tableNodes = categoryNode.SelectNodes(".//table").ToArray();
+            var tableNodes = categoryNode.SelectNodes(".//table")?.ToArray();
             if (tableNodes == null || tableNodes.Length == 0)
                 yield break;
 
@@ -180,25 +180,17 @@ public partial class TanimeSeasonalPlanning
         if (intSeason == 0)
             return null;
 
-        var seasonRecord = await Tseason.SingleAsync(intSeason, cancellationToken, cmd);
-        if (seasonRecord is null)
+        var seasonLiteral = DateHelpers.GetSeasonLiteral(season);
+        if (seasonLiteral == null || seasonLiteral.IsStringNullOrEmptyOrWhiteSpace())
+            return null;
+
+        var seasonRecord = new Tseason()
         {
-            var seasonliteral = DateHelpers.GetSeasonLiteral(season);
-            if (seasonliteral == null || seasonliteral.IsStringNullOrEmptyOrWhiteSpace())
-                return null;
+            SeasonNumber = intSeason,
+            DisplayName = seasonLiteral,
+        };
 
-            seasonRecord = new Tseason()
-            {
-                SeasonNumber = intSeason,
-                DisplayName = seasonliteral,
-            };
-
-            var resultInsert = await seasonRecord.InsertAsync(cancellationToken, cmd);
-            if (!resultInsert.IsSuccess)
-                return null;
-        }
-
-        return seasonRecord;
+        return await Tseason.SingleOrCreateAsync(seasonRecord, false ,cancellationToken, cmd);
     }
 
     private static async Task<TorigineAdaptation?> GetOrigineAdaptationAsync(string? value,

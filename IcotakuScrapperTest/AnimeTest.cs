@@ -202,7 +202,7 @@ namespace IcotakuScrapperTest
         [Test]
         public async static Task PlanningCountItem()
         {
-            var t = await TanimeSeasonalPlanning.GetItemsCountByLettersAsync(SeasonalAnimePlanningGroupBy.Letter,
+            var t = await TanimeSeasonalPlanning.GetItemsCount(SeasonalAnimePlanningGroupBy.Letter,
                 OrderBy.Asc).ToArrayAsync();
             
             Assert.Pass();

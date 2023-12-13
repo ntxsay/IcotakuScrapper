@@ -6,9 +6,9 @@ namespace IcotakuScrapperTest;
 public class SeasonTest
 {
     [Test]
-    public void ScrapSeason()
+    public async Task ScrapSeasonAsync()
     {
-        var d = Tseason.ScrapSeasons(IcotakuSection.Anime).ToArray();
-        Assert.IsNotEmpty(d);
+        var result = await Tseason.ScrapAsync(IcotakuSection.Anime);
+        Assert.IsTrue(result.IsSuccess);
     }
 }

@@ -5,7 +5,27 @@ namespace IcotakuScrapper.Common;
 
 public partial class Tseason
 {
-    public static IEnumerable<Tseason> ScrapSeasons(IcotakuSection section)
+    /// <summary>
+    /// Scrappe les saisons depuis icotaku.com
+    /// </summary>
+    /// <param name="section"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static async Task<OperationState> ScrapAsync(IcotakuSection section, CancellationToken? cancellationToken = null)
+    {
+        if (section != IcotakuSection.Anime && section != IcotakuSection.Drama)
+            return new OperationState(false, "Cette section n'est pas supportée");
+
+        await using var command = (await Main.GetSqliteConnectionAsync()).CreateCommand();
+
+        var values = ScrapSeasons(section).ToArray();
+        if (values.Length == 0)
+            return new OperationState(false, "Aucune saison n'a été trouvée");
+        
+        return await InsertOrReplaceAsync(values, DbInsertMode.InsertOrIgnore, cancellationToken, command);
+    }
+    
+    private static IEnumerable<Tseason> ScrapSeasons(IcotakuSection section)
     {
         //url de la page en cours contenant le tableau des fiches
         var pageUrl = IcotakuWebHelpers.GetSeasonalPlanningUrl(section);
