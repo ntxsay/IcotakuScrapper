@@ -216,6 +216,21 @@ public static class IcotakuWebHelpers
     }
     
     /// <summary>
+    /// Obtient l'url de la page du planning saisonnier
+    /// </summary>
+    /// <param name="section"></param>
+    /// <remarks>L'url n'est valide que pour les animes et les dramas</remarks>
+    /// <returns></returns>
+    public static string? GetSeasonalPlanningUrl(IcotakuSection section)
+    {
+        if (section is IcotakuSection.Anime or IcotakuSection.Drama)
+            return $"{GetBaseUrl(section)}/planning_saisonnier.html";
+        LogServices.LogDebug($"La section {section} n'est pas prise en charge.");
+        return null;
+    }
+    
+    
+    /// <summary>
     /// Retourne l'url absolue de l'image à partir de l'attribut src du noeud img
     /// </summary>
     /// <param name="section">Correspond à la section du site permettant de sélectionner la bonne base Url</param>

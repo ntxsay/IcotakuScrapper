@@ -253,11 +253,11 @@ public static class DateHelpers
         };
     }
 
-    public static string? GetSeasonLiteral(uint intSeason)
+    public static string? GetSeasonLiteral(uint numberedSeason)
     {
-        if (intSeason == 0)
+        if (numberedSeason == 0)
             return null;
-        var stringIntDate = intSeason.ToString();
+        var stringIntDate = numberedSeason.ToString();
         if (stringIntDate.Length != 6)//2301-202304
             return null;
         var yearString = stringIntDate[..4];

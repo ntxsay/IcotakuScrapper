@@ -198,5 +198,15 @@ namespace IcotakuScrapperTest
             var path = await anime.DownloadThumbnailAsync();
             Assert.IsNotEmpty(path);
         }
+        
+        [Test]
+        public async static Task PlanningCountItem()
+        {
+            var t = await TanimeSeasonalPlanning.GetItemsCountByLettersAsync(SeasonalAnimePlanningGroupBy.Letter,
+                OrderBy.Asc).ToArrayAsync();
+            
+            Assert.Pass();
+
+        }
     }
 }

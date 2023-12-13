@@ -8,6 +8,67 @@ namespace IcotakuScrapper.Anime;
 
 public partial class TanimeSeasonalPlanning
 {
+    public static async IAsyncEnumerable<ItemGroupCountStruct> GetItemsCountByLettersAsync(SeasonalAnimePlanningGroupBy groupBy, OrderBy orderBy = OrderBy.Asc, 
+        bool? isAdultContent = false, bool? isExplicitContent = false, CancellationToken? cancellationToken = null)
+    {
+        await using var command = (await Main.GetSqliteConnectionAsync()).CreateCommand();
+
+        switch (groupBy)
+        {
+            case SeasonalAnimePlanningGroupBy.Default:
+                break;
+            case SeasonalAnimePlanningGroupBy.OrigineAdaptation:
+                command.CommandText =
+                    """
+                    SELECT
+                        TorigineAdaptation.Name AS ItemName, 
+                        TorigineAdaptation.Description,
+                        COUNT(TanimeSeasonalPlanning.Id) AS ItemCount
+                    FROM main.TanimeSeasonalPlanning
+                    LEFT JOIN main.TorigineAdaptation on TorigineAdaptation.Id = TanimeSeasonalPlanning.IdOrigine
+                    """;
+                command.AddExplicitContentFilter(DbStartFilterMode.Where, "TanimeSeasonalPlanning.IsAdultContent", "TanimeSeasonalPlanning.IsExplicitContent", isAdultContent, isExplicitContent);
+                command.CommandText += Environment.NewLine + "GROUP BY ItemName" + Environment.NewLine + $"ORDER BY ItemName {orderBy}";
+                break;
+            case SeasonalAnimePlanningGroupBy.Season:
+                break;
+            case SeasonalAnimePlanningGroupBy.ReleaseMonth:
+                break;
+            case SeasonalAnimePlanningGroupBy.GroupName:
+                break;
+            case SeasonalAnimePlanningGroupBy.Letter:
+                command.CommandText =
+                    """
+                    SELECT
+                        UPPER(SUBSTR(AnimeName, 1, 1)) AS ItemName,
+                        COUNT(Id) AS ItemCount
+                    FROM main.TanimeSeasonalPlanning
+                    """;
+                command.AddExplicitContentFilter(DbStartFilterMode.Where, "TanimeSeasonalPlanning.IsAdultContent", "TanimeSeasonalPlanning.IsExplicitContent", isAdultContent, isExplicitContent);
+                command.CommandText += Environment.NewLine + "GROUP BY ItemName" + Environment.NewLine + $"ORDER BY ItemName {orderBy}";
+                
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(groupBy), groupBy, null);
+        }
+        
+        
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
+        if (!reader.HasRows)
+            yield break;
+
+        while (await reader.ReadAsync(cancellationToken ?? CancellationToken.None))
+        {
+            yield return new ItemGroupCountStruct
+            {
+                IdentifierKind = ItemGroupCountKind.AnimeLetter,
+                Name = reader.GetString(reader.GetOrdinal("ItemName")),
+                Count = (uint)reader.GetInt32(reader.GetOrdinal("ItemCount"))
+            };
+            
+        }
+    }
+
     public static async Task<Paginate<TanimeSeasonalPlanning>> PaginateAsync(SeasonalAnimePlanningOptions options,
         uint currentPage = 1, uint maxContentByPage = 20,
         SeasonalAnimePlanningSortBy sortBy = SeasonalAnimePlanningSortBy.ReleaseMonth,

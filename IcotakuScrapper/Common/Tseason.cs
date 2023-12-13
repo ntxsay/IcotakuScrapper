@@ -25,7 +25,7 @@ public enum SeasonSortBy
     Name = 3
 }
 
-public class Tseason
+public partial class Tseason
 {
     public int Id { get; protected set; }
     public string DisplayName { get; set; } = string.Empty;
@@ -350,8 +350,7 @@ public class Tseason
             return new OperationState<int>(false, "Une erreur est survenue lors de l'insertion");
         }
     }
-
-
+    
     #endregion
     
     #region Update
