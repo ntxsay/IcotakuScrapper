@@ -1,118 +1,197 @@
-﻿using System.ComponentModel;
-using System.Runtime.CompilerServices;
-using IcotakuScrapper.Common;
+﻿using IcotakuScrapper.Common;
 using IcotakuScrapper.Extensions;
 using Microsoft.Data.Sqlite;
+using System.Text;
 
 namespace IcotakuScrapper.Anime;
 
 public partial class TanimeSeasonalPlanning
 {
-    public static async IAsyncEnumerable<ItemGroupCountStruct> GetItemsCount(SeasonalAnimePlanningGroupBy groupBy, OrderBy orderBy = OrderBy.Asc, 
+    public static async IAsyncEnumerable<ItemGroupCountStruct> GetItemsCount(SeasonalAnimeSelectionMode selectionMode, OrderBy orderBy = OrderBy.Asc,
         bool? isAdultContent = false, bool? isExplicitContent = false, CancellationToken? cancellationToken = null)
     {
+        if (selectionMode == SeasonalAnimeSelectionMode.None)
+            yield break;
+        
         await using var command = (await Main.GetSqliteConnectionAsync()).CreateCommand();
 
-        switch (groupBy)
+        switch (selectionMode)
         {
-            case SeasonalAnimePlanningGroupBy.OrigineAdaptation:
+            case SeasonalAnimeSelectionMode.OrigineAdaptation:
                 command.CommandText =
                     """
                     SELECT
                         TorigineAdaptation.Name AS ItemName, 
-                        TorigineAdaptation.Description,
+                        TorigineAdaptation.Id AS ItemData,
+                        TorigineAdaptation.Description AS ItemDescription,
                         COUNT(TanimeSeasonalPlanning.Id) AS ItemCount
                     FROM main.TanimeSeasonalPlanning
                     LEFT JOIN main.TorigineAdaptation on TorigineAdaptation.Id = TanimeSeasonalPlanning.IdOrigine
                     """;
                 break;
-            case SeasonalAnimePlanningGroupBy.Season:
+            case SeasonalAnimeSelectionMode.Season:
                 command.CommandText =
                     """
                     SELECT
                         Tseason.DisplayName AS ItemName,
+                        Tseason.SeasonNumber AS ItemData,
+                        'Recherche les animes dont la saison de diffusion est « ' || Tseason.DisplayName || ' »' AS ItemDescription,
                         COUNT(TanimeSeasonalPlanning.Id) AS ItemCount
                     FROM main.Tseason
                     LEFT JOIN main.TanimeSeasonalPlanning on TanimeSeasonalPlanning.IdSeason = Tseason.Id
                     """;
                 break;
-            case SeasonalAnimePlanningGroupBy.ReleaseMonth:
+            case SeasonalAnimeSelectionMode.ReleaseMonth:
                 command.CommandText =
                     """
                     SELECT
                         TanimeSeasonalPlanning.ReleaseMonth AS ItemName,
+                        TanimeSeasonalPlanning.ReleaseMonth AS ItemData,
+                        'Recherche les animes dont le mois de diffusion est celui-ci ' AS ItemDescription,
                         COUNT(TanimeSeasonalPlanning.Id) AS ItemCount
                     FROM main.TanimeSeasonalPlanning
                     """;
                 break;
-            case SeasonalAnimePlanningGroupBy.GroupName:
+            case SeasonalAnimeSelectionMode.GroupName:
                 command.CommandText =
                     """
                     SELECT
                         TanimeSeasonalPlanning.GroupName AS ItemName,
+                        TanimeSeasonalPlanning.GroupName AS ItemData,
+                        'Recherche les animes dont le format est « ' || TanimeSeasonalPlanning.GroupName AS ItemDescription,
                         COUNT(TanimeSeasonalPlanning.Id) AS ItemCount
                     FROM main.TanimeSeasonalPlanning
                     """;
                 break;
-            case SeasonalAnimePlanningGroupBy.Default:
-            case SeasonalAnimePlanningGroupBy.Letter:
+            case SeasonalAnimeSelectionMode.Letter:
                 command.CommandText =
                     """
                     SELECT
                         UPPER(SUBSTR(AnimeName, 1, 1)) AS ItemName,
-                        COUNT(Id) AS ItemCount
+                        UPPER(SUBSTR(AnimeName, 1, 1)) AS ItemData,
+                        'Recherche les animes dont la première lettre commence par « ' || UPPER(SUBSTR(AnimeName, 1, 1)) || ' »' AS ItemDescription,
+                        COUNT(TanimeSeasonalPlanning.Id) AS ItemCount
                     FROM main.TanimeSeasonalPlanning
                     """;
                 break;
             default:
-                throw new ArgumentOutOfRangeException(nameof(groupBy), groupBy, null);
+                throw new ArgumentOutOfRangeException(nameof(selectionMode), selectionMode, null);
         }
-        
-        command.AddExplicitContentFilter(DbStartFilterMode.Where, "TanimeSeasonalPlanning.IsAdultContent", "TanimeSeasonalPlanning.IsExplicitContent", isAdultContent, isExplicitContent);
-        command.CommandText += Environment.NewLine + "GROUP BY ItemName" + Environment.NewLine + $"ORDER BY ItemName {orderBy}";
 
-        
+        command.AddExplicitContentFilter(DbStartFilterMode.Where, "TanimeSeasonalPlanning.IsAdultContent", "TanimeSeasonalPlanning.IsExplicitContent", isAdultContent, isExplicitContent);
+        command.CommandText += Environment.NewLine + 
+                               $"""
+                                GROUP BY ItemName
+                                ORDER BY ItemName {orderBy}
+                                """;
+
+
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
             yield break;
 
         while (await reader.ReadAsync(cancellationToken ?? CancellationToken.None))
         {
-            yield return new ItemGroupCountStruct
+            var itemName = reader.IsDBNull(reader.GetOrdinal("ItemName")) ? null : reader.GetString(reader.GetOrdinal("ItemName"));
+            var itemDescription = reader.IsDBNull(reader.GetOrdinal("ItemDescription")) ? null : reader.GetString(reader.GetOrdinal("ItemDescription"));
+            var itemData = reader.IsDBNull(reader.GetOrdinal("ItemData")) ? null : reader.GetValue(reader.GetOrdinal("ItemData"));
+            var itemCount = reader.GetInt32(reader.GetOrdinal("ItemCount"));
+
+            var groupName = selectionMode switch
             {
-                IdentifierKind = ItemGroupCountKind.AnimeLetter,
-                Name = ConvertItemCountName(groupBy, reader.IsDBNull(reader.GetOrdinal("ItemName")) ? null : reader.GetString(reader.GetOrdinal("ItemName"))),
-                Count = (uint)reader.GetInt32(reader.GetOrdinal("ItemCount"))
+                SeasonalAnimeSelectionMode.OrigineAdaptation => "Origine de l'adaptation",
+                SeasonalAnimeSelectionMode.Season => "Saison",
+                SeasonalAnimeSelectionMode.ReleaseMonth => "Date de diffusion",
+                SeasonalAnimeSelectionMode.GroupName => "Format",
+                SeasonalAnimeSelectionMode.Letter => "Lettre",
+                SeasonalAnimeSelectionMode.None => "Aucun",
+                _ => throw new ArgumentOutOfRangeException(nameof(selectionMode), selectionMode, null)
             };
             
+            yield return new ItemGroupCountStruct
+            {
+                IdentifierKind = ConvertSelectionModeToItemGroupCountKind(selectionMode),
+                GroupName = groupName,
+                Name = ConvertItemCountName(selectionMode, itemName),
+                Data = ConvertItemCountData(selectionMode, itemData),
+                Description = itemDescription,
+                Count = itemCount
+            };
+
         }
     }
 
-    private static string ConvertItemCountName(SeasonalAnimePlanningGroupBy groupBy, string? value)
+    private static ItemGroupCountKind ConvertSelectionModeToItemGroupCountKind(SeasonalAnimeSelectionMode selectionMode)
     {
-        if (value == null || value.IsStringNullOrEmptyOrWhiteSpace())
-            return groupBy switch
-            {
-                SeasonalAnimePlanningGroupBy.OrigineAdaptation => "Origine inconnue",
-                SeasonalAnimePlanningGroupBy.Season => "Saison inconnue",
-                SeasonalAnimePlanningGroupBy.ReleaseMonth => "Mois inconnu",
-                SeasonalAnimePlanningGroupBy.GroupName => "Groupe inconnu",
-                SeasonalAnimePlanningGroupBy.Default => "Sans nom",
-                SeasonalAnimePlanningGroupBy.Letter => "Caractère inconnu",
-                _ => throw new ArgumentOutOfRangeException(nameof(groupBy), groupBy, null)
-            };
-        
-        return groupBy switch {
-            SeasonalAnimePlanningGroupBy.OrigineAdaptation => value,
-            SeasonalAnimePlanningGroupBy.Season => value,
-            SeasonalAnimePlanningGroupBy.ReleaseMonth => DateHelpers.GetYearMonthLiteral(uint.Parse(value)) ?? "Mois inconnu",
-            SeasonalAnimePlanningGroupBy.GroupName => value,
-            SeasonalAnimePlanningGroupBy.Default => value,
-            SeasonalAnimePlanningGroupBy.Letter => value,
-            _ => throw new ArgumentOutOfRangeException(nameof(groupBy), groupBy, null)
+        return selectionMode switch
+        {
+            SeasonalAnimeSelectionMode.OrigineAdaptation => ItemGroupCountKind.OrigineAdaptation,
+            SeasonalAnimeSelectionMode.Season => ItemGroupCountKind.Season,
+            SeasonalAnimeSelectionMode.ReleaseMonth => ItemGroupCountKind.ReleaseMonth,
+            SeasonalAnimeSelectionMode.GroupName => ItemGroupCountKind.GroupName,
+            SeasonalAnimeSelectionMode.Letter => ItemGroupCountKind.AnimeLetter,
+            SeasonalAnimeSelectionMode.None => ItemGroupCountKind.None,
+            _ => throw new ArgumentOutOfRangeException(nameof(selectionMode), selectionMode, null)
         };
     }
     
+    private static string ConvertItemCountName(SeasonalAnimeSelectionMode selectionMode, string? value)
+    {
+        if (value == null || value.IsStringNullOrEmptyOrWhiteSpace())
+            return selectionMode switch
+            {
+                SeasonalAnimeSelectionMode.OrigineAdaptation => "Origine inconnue",
+                SeasonalAnimeSelectionMode.Season => "Saison inconnue",
+                SeasonalAnimeSelectionMode.ReleaseMonth => "Mois inconnu",
+                SeasonalAnimeSelectionMode.GroupName => "Groupe inconnu",
+                SeasonalAnimeSelectionMode.Letter => "Caractère inconnu",
+                SeasonalAnimeSelectionMode.None => "Aucun",
+                _ => throw new ArgumentOutOfRangeException(nameof(selectionMode), selectionMode, null)
+            };
+
+        return selectionMode switch
+        {
+            SeasonalAnimeSelectionMode.OrigineAdaptation => value,
+            SeasonalAnimeSelectionMode.Season => value,
+            SeasonalAnimeSelectionMode.ReleaseMonth => DateHelpers.GetYearMonthLiteral(uint.Parse(value)) ?? "Mois inconnu",
+            SeasonalAnimeSelectionMode.GroupName => value,
+            SeasonalAnimeSelectionMode.Letter => value,
+            SeasonalAnimeSelectionMode.None => "Aucun",
+            _ => throw new ArgumentOutOfRangeException(nameof(selectionMode), selectionMode, null)
+        };
+    }
+    
+    private static object? ConvertItemCountData(SeasonalAnimeSelectionMode selectionMode, object? value)
+    {
+        if (value == null)
+            return null;
+
+        switch (selectionMode)
+        {
+            case SeasonalAnimeSelectionMode.OrigineAdaptation:
+                if (int.TryParse(value.ToString(), out var id))
+                    return id;
+                break;
+            case SeasonalAnimeSelectionMode.Season:
+                if (uint.TryParse(value.ToString(), out var seasonNumber))
+                    return seasonNumber;
+                break;
+            case SeasonalAnimeSelectionMode.ReleaseMonth:
+                if (uint.TryParse(value.ToString(), out var releaseMonth))
+                    return releaseMonth;
+                break;
+            case SeasonalAnimeSelectionMode.GroupName:
+                return value.ToString();
+            case SeasonalAnimeSelectionMode.Letter:
+                return value.ToString()?.FirstOrDefault();
+            case SeasonalAnimeSelectionMode.None:
+            default:
+                break;
+        }
+        
+        return null;
+    }
+
     public static async Task<Paginate<TanimeSeasonalPlanning>> PaginateAsync(SeasonalAnimePlanningOptions options,
         uint currentPage = 1, uint maxContentByPage = 20,
         SeasonalAnimePlanningSortBy sortBy = SeasonalAnimePlanningSortBy.ReleaseMonth,
@@ -210,7 +289,7 @@ public partial class TanimeSeasonalPlanning
                 sqlScript += Environment.NewLine + "AND ";
             else
                 sqlScript += Environment.NewLine + "WHERE ";
-            
+
             sqlScript += "TanimeSeasonalPlanning.IsAdultContent = $IsAdultContent";
         }
 
@@ -220,17 +299,17 @@ public partial class TanimeSeasonalPlanning
                 sqlScript += Environment.NewLine + "AND ";
             else
                 sqlScript += Environment.NewLine + "WHERE ";
-            
+
             sqlScript += "TanimeSeasonalPlanning.IsExplicitContent = $IsExplicitContent";
         }
-        
+
         if (options.HasMinReleaseMonth || options.HasMaxReleaseMonth)
         {
             if (options.HasKeyword || options.HasMinSeason || options.HasMaxSeason || options.IsAdultContent != null || options.IsExplicitContent != null)
                 sqlScript += Environment.NewLine + "AND ";
             else
                 sqlScript += Environment.NewLine + "WHERE ";
-            
+
             if (options is { HasMinReleaseMonth: true, HasMaxReleaseMonth: true })
                 sqlScript += "(TanimeSeasonalPlanning.ReleaseMonth BETWEEN $MinReleaseMonth AND $MaxReleaseMonth)";
             else if (options.HasMinReleaseMonth)
@@ -251,7 +330,7 @@ public partial class TanimeSeasonalPlanning
 
             sqlScript += $"TanimeSeasonalPlanning.IdOrigine IN ({string.Join(',', options.IdOrigineAdaptationToInclude)})";
         }
-        
+
         if (options.HasIdOrigineAdaptationToExclude)
         {
             if (options.HasKeyword || options.HasMinSeason || options.HasMaxSeason || options.IsAdultContent != null ||
@@ -262,7 +341,7 @@ public partial class TanimeSeasonalPlanning
 
             sqlScript += $"TanimeSeasonalPlanning.IdOrigine NOT IN ({string.Join(',', options.IdOrigineAdaptationToExclude)})";
         }
-        
+
         if (options.HasIdDistributorsToInclude)
         {
             if (options.HasKeyword || options.HasMinSeason || options.HasMaxSeason || options.IsAdultContent != null ||
@@ -273,7 +352,7 @@ public partial class TanimeSeasonalPlanning
 
             sqlScript += $"TanimeSeasonalPlanning.IdDistributor IN ({string.Join(',', options.IdDistributorsToInclude)})";
         }
-        
+
         if (options.HasIdDistributorsToExclude)
         {
             if (options.HasKeyword || options.HasMinSeason || options.HasMaxSeason || options.IsAdultContent != null ||
@@ -284,7 +363,7 @@ public partial class TanimeSeasonalPlanning
 
             sqlScript += $"TanimeSeasonalPlanning.IdDistributor NOT IN ({string.Join(',', options.IdDistributorsToExclude)})";
         }
-        
+
         if (options.HasIdStudiosToInclude)
         {
             if (options.HasKeyword || options.HasMinSeason || options.HasMaxSeason || options.IsAdultContent != null ||
@@ -295,7 +374,7 @@ public partial class TanimeSeasonalPlanning
 
             sqlScript += $"TanimeSeasonalPlanning.IdStudio IN ({string.Join(',', options.IdStudiosToInclude)})";
         }
-        
+
         if (options.HasIdStudiosToExclude)
         {
             if (options.HasKeyword || options.HasMinSeason || options.HasMaxSeason || options.IsAdultContent != null ||
@@ -306,7 +385,7 @@ public partial class TanimeSeasonalPlanning
 
             sqlScript += $"TanimeSeasonalPlanning.IdStudio NOT IN ({string.Join(',', options.IdStudiosToExclude)})";
         }
-        
+
         if (options.HasThumbnail != null)
         {
             if (options.HasKeyword || options.HasMinSeason || options.HasMaxSeason || options.IsAdultContent != null ||
@@ -330,6 +409,7 @@ public partial class TanimeSeasonalPlanning
             sqlScript += "TanimeSeasonalPlanning.GroupName = $GroupName COLLATE NOCASE";
         }
 
+        FilterSelection(command, ref sqlScript, options.ItemGroupCountData);
 
         sqlScript += Environment.NewLine;
         sqlScript += sortBy switch
@@ -347,31 +427,105 @@ public partial class TanimeSeasonalPlanning
 
         if (options.HasKeyword)
             command.Parameters.AddWithValue("$Keyword", $"%{options.Keyword}%");
-        
+
         if (options.HasMinSeason)
             command.Parameters.AddWithValue("$MinSeason", options.MinSeason.ToIntSeason());
-        
+
         if (options.HasMaxSeason)
             command.Parameters.AddWithValue("$MaxSeason", options.MaxSeason.ToIntSeason());
-        
+
         if (options.IsAdultContent != null)
             command.Parameters.AddWithValue("$IsAdultContent", options.IsAdultContent.Value ? 1 : 0);
-        
+
         if (options.IsExplicitContent != null)
             command.Parameters.AddWithValue("$IsExplicitContent", options.IsExplicitContent.Value ? 1 : 0);
-        
+
         if (options.HasMinReleaseMonth)
             command.Parameters.AddWithValue("$MinReleaseMonth", options.MinReleaseMonth);
-        
+
         if (options.HasMaxReleaseMonth)
             command.Parameters.AddWithValue("$MaxReleaseMonth", options.MaxReleaseMonth);
-        
+
         if (options.HasGroupName)
             command.Parameters.AddWithValue("$GroupName", options.GroupName);
 
         return sqlScript;
     }
+
+    private static void FilterSelection(SqliteCommand command, ref string sqlScript, IReadOnlyCollection<ItemGroupCountStruct> groups)
+    {
+        //Si la requête est vide, on ne fait rien
+        if (sqlScript.IsStringNullOrEmptyOrWhiteSpace())
+            return;
+        
+        //Si la liste est vide, on ne fait rien
+        if (groups.Count == 0)
+            return;
+        
+        //Si la liste contient plus d'un élément, on ne fait rien
+        var isSame = groups.Select(x => x.IdentifierKind).Distinct().Count() == 1;
+        if (!isSame)
+        {
+            LogServices.LogDebug("Les groupes ne sont pas du même type");
+            return;
+        }
+
+        //On récupère le type de données
+        var kind = groups.First().IdentifierKind;
+        //Si le type de données est None, on ne fait rien
+        if (kind == ItemGroupCountKind.None)
+            return;
+        
+        if (sqlScript.Contains("WHERE"))
+            sqlScript += Environment.NewLine + "AND ";
+        else
+            sqlScript += Environment.NewLine + "WHERE ";
+
+        switch (kind)
+        {
+            case ItemGroupCountKind.OrigineAdaptation:
+                var origineData = groups.Select(x => x.Data).OfType<int>().ToArray();
+                if (origineData.Length == 0)
+                    return;
+                sqlScript += $"(TanimeSeasonalPlanning.IdOrigine IN ({string.Join(',', origineData)}))";
+                break;
+            case ItemGroupCountKind.Season:
+                var seasonData = groups.Select(x => x.Data).OfType<uint>().ToArray();
+                if (seasonData.Length == 0)
+                    return;
+                sqlScript += $"(Tseason.SeasonNumber IN ({string.Join(',', seasonData)}))";
+                break;
+            case ItemGroupCountKind.ReleaseMonth:
+                var releaseMonthData = groups.Select(x => x.Data).OfType<uint>().ToArray();
+                if (releaseMonthData.Length == 0)
+                    return;
+                sqlScript += $"(TanimeSeasonalPlanning.ReleaseMonth IN ({string.Join(',', releaseMonthData)}))";
+                break;
+            case ItemGroupCountKind.GroupName:
+                var groupNameData = groups.Select(x => x.Data).OfType<string>().ToArray();
+                if (groupNameData.Length == 0)
+                    return;
+                sqlScript += $"(TanimeSeasonalPlanning.GroupName IN ({string.Join(',', groupNameData.Select(s => $"'{s}'"))}))";
+                break;
+            case ItemGroupCountKind.AnimeLetter:
+                var letterData = groups.Select(x => x.Data).OfType<char>().ToArray();
+                if (letterData.Length == 0)
+                    return;
+                var letterCondition = new StringBuilder();
+                letterCondition.AppendLine();
+                letterCondition.AppendLine($"TanimeSeasonalPlanning.AnimeName COLLATE NOCASE LIKE '{letterData[0]}%'");
+                foreach (var value in letterData[1..])
+                    letterCondition.Append($" OR TanimeSeasonalPlanning.AnimeName COLLATE NOCASE LIKE '{value}%'");
+                sqlScript += $"({letterCondition})";
+                break;
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+        
+        //command.CommandText = sqlScript;
+    }
 }
+
 
 public readonly struct SeasonalAnimePlanningOptions
 {
@@ -384,6 +538,9 @@ public readonly struct SeasonalAnimePlanningOptions
     public WeatherSeason MaxSeason { get; init; }
     public uint MinReleaseMonth { get; init; }
     public uint MaxReleaseMonth { get; init; }
+
+    public ItemGroupCountStruct[] ItemGroupCountData { get; init; } = [];
+
     public HashSet<int> IdOrigineAdaptationToInclude { get; init; } = [];
     public HashSet<int> IdOrigineAdaptationToExclude { get; init; } = [];
     public HashSet<int> IdDistributorsToInclude { get; init; } = [];

@@ -101,7 +101,7 @@ public partial class Tanime : TanimeBase
     /// <param name="cancellationToken"></param>
     /// <param name="cmd"></param>
     /// <returns></returns>
-    public new static async Task<Tanime?> SingleByIdAsync(int id, CancellationToken? cancellationToken = null,
+    public static async Task<Tanime?> SingleByIdAsync(int id, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
         => await SingleAsync(id, IntColumnSelect.Id, cancellationToken, cmd);
     
@@ -112,7 +112,7 @@ public partial class Tanime : TanimeBase
     /// <param name="cancellationToken"></param>
     /// <param name="cmd"></param>
     /// <returns></returns>
-    public new static async Task<Tanime?> SingleBySheetIdAsync(int id, CancellationToken? cancellationToken = null,
+    public static async Task<Tanime?> SingleBySheetIdAsync(int id, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
         => await SingleAsync(id, IntColumnSelect.SheetId, cancellationToken, cmd);
     

@@ -26,6 +26,16 @@ public enum SeasonalAnimePlanningGroupBy : byte
     Letter
 }
 
+public enum SeasonalAnimeSelectionMode : byte
+{
+    None,
+    OrigineAdaptation,
+    Season,
+    ReleaseMonth,
+    GroupName,
+    Letter
+}
+
 /// <summary>
 /// Représente brièvement les informations d'un animé d'une saison.
 /// </summary>

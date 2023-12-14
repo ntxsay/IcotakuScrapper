@@ -527,11 +527,12 @@ public partial class TsheetIndex
             return new OperationState<int>(false, "Une erreur est survenue lors de l'ajout de l'anime");
         }
     }
-    
+
     /// <summary>
     /// Insère une collection d'index dans la table TsheetIndex
     /// </summary>
     /// <param name="records"></param>
+    /// <param name="insertMode"></param>
     /// <param name="cancellationToken"></param>
     /// <param name="cmd"></param>
     /// <returns></returns>

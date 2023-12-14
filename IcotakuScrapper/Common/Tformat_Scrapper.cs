@@ -21,11 +21,13 @@ public partial class Tformat
         return baseUrl + "/recherche-avancee.html";
     }
 
-    
+
     /// <summary>
     /// Scrape les formats depuis icotaku.com
     /// </summary>
     /// <param name="sections"></param>
+    /// <param name="insertMode"></param>
+    /// <param name="isDeleteSectionRecords"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
     public static async Task<OperationState> ScrapAsync(HashSet<IcotakuSection> sections,

@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using IcotakuScrapper.Extensions;
+﻿using IcotakuScrapper.Extensions;
 using Microsoft.Data.Sqlite;
 
 namespace IcotakuScrapper.Contact;

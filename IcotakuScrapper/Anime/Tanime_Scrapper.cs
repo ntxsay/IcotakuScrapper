@@ -886,7 +886,7 @@ public partial class Tanime
             if (contactHref == null || contactHref.IsStringNullOrEmptyOrWhiteSpace())
                 continue;
             
-            var contactUri = IcotakuWebHelpers.GetFullHrefFromHtmlNode(contactNode, IcotakuSection.Anime);
+            var contactUri = IcotakuWebHelpers.GetFullHrefFromHtmlNode(contactNode!, IcotakuSection.Anime);
             if (contactUri == null)
                 continue;
 

@@ -161,7 +161,8 @@ namespace IcotakuScrapper.Extensions
                 await anime.AddOrUpdateAsync(value, cancellationToken, cmd);
         }
         
-        private static async Task<OperationState> AddOrUpdateAsync(this Tanime anime, TanimeStudio value, CancellationToken? cancellationToken = null,
+        private static async Task AddOrUpdateAsync(this Tanime anime, TanimeStudio value,
+            CancellationToken? cancellationToken = null,
             SqliteCommand? cmd = null)
         {
             ArgumentNullException.ThrowIfNull(anime);
@@ -171,7 +172,7 @@ namespace IcotakuScrapper.Extensions
             if (value.IdAnime != anime.Id)
                 value.IdAnime = anime.Id;
 
-            return await value.AddOrUpdateAsync(cancellationToken, cmd);
+            await value.AddOrUpdateAsync(cancellationToken, cmd);
         }
 
         #endregion
@@ -214,7 +215,7 @@ namespace IcotakuScrapper.Extensions
                 await anime.AddOrUpdateAsync(value, cancellationToken, cmd);
         }
         
-        private static async Task<OperationState> AddOrUpdateAsync(this Tanime anime, TanimeCategory value, CancellationToken? cancellationToken = null,
+        private static Task<OperationState> AddOrUpdateAsync(this Tanime anime, TanimeCategory value, CancellationToken? cancellationToken = null,
             SqliteCommand? cmd = null)
         {
             ArgumentNullException.ThrowIfNull(anime);
@@ -224,7 +225,7 @@ namespace IcotakuScrapper.Extensions
             if (value.IdAnime != anime.Id)
                 value.IdAnime = anime.Id;
 
-            return await value.AddOrUpdateAsync(cancellationToken, cmd);
+            return value.AddOrUpdateAsync(cancellationToken, cmd);
         }
 
         #endregion
@@ -345,7 +346,7 @@ namespace IcotakuScrapper.Extensions
 
         #endregion
 
-                #region Staffs
+        #region Staffs
 
         public static async Task<OperationState> AddOrReplaceStaffsAsync(this Tanime anime, CancellationToken? cancellationToken = null,
             SqliteCommand? cmd = null)
