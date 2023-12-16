@@ -132,7 +132,7 @@ DROP TABLE IF EXISTS Tseason;
 CREATE TABLE IF NOT EXISTS Tseason
 (
     Id           INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
-    SeasonNumber INTEGER NOT NULL, -- 202301 (année + numéro de saison)
+    SeasonNumber INTEGER NOT NULL UNIQUE, -- 202301 (année + numéro de saison)
     DisplayName  TEXT    NOT NULL  -- Nom de la saison (printemps 2008, etc)
 );
 -- endregion

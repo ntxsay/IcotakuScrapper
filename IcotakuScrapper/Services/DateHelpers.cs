@@ -272,6 +272,40 @@ public static class DateHelpers
         return GetSeasonLiteral((WeatherSeasonKind)seasonNumber, year);
     }
 
+    public static WeatherSeason GetWeatherSeason(uint numberedSeason)
+    {
+        if (numberedSeason == 0)
+            return default;
+        var stringIntDate = numberedSeason.ToString();
+        if (stringIntDate.Length != 6)//2301-202304
+            return default;
+        var yearString = stringIntDate[..4];
+        var seasonNumberString = stringIntDate.Substring(4, 2);
+        
+        if (!uint.TryParse(yearString, out var year) || year < DateOnly.MinValue.Year || year > DateOnly.MaxValue.Year)
+            return default;
+        
+        if (!byte.TryParse(seasonNumberString, out var seasonNumber) || seasonNumber is < 1 or > 4)
+            return default;
+        
+        return new WeatherSeason((WeatherSeasonKind)seasonNumber, year);
+    }
+    
+    public static WeatherSeason GetWeatherSeason(DateTime date)
+    {
+        var year = (uint)date.Year;
+        var month = (byte)date.Month;
+        var season = month switch
+        {
+            >= 1 and <= 3 => WeatherSeasonKind.Winter,
+            >= 4 and <= 6 => WeatherSeasonKind.Spring,
+            >= 7 and <= 8 => WeatherSeasonKind.Summer,
+            >= 9 and <= 12 => WeatherSeasonKind.Fall,
+            _ => WeatherSeasonKind.Unknown
+        };
+        return new WeatherSeason(season, season == WeatherSeasonKind.Winter ? year - 1 : year);
+    }
+    
     public static string? GetSeasonLiteral(WeatherSeason season)
     {
         return GetSeasonLiteral(season.Season, season.Year);

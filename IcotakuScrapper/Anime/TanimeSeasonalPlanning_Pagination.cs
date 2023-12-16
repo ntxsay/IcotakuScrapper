@@ -550,8 +550,8 @@ public readonly struct SeasonalAnimePlanningOptions
     public HashSet<int> IdStudiosToInclude { get; init; } = [];
     public HashSet<int> IdStudiosToExclude { get; init; } = [];
 
-    public bool HasMinSeason => MinSeason.Equals(default(WeatherSeason));
-    public bool HasMaxSeason => MaxSeason.Equals(default(WeatherSeason));
+    public bool HasMinSeason => !MinSeason.Equals(default(WeatherSeason)) && MinSeason.Season != WeatherSeasonKind.Unknown && MinSeason.Year > 0;
+    public bool HasMaxSeason => !MaxSeason.Equals(default(WeatherSeason)) && MaxSeason.Season != WeatherSeasonKind.Unknown && MaxSeason.Year > 0;
     public bool HasMinReleaseMonth => MinReleaseMonth > 0;
     public bool HasMaxReleaseMonth => MaxReleaseMonth > 0;
     public bool HasKeyword => Keyword != null && !Keyword.IsStringNullOrEmptyOrWhiteSpace();

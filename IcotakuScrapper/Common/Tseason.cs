@@ -43,6 +43,15 @@ public partial class Tseason
         SeasonNumber = seasonNumber;
     }
     
+    public void Copy(Tseason season)
+    {
+        Id = season.Id;
+        DisplayName = season.DisplayName;
+        SeasonNumber = season.SeasonNumber;
+    }
+    
+    public WeatherSeason ToWeatherSeason()
+        => DateHelpers.GetWeatherSeason(SeasonNumber);
     
     public override string ToString()
         => DateHelpers.GetSeasonLiteral(SeasonNumber) ?? $"{DisplayName} ({SeasonNumber})";
@@ -180,7 +189,31 @@ public partial class Tseason
         
         return await GetRecords(reader, cancellationToken).ToArrayAsync(cancellationToken ?? CancellationToken.None);
     }
-    
+
+    public static async Task<TseasonStruct[]> SelectStructAsync(SeasonSortBy sortBy = SeasonSortBy.Default, OrderBy orderBy = OrderBy.Asc, uint limit = 0, uint skip = 0, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        command.CommandText = IcotakuSqlSelectScript + Environment.NewLine;
+
+        command.CommandText += sortBy switch
+        {
+            SeasonSortBy.SeasonNumber => $"ORDER BY SeasonNumber {orderBy}",
+            SeasonSortBy.Name => $"ORDER BY DisplayName {orderBy}",
+            SeasonSortBy.Default => $"ORDER BY Id {orderBy}",
+            _ => $"ORDER BY Id {orderBy}"
+        };
+
+        command.AddLimitOffset(limit, skip);
+
+        command.Parameters.Clear();
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
+        if (!reader.HasRows)
+            return [];
+
+        return await GetStructRecords(reader, cancellationToken).ToArrayAsync(cancellationToken ?? CancellationToken.None);
+    }
+
     public static async Task<Tseason[]> SelectAsync(uint seasonNumber, SeasonSortBy sortBy = SeasonSortBy.Default, OrderBy orderBy = OrderBy.Asc, uint limit = 0, uint skip = 0, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
@@ -557,7 +590,16 @@ public partial class Tseason
             SeasonNumber = (uint)reader.GetInt32(seasonNumberIndex)
         };
     }
-    
+
+    internal static TseasonStruct GetStructRecord(SqliteDataReader reader, int idIndex, int seasonNumberIndex, int displayNameIndex)
+    {
+        return new TseasonStruct()
+        {
+            Id = reader.GetInt32(idIndex),
+            DisplayName = reader.GetString(displayNameIndex),
+            SeasonNumber = (uint)reader.GetInt32(seasonNumberIndex)
+        };
+    }
 
 
     private static async IAsyncEnumerable<Tseason> GetRecords(SqliteDataReader reader,
@@ -572,7 +614,19 @@ public partial class Tseason
         }
     }
 
-    
+    private static async IAsyncEnumerable<TseasonStruct> GetStructRecords(SqliteDataReader reader,
+        CancellationToken? cancellationToken = null)
+    {
+        while (await reader.ReadAsync(cancellationToken ?? CancellationToken.None))
+        {
+            yield return GetStructRecord(reader,
+                idIndex: reader.GetOrdinal("Id"),
+                seasonNumberIndex: reader.GetOrdinal("SeasonNumber"),
+                displayNameIndex: reader.GetOrdinal("DisplayName"));
+        }
+    }
+
+
     private const string IcotakuSqlSelectScript = 
         """
         SELECT 
@@ -581,4 +635,18 @@ public partial class Tseason
             SeasonNumber 
         FROM Tseason
         """;
+}
+
+public readonly struct TseasonStruct
+{
+    public TseasonStruct()
+    {
+    }
+
+    public int Id { get; init; }
+    public string DisplayName { get; init; } = string.Empty;
+    public uint SeasonNumber { get; init; }
+    
+    public WeatherSeason ToWeatherSeason()
+        => DateHelpers.GetWeatherSeason(SeasonNumber);
 }
