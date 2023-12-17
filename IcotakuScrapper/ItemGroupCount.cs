@@ -6,6 +6,7 @@ public enum ItemGroupCountKind
     AnimeLetter,
     Season,
     OrigineAdaptation,
+    Category,
     ReleaseMonth,
     GroupName,
 }

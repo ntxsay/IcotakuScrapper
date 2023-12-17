@@ -23,6 +23,7 @@ public enum SeasonalAnimePlanningGroupBy : byte
     Season,
     ReleaseMonth,
     GroupName,
+    Category,
     Letter
 }
 
@@ -33,6 +34,7 @@ public enum SeasonalAnimeSelectionMode : byte
     Season,
     ReleaseMonth,
     GroupName,
+    Category,
     Letter
 }
 
@@ -805,10 +807,16 @@ public partial class TanimeSeasonalPlanning
     private static async IAsyncEnumerable<TanimeSeasonalPlanning> GetRecords(SqliteDataReader reader,
         CancellationToken? cancellationToken = null)
     {
+        List<int> sheetIdArray = [];
+
         while (await reader.ReadAsync(cancellationToken ?? CancellationToken.None))
         {
             var idPlanning = reader.GetInt32(reader.GetOrdinal("BaseId"));
             var animeSheetId = reader.GetInt32(reader.GetOrdinal("BaseSheetId"));
+
+            if (sheetIdArray.Contains(animeSheetId))
+                continue;
+            
             var record = new TanimeSeasonalPlanning()
             {
                 Id = idPlanning,
@@ -850,13 +858,15 @@ public partial class TanimeSeasonalPlanning
                 record.Anime = animeBase;
 
             yield return record;
+            
+            sheetIdArray.Add(animeSheetId);
         }
     }
 
     private const string SqlSelectScript =
         """
         SELECT
-            TanimeSeasonalPlanning.Id AS BaseId,
+            DISTINCT TanimeSeasonalPlanning.Id AS BaseId,
             TanimeSeasonalPlanning.IdSeason AS IdSeason,
             TanimeSeasonalPlanning.IdOrigine AS IdOrigine,
             TanimeSeasonalPlanning.SheetId AS BaseSheetId,
@@ -881,6 +891,10 @@ public partial class TanimeSeasonalPlanning
             TanimeSeasonalPlanning
         LEFT JOIN main.TorigineAdaptation on TorigineAdaptation.Id = TanimeSeasonalPlanning.IdOrigine
         LEFT JOIN main.Tseason  on Tseason.Id = TanimeSeasonalPlanning.IdSeason
+        LEFT JOIN main.Tanime on Tanime.SheetId = TanimeSeasonalPlanning.SheetId
+        LEFT JOIN main.TanimeCategory on TanimeCategory.IdAnime = Tanime.Id
+        LEFT JOIN main.Tcategory on Tcategory.Id = TanimeCategory.IdCategory
+        
         """;
 
     private const string SqlCountScript =
@@ -891,5 +905,9 @@ public partial class TanimeSeasonalPlanning
             TanimeSeasonalPlanning
         LEFT JOIN main.TorigineAdaptation on TorigineAdaptation.Id = TanimeSeasonalPlanning.IdOrigine
         LEFT JOIN main.Tseason  on Tseason.Id = TanimeSeasonalPlanning.IdSeason
+        LEFT JOIN main.Tanime on Tanime.SheetId = TanimeSeasonalPlanning.SheetId
+        LEFT JOIN main.TanimeCategory on TanimeCategory.IdAnime = Tanime.Id
+        LEFT JOIN main.Tcategory on Tcategory.Id = TanimeCategory.IdCategory
+        
         """;
 }

@@ -1,6 +1,6 @@
 ﻿namespace IcotakuScrapper.Extensions
 {
-    internal static class AppExtensions
+    public static class AppExtensions
     {
         /// <summary>
         /// Retourne une valeur booléenne indiquant si la valeur de type string est null, vide ou ne contient que des espaces blancs
@@ -16,17 +16,22 @@
         /// <returns>Une valeur booléenne</returns>
         public static bool IsStringEmptyOrWhiteSpace(this string self) => ExtensionMethods.IsStringEmptyOrWhiteSpace(self);
 
-        public static ContactType ConvertTo(this IcotakuSheetType sheetType) 
+        public static ContactType ConvertTo(this IcotakuSheetType sheetType)
             => ExtensionMethods.ConvertTo(sheetType);
-        public static IcotakuSheetType ConvertTo(this ContactType contactType) 
+        public static IcotakuSheetType ConvertTo(this ContactType contactType)
             => ExtensionMethods.ConvertTo(contactType);
 
-        public static IcotakuDefaultFolder ConvertDefaultFolderTo(this IcotakuSection section) 
+        public static IcotakuDefaultFolder ConvertDefaultFolderTo(this IcotakuSection section)
             => ExtensionMethods.ConvertDefaultFolderTo(section);
 
         public static IcotakuDefaultFolder ConvertToDefaultFolder(this IcotakuSheetType sheetType)
             => ExtensionMethods.ConvertToDefaultFolder(sheetType);
 
+        public static string GetLiteralDiffusion(this DiffusionStateKind stateKind)
+            => IcotakuHelpers.GetDiffusionStateLiteral(stateKind);
+
+        public static DiffusionStateKind GetDiffusionStateKind(this string? value)
+            => IcotakuHelpers.GetDiffusionStateKind(value);
     }
 
     internal static class ExtensionMethods

@@ -27,7 +27,7 @@ namespace IcotakuScrapperWebApi.Controllers
 
         [HttpGet("Seasonal/ItemsGroupCount")]
         public async Task<ItemGroupCountStruct[]> SelectAllSeasonalPlanningAsync([FromQuery] bool? isAdultContent, [FromQuery] bool? isExplicitContent, [FromQuery] SeasonalAnimePlanningGroupBy groupBy, [FromQuery] SeasonalAnimePlanningSortBy sortBy, [FromQuery] OrderBy orderBy = OrderBy.Asc)
-            => await TanimeSeasonalPlanning.GetItemsCount(groupBy, orderBy, isAdultContent, isExplicitContent).ToArrayAsync();
+            => await TanimeSeasonalPlanning.CountAndGroupBySelectionMode(groupBy, orderBy, isAdultContent, isExplicitContent).ToArrayAsync();
         
         [HttpPost("Seasonal/Scrap")]
         public async Task<OperationState> SaveDailyPlanningsync([FromQuery] uint year, [FromQuery] WeatherSeasonKind season)

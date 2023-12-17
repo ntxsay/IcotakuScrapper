@@ -205,7 +205,7 @@ public enum DiffusionStateKind : byte
     /// <summary>
     /// Diffusion arrêtée
     /// </summary>
-    Stopped,
+    Stopped
 }
 
 public enum ContactType : byte
