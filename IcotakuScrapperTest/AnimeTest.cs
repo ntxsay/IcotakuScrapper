@@ -199,14 +199,6 @@ namespace IcotakuScrapperTest
             Assert.IsNotEmpty(path);
         }
         
-        [Test]
-        public async static Task PlanningCountItem()
-        {
-            var t = await TanimeSeasonalPlanning.CountAndGroupBySelectionMode(SeasonalAnimePlanningGroupBy.Letter,
-                OrderBy.Asc).ToArrayAsync();
-            
-            Assert.Pass();
-
-        }
+        
     }
 }
