@@ -189,7 +189,31 @@ public partial class Tseason
         
         return await GetRecords(reader, cancellationToken).ToArrayAsync(cancellationToken ?? CancellationToken.None);
     }
+    public static async Task<Tseason[]> SelectAsync(uint seasonNumber, SeasonSortBy sortBy = SeasonSortBy.Default, OrderBy orderBy = OrderBy.Asc, uint limit = 0, uint skip = 0, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        command.CommandText = IcotakuSqlSelectScript + Environment.NewLine + "WHERE SeasonNumber = $SeasonNumber";
 
+        command.CommandText += sortBy switch
+        {
+            SeasonSortBy.SeasonNumber => $"ORDER BY SeasonNumber {orderBy}",
+            SeasonSortBy.Name => $"ORDER BY DisplayName {orderBy}",
+            SeasonSortBy.Default => $"ORDER BY Id {orderBy}",
+            _ => $"ORDER BY Id {orderBy}"
+        };
+
+        command.AddLimitOffset(limit, skip);
+
+        command.Parameters.Clear();
+
+        command.Parameters.AddWithValue("$SeasonNumber", seasonNumber);
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
+        if (!reader.HasRows)
+            return [];
+
+        return await GetRecords(reader, cancellationToken).ToArrayAsync(cancellationToken ?? CancellationToken.None);
+    }
     public static async Task<TseasonStruct[]> SelectStructAsync(SeasonSortBy sortBy = SeasonSortBy.Default, OrderBy orderBy = OrderBy.Asc, uint limit = 0, uint skip = 0, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
@@ -214,31 +238,7 @@ public partial class Tseason
         return await GetStructRecords(reader, cancellationToken).ToArrayAsync(cancellationToken ?? CancellationToken.None);
     }
 
-    public static async Task<Tseason[]> SelectAsync(uint seasonNumber, SeasonSortBy sortBy = SeasonSortBy.Default, OrderBy orderBy = OrderBy.Asc, uint limit = 0, uint skip = 0, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
-    {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = IcotakuSqlSelectScript + Environment.NewLine + "WHERE SeasonNumber = $SeasonNumber";
-        
-        command.CommandText += sortBy switch
-        {
-            SeasonSortBy.SeasonNumber => $"ORDER BY SeasonNumber {orderBy}",
-            SeasonSortBy.Name => $"ORDER BY DisplayName {orderBy}",
-            SeasonSortBy.Default => $"ORDER BY Id {orderBy}",
-            _ => $"ORDER BY Id {orderBy}"
-        };
-        
-        command.AddLimitOffset(limit, skip);
-
-        command.Parameters.Clear();
-        
-        command.Parameters.AddWithValue("$SeasonNumber", seasonNumber);
-        
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
-        if (!reader.HasRows)
-            return [];
-        
-        return await GetRecords(reader, cancellationToken).ToArrayAsync(cancellationToken ?? CancellationToken.None);
-    }
+    
 
     #endregion
 
