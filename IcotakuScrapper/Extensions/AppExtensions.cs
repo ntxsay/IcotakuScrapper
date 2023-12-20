@@ -32,6 +32,15 @@
 
         public static DiffusionStateKind GetDiffusionStateKind(this string? value)
             => IcotakuHelpers.GetDiffusionStateKind(value);
+        
+        public static string? GetSearchPamareter(this DiffusionStateKind stateKind)
+            => IcotakuHelpers.GetDiffusionStateSearchPamareter(stateKind);
+        
+        public static string? GetMonthSearchPamareter(this byte monthNumber)
+            => DateHelpers.GetMonthSearchParameter(monthNumber);
+        
+        public static string? GetSearchPamareter(this WeatherSeasonKind seasonKind)
+            => DateHelpers.GetSeasonSearchParameter(seasonKind);
     }
 
     internal static class ExtensionMethods

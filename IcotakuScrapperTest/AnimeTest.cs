@@ -8,13 +8,15 @@ namespace IcotakuScrapperTest
         [SetUp]
         public void SetUp()
         {
-            Main.LoadDatabaseAt(@"C:\Datas\icotaku.db");
+            /*Main.LoadDatabaseAt(@"C:\Datas\icotaku.db");
 
-            //Initialise la connexion à la base de données SQLite
-            Main.InitializeDbConnectionString();
+            
 
             //Initialise le dossier de travail
-            Main.LoadWorkingDirectoryAt(@"C:\Datas\icotaku");
+            Main.LoadWorkingDirectoryAt(@"C:\Datas\icotaku");*/
+            
+            //Initialise la connexion à la base de données SQLite
+            Main.InitializeDbConnectionString();
 
             //Interdit l'accès au contenu adulte au sein de l'application
             Main.IsAccessingToAdultContent = false;
@@ -199,6 +201,17 @@ namespace IcotakuScrapperTest
             Assert.IsNotEmpty(path);
         }
         
-        
+        [Test]
+        public async Task AdvancedSearch()
+        {
+            var parameter = new AnimeFinderParameterStruct()
+            {
+                Title = "rosa",
+                OrigineAdaptation = "manga",
+                Year = 2008,
+            };
+            var animes = await Tanime.ScrapAnimeSearchAsync(parameter);
+            Assert.IsNotEmpty(animes);
+        }
     }
 }

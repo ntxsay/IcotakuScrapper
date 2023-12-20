@@ -3,6 +3,7 @@ using IcotakuScrapper.Extensions;
 using IcotakuScrapper.Services.IOS;
 using System.Net;
 using System.Net.Http.Headers;
+using IcotakuScrapper.Anime;
 
 namespace IcotakuScrapper.Services;
 
@@ -181,6 +182,149 @@ public static class IcotakuWebHelpers
         };
     }
 
+    public static string? GetAdvancedSearchUrl(IcotakuSection section, AnimeFinderParameterStruct findParameter)
+    {
+        
+        var baseUrl = section switch
+        {
+            IcotakuSection.Anime => $"{IcotakuAnimeUrl}/recherche-avancee.html?",
+            IcotakuSection.Manga => null,
+            IcotakuSection.LightNovel => null,
+            IcotakuSection.Drama => null,
+            IcotakuSection.Community => null,
+            _ => throw new ArgumentOutOfRangeException(nameof(section), section, "Cette section du site Icotaku n'est pas prise en charge.")
+        };
+        
+        if (baseUrl == null)
+            return null;
+        
+        //Rechercher dans les titres
+        if (findParameter.Title != null && !findParameter.Title.IsStringNullOrEmptyOrWhiteSpace())
+            baseUrl += $"titre={findParameter.Title}";
+        
+        //Rechercher dans les catégories
+        if (findParameter.Format != null && !findParameter.Format.IsStringNullOrEmptyOrWhiteSpace())
+        {
+            if (!baseUrl.EndsWith('?'))
+                baseUrl += "&";
+            baseUrl += $"&categorie={findParameter.Format}";
+        }
+        
+        //Rechercher dans les publics
+        if (findParameter.Target != null && !findParameter.Target.IsStringNullOrEmptyOrWhiteSpace())
+        {
+            if (!baseUrl.EndsWith('?'))
+                baseUrl += "&";
+            baseUrl += $"&public={findParameter.Target}";
+        }
+        
+        //Rechercher dans les origines
+        if (findParameter.OrigineAdaptation != null && !findParameter.OrigineAdaptation.IsStringNullOrEmptyOrWhiteSpace())
+        {
+            if (!baseUrl.EndsWith('?'))
+                baseUrl += "&";
+            baseUrl += $"&origine={findParameter.OrigineAdaptation}";
+        }
+        
+        //Rechercher dans les studios
+        if (findParameter.StudioId is > 0)
+        {
+            if (!baseUrl.EndsWith('?'))
+                baseUrl += "&";
+            baseUrl += $"&studio={findParameter.StudioId}";
+        }
+        
+        //Rechercher dans les états de diffusion
+        if (findParameter.DiffusionState != DiffusionStateKind.Unknown)
+        {
+            if (!baseUrl.EndsWith('?'))
+                baseUrl += "&";
+            baseUrl += $"&diffusion={findParameter.DiffusionState.GetSearchPamareter()}";
+        }
+        
+        //Rechercher dans les éditeurs
+        if (findParameter.DistributorId is > 0)
+        {
+            if (!baseUrl.EndsWith('?'))
+                baseUrl += "&";
+            baseUrl += $"&editeurFr={findParameter.DistributorId}";
+        }
+        
+        //Rechercher dans les années
+        if (findParameter.Year > 0)
+        {
+            if (!baseUrl.EndsWith('?'))
+                baseUrl += "&";
+            baseUrl += $"&annee={findParameter.Year}";
+        }
+        
+        //Rechercher dans les mois
+        if (findParameter.MonthNumber is >= 1 and <= 12)
+        {
+            if (!baseUrl.EndsWith('?'))
+                baseUrl += "&";
+            baseUrl += $"&mois={findParameter.MonthNumber.GetMonthSearchPamareter()}";
+        }
+        
+        //Rechercher dans les saisons
+        if (findParameter.Season != WeatherSeasonKind.Unknown)
+        {
+            if (!baseUrl.EndsWith('?'))
+                baseUrl += "&";
+            baseUrl += $"&saison={findParameter.Season.GetSearchPamareter()}";
+        }
+        
+        //Rechercher dans les genres (inclus)
+        if (findParameter.IncludeGenresId.Length > 0)
+        {
+            if (!baseUrl.EndsWith('?'))
+                baseUrl += "&";
+            baseUrl += $"&genres_inclus[]={string.Join("&genres_inclus[]=", findParameter.IncludeGenresId)}";
+        }
+        
+        //Rechercher dans les genres (exclus)
+        if (findParameter.ExcludeGenresId.Length > 0)
+        {
+            if (!baseUrl.EndsWith('?'))
+                baseUrl += "&";
+            baseUrl += $"&genres_exclus[]={string.Join("&genres_exclus[]=", findParameter.ExcludeGenresId)}";
+        }
+        
+        //Rechercher dans les thèmes (inclus)
+        if (findParameter.IncludeThemesId.Length > 0)
+        {
+            if (!baseUrl.EndsWith('?'))
+                baseUrl += "&";
+            baseUrl += $"&themes_inclus[]={string.Join("&themes_inclus[]=", findParameter.IncludeThemesId)}";
+        }
+        
+        //Rechercher dans les thèmes (exclus)
+        if (findParameter.ExcludeThemesId.Length > 0)
+        {
+            if (!baseUrl.EndsWith('?'))
+                baseUrl += "&";
+            baseUrl += $"&themes_exclus[]={string.Join("&themes_exclus[]=", findParameter.ExcludeThemesId)}";
+        }
+        
+        //commit
+        if (!baseUrl.EndsWith('?'))
+        {
+            baseUrl += "&";
+            baseUrl += "commit=Rechercher";
+        }
+        
+        if (baseUrl.EndsWith('?'))
+            baseUrl = baseUrl.TrimEnd('?');
+        else if (baseUrl.EndsWith('&'))
+            baseUrl = baseUrl.TrimEnd('&');
+
+
+        if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out var uri) || !uri.IsAbsoluteUri)
+            return null;
+        
+        return uri.ToString();
+    }
+
     /// <summary>
     /// Obtient l'url de la page de la liste des animes
     /// </summary>
@@ -200,9 +344,9 @@ public static class IcotakuWebHelpers
             IcotakuSection.Anime =>sheetType switch
             {
                 IcotakuSheetType.Unknown => null,
-                IcotakuSheetType.Anime => $"https://anime.icotaku.com/animes.html?filter={letter}{(page == 0 ? "" : "&page=" + page)}",
-                IcotakuSheetType.Person => $"https://anime.icotaku.com/individus.html?filter={{letter}}{(page == 0 ? "" : "&page=" + page)}",
-                IcotakuSheetType.Character => $"https://anime.icotaku.com/personnages.html?filter={{letter}}{(page == 0 ? "" : "&page=" + page)}",
+                IcotakuSheetType.Anime => $"{IcotakuAnimeUrl}/animes.html?filter={letter}{(page == 0 ? "" : "&page=" + page)}",
+                IcotakuSheetType.Person => $"{IcotakuAnimeUrl}/individus.html?filter={{letter}}{(page == 0 ? "" : "&page=" + page)}",
+                IcotakuSheetType.Character => $"{IcotakuAnimeUrl}/personnages.html?filter={{letter}}{(page == 0 ? "" : "&page=" + page)}",
                 IcotakuSheetType.Studio => null,
                 IcotakuSheetType.Distributor => null,
                 _ => throw new ArgumentOutOfRangeException(nameof(sheetType), sheetType, "Ce type de fiche n'est pas pris en charge.")
@@ -398,6 +542,94 @@ public static class IcotakuWebHelpers
     /// <param name="password">Mot de passe du compe Icotaku</param>
     /// <returns></returns>
     internal static async Task<string?> GetRestrictedHtmlAsync(IcotakuSection section, Uri sheetUri, string username,
+        string password)
+    {
+        try
+        {
+            var baseUrl = GetBaseUrl(section);
+            if (baseUrl == null)
+                return null;
+
+            var handler = new HttpClientHandler
+            {
+                CookieContainer = new CookieContainer(),
+                UseCookies = true
+            };
+
+            using var client = new HttpClient(handler);
+            client.BaseAddress = new Uri(baseUrl);
+
+            client.DefaultRequestHeaders.Accept.Clear();
+            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("text/html"));
+            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/xhtml+xml"));
+            client.DefaultRequestHeaders.AcceptEncoding.Clear();
+            client.DefaultRequestHeaders.AcceptEncoding.Add(new StringWithQualityHeaderValue("utf-8"));
+            client.DefaultRequestHeaders.AcceptLanguage.Clear();
+            client.DefaultRequestHeaders.AcceptLanguage.Add(new StringWithQualityHeaderValue("fr-FR"));
+            client.DefaultRequestHeaders.AcceptLanguage.Add(new StringWithQualityHeaderValue("fr"));
+
+
+            // Récupérer la page d'accueil pour récupérer le jeton CSRF
+            using var homePageResult = await client.GetAsync("/");
+            homePageResult.EnsureSuccessStatusCode();
+
+            var homePageContent = await homePageResult.Content.ReadAsStringAsync();
+            var homePageDocument = new HtmlDocument();
+            homePageDocument.LoadHtml(homePageContent);
+
+            var csrfTokenNode = homePageDocument.DocumentNode.SelectSingleNode("//input[@name='_csrf_token']");
+            if (csrfTokenNode == null)
+            {
+                LogServices.LogDebug("Le jeton CSRF n'a pas été trouvé");
+                return null;
+            }
+
+            var csrfToken = csrfTokenNode.GetAttributeValue("value", string.Empty);
+
+            if (csrfToken.IsStringNullOrEmptyOrWhiteSpace())
+            {
+                LogServices.LogDebug("Le jeton CSRF est vide");
+                return null;
+            }
+
+            // Récupérer le cookie de session
+            var cookies = handler.CookieContainer.GetCookies(client.BaseAddress);
+            var sessionCookie = cookies["icookie"];
+
+            if (sessionCookie == null)
+            {
+                LogServices.LogDebug("Le cookie de session n'a pas été trouvé");
+                return null;
+            }
+
+            // Se connecter
+            using var loginResult = await client.PostAsync("/login.html", new FormUrlEncodedContent(
+                new Dictionary<string, string>
+                {
+                    { "_csrf_token", csrfToken },
+                    { "login", username },
+                    { "password", password },
+                    { "referer", "/" }
+                }));
+
+            loginResult.EnsureSuccessStatusCode();
+
+            // Récupérer la page de la fiche
+            var sheetResult = await client.GetAsync(sheetUri.PathAndQuery);
+
+            sheetResult.EnsureSuccessStatusCode();
+
+            var sheetContent = await sheetResult.Content.ReadAsStringAsync();
+            return sheetContent;
+        }
+        catch (Exception e)
+        {
+            LogServices.LogDebug(e);
+            return null;
+        }
+    }
+
+        internal static async Task<string?> GetAdvancedSearchHtmlAsync(IcotakuSection section, Uri sheetUri, string username,
         string password)
     {
         try

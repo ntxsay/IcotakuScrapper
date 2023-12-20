@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Globalization;
+using HtmlAgilityPack;
 using IcotakuScrapper.Common;
 using IcotakuScrapper.Extensions;
 
@@ -56,6 +57,24 @@ public static class DateHelpers
             _ => 0
         };
     }
+
+    public static string? GetMonthSearchParameter(byte monthNumber)
+        => monthNumber switch
+        {
+            1 => "janvier",
+            2 => "fevrier",
+            3 => "mars",
+            4 => "avril",
+            5 => "mai",
+            6 => "juin",
+            7 => "juillet",
+            8 => "aout",
+            9 => "septembre",
+            10 => "octobre",
+            11 => "novembre",
+            12 => "decembre",
+            _ => null
+        };
     
     
 
@@ -270,6 +289,18 @@ public static class DateHelpers
             return null;
         
         return GetSeasonLiteral((WeatherSeasonKind)seasonNumber, year);
+    }
+    
+    public static string? GetSeasonSearchParameter(WeatherSeasonKind season)
+    {
+        return season switch
+        {
+            WeatherSeasonKind.Spring => "printemps",
+            WeatherSeasonKind.Summer => "ete",
+            WeatherSeasonKind.Fall => "automne",
+            WeatherSeasonKind.Winter => "hiver",
+            _ => null
+        };
     }
 
     public static WeatherSeason GetWeatherSeason(uint numberedSeason)

@@ -110,6 +110,22 @@ public partial class Tanime
 
         return await ScrapAnimeAsync(htmlDocument.DocumentNode, sheetUri, cancellationToken, cmd);
     }
+    
+    private static async Task<OperationState<TanimeBase?>> ScrapAnimeBaseAsync(string htmlContent, Uri sheetUri, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        HtmlDocument htmlDocument = new();
+        htmlDocument.LoadHtml(htmlContent);
+
+        return await ScrapAnimeBaseAsync(htmlDocument.DocumentNode, sheetUri, cancellationToken, cmd);
+    }
+    
+    private static async Task<OperationState<TanimeBase?>> ScrapAnimeBaseAsync(Uri sheetUri, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        HtmlWeb web = new();
+        var htmlDocument = web.Load(sheetUri.OriginalString);
+
+        return await ScrapAnimeBaseAsync(htmlDocument.DocumentNode, sheetUri, cancellationToken, cmd);
+    }
 
     /// <summary>
     /// Récupère les informations de la fiche anime à partir de son url
@@ -261,6 +277,83 @@ public partial class Tanime
         }
     }
 
+    private static async Task<OperationState<TanimeBase?>> ScrapAnimeBaseAsync(HtmlNode documentNode, Uri sheetUri, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        try
+        {
+            var isAdultContent = ScrapIsAdultContent(documentNode);
+            if (Main.IsAccessingToAdultContent == false && isAdultContent)
+                return new OperationState<TanimeBase?>(false, "L'anime est considéré comme étant un contenu adulte (Hentai, Yuri, Yaoi).");
+
+            var isExplicitContent = ScrapIsExplicitContent(documentNode);
+            if (Main.IsAccessingToExplicitContent == false && isExplicitContent)
+                return new OperationState<TanimeBase?>(false, "L'anime est considéré comme étant un contenu explicite (Violence ou nudité explicite).");
+
+            var mainName = ScrapMainName(documentNode);
+            if (mainName == null || mainName.IsStringNullOrEmptyOrWhiteSpace())
+                throw new Exception("Le nom de l'anime n'a pas été trouvé");
+
+            var sheetId = IcotakuWebHelpers.GetSheetId(sheetUri);
+            await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+
+            var anime = new TanimeBase()
+            {
+                Name = mainName,
+                SheetId = sheetId,
+                Url = sheetUri.ToString(),
+                IsAdultContent = isAdultContent,
+                IsExplicitContent = isExplicitContent,
+                Note = ScrapNote(documentNode),
+                VoteCount = ScrapVoteCount(documentNode),
+                DiffusionState = ScrapDiffusionState(documentNode),
+                EpisodesCount = ScrapTotalEpisodes(documentNode),
+                Duration = ScrapDuration(documentNode),
+                Target = await ScrapTargetAsync(documentNode, cancellationToken, command),
+                OrigineAdaptation = await ScrapOrigineAdaptationAsync(documentNode, cancellationToken, command),
+                Format = await ScrapFormatAsync(documentNode, cancellationToken, command),
+                Season = await ScrapSeason(documentNode, cancellationToken, command),
+                ReleaseDate = ScrapBeginDate(documentNode),
+                Description = ScrapDescription(documentNode),
+                ThumbnailUrl = ScrapFullThumbnail(documentNode),
+            };
+
+            //Genres et themes
+            var genres = await GetCategoriesAsync(documentNode, CategoryType.Genre, cancellationToken, command).ToArrayAsync();
+            var themes = await GetCategoriesAsync(documentNode, CategoryType.Theme, cancellationToken, command).ToArrayAsync();
+            List<Tcategory> categories = [.. genres, .. themes];
+            if (categories.Count > 0)
+            {
+                foreach (var category in categories)
+                {
+                    if (!anime.Categories.Any(a => string.Equals(a.Name, category.Name, StringComparison.OrdinalIgnoreCase) && a.Type == category.Type))
+                        anime.Categories.Add(category);
+                }
+            }
+
+            return new OperationState<TanimeBase?>
+            {
+                IsSuccess = true,
+                Data = anime,
+            };
+        }
+        catch (Exception ex)
+        {
+            LogServices.LogDebug(ex);
+            return new OperationState<TanimeBase?>(false, ex.Message);
+        }
+    }
+
+    
+    public static async Task<TanimeBase[]> ScrapAnimeSearchAsync(AnimeFinderParameterStruct finderParameter, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        var url = IcotakuWebHelpers.GetAdvancedSearchUrl(IcotakuSection.Anime, finderParameter);
+        if (url.IsStringNullOrEmptyOrWhiteSpace())
+            return Array.Empty<TanimeBase>();
+        HtmlWeb htmlWeb = new();
+        var htmlDocument = htmlWeb.Load(url);
+
+        return await ScrapSearchResult(htmlDocument.DocumentNode, cancellationToken, cmd).ToArrayAsync();
+    }
     #endregion
 
     #region General
@@ -973,6 +1066,36 @@ public partial class Tanime
 
     #region Download Folder
 
+
+    #endregion
+
+    #region finder
+
+    private static async  IAsyncEnumerable<TanimeBase> ScrapSearchResult(HtmlNode documentNode, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        var tableNode = documentNode.SelectSingleNode("//table[contains(@class, 'table_apercufiche')]");
+
+        var nodes = tableNode?.SelectNodes(".//div[contains(@class, 'td_apercufiche')]/a[1]")?.ToArray();
+        if (nodes == null || nodes.Length == 0)
+            yield break;
+
+        foreach (var node in nodes)
+        {
+            var href = node.Attributes["href"]?.Value;
+            if (href == null || href.IsStringNullOrEmptyOrWhiteSpace())
+                continue;
+
+            var uri = IcotakuWebHelpers.GetFullHrefFromHtmlNode(node, IcotakuSection.Anime);
+            if (uri == null)
+                continue;
+            
+            var animeBaseResult = await ScrapAnimeBaseAsync(uri);
+            if (!animeBaseResult.IsSuccess || animeBaseResult.Data == null)
+                continue;
+            
+            yield return animeBaseResult.Data;
+        }
+    }
 
     #endregion
 }

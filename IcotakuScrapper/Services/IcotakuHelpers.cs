@@ -31,5 +31,17 @@ namespace IcotakuScrapper.Services
                 DiffusionStateKind.Stopped => "Arrêté",
                 _ => throw new ArgumentOutOfRangeException(nameof(stateKind), stateKind, "La valeur spécifiée est invalide")
             };
+        
+        public static string? GetDiffusionStateSearchPamareter(DiffusionStateKind stateKind)
+            => stateKind switch
+            {
+                DiffusionStateKind.Unknown => null,
+                DiffusionStateKind.UpComing => "bientot",
+                DiffusionStateKind.InProgress => "en_cours",
+                DiffusionStateKind.Paused => "en_pause",
+                DiffusionStateKind.Completed => "terminee",
+                DiffusionStateKind.Stopped => "arretee",
+                _ => null
+            };
     }
 }
