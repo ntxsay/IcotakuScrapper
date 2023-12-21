@@ -1,4 +1,5 @@
-﻿using IcotakuScrapper.Extensions;
+﻿using IcotakuScrapper.Common;
+using IcotakuScrapper.Extensions;
 
 using Microsoft.Data.Sqlite;
 
@@ -7,7 +8,7 @@ namespace IcotakuScrapper.Contact;
 /// <summary>
 /// Représente un contact sans les informations détaillées de <see cref="Tcontact"/>.
 /// </summary>
-public class TcontactBase
+public class TcontactBase : ITableSheetBase
 {
     /// <summary>
     /// Obtient ou définit l'id du contact.

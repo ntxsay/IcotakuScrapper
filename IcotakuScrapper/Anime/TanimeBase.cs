@@ -7,13 +7,13 @@ using System.Threading;
 
 namespace IcotakuScrapper.Anime;
 
-public class TanimeBase
+public partial class TanimeBase : ITableSheetBase
 {
     /// <summary>
     /// Obtient ou définit l'id de l'anime.
     /// </summary>
     public int Id { get; protected set; }
-    
+
     /// <summary>
     /// Obtient ou définit le guid de l'anime.
     /// </summary>
@@ -23,7 +23,7 @@ public class TanimeBase
     /// Obtient ou définit l'id de la fiche Icotaku de l'anime.
     /// </summary>
     public int SheetId { get; set; }
-    
+
     /// <summary>
     /// Obtient ou définit la date de sortie de l'anime au format yyyy-MM-dd.
     /// </summary>
@@ -71,7 +71,7 @@ public class TanimeBase
     /// Obtient ou définit le nombre d'épisodes de l'anime.
     /// </summary>
     public ushort EpisodesCount { get; set; }
-    
+
     /// <summary>
     /// Obtient ou définit la durée d'un épisode de l'anime (en minutes).
     /// </summary>
@@ -103,12 +103,12 @@ public class TanimeBase
     /// Obtient ou définit l'url de la fiche de l'anime.
     /// </summary>
     public string Url { get; set; } = null!;
-    
+
     /// <summary>
     /// Obtient ou définit l'url de l'image de l'anime.
     /// </summary>
     public string? ThumbnailUrl { get; set; }
-    
+
     public string? ThumbnailPath => GetThumbnailPath();
 
     /// <summary>
@@ -124,7 +124,7 @@ public class TanimeBase
     {
         Id = id;
     }
-    
+
     public TanimeBase(int id, Guid guid)
     {
         Id = id;
@@ -132,7 +132,9 @@ public class TanimeBase
     }
 
     public override string ToString() => $"{Name} ({Id}/{SheetId})";
-    
+
+    #region Folder et download
+
     /// <summary>
     /// Retourne la date de sortie de l'anime via l'objet <see cref="DateOnly"/>.
     /// </summary>
@@ -157,7 +159,7 @@ public class TanimeBase
 
         if (DateOnly.TryParse($"{year}-{month}-{day}", CultureInfo.DefaultThreadCurrentCulture, out var result))
             return result;
-        
+
         return null;
     }
 
@@ -181,12 +183,15 @@ public class TanimeBase
         if (sheetId == 0)
             return false;
 
-        return await IcotakuWebHelpers.DownloadFullSheetFolderAsync(IcotakuSheetType.Anime, sheetId, itemGuid, cancellationToken ?? CancellationToken.None);
+        return await IcotakuWebHelpers.DownloadFullSheetFolderAsync(IcotakuSheetType.Anime, sheetId, itemGuid,
+            cancellationToken ?? CancellationToken.None);
     }
 
-    public static async Task<bool> DownloadFolderAsync(Guid itemGuid, int sheetId, CancellationToken? cancellationToken = null)
+    public static async Task<bool> DownloadFolderAsync(Guid itemGuid, int sheetId,
+        CancellationToken? cancellationToken = null)
     {
-        return await IcotakuWebHelpers.DownloadFullSheetFolderAsync(IcotakuSheetType.Anime, sheetId, itemGuid, cancellationToken ?? CancellationToken.None);
+        return await IcotakuWebHelpers.DownloadFullSheetFolderAsync(IcotakuSheetType.Anime, sheetId, itemGuid,
+            cancellationToken ?? CancellationToken.None);
     }
 
     /// <summary>
@@ -209,10 +214,12 @@ public class TanimeBase
 
     public static string? GetFolderPath(Guid itemGuid)
     {
-        return !InputOutput.IsDirectoryExists(IcotakuDefaultFolder.Animes, itemGuid) 
-            ? null 
+        return !InputOutput.IsDirectoryExists(IcotakuDefaultFolder.Animes, itemGuid)
+            ? null
             : InputOutput.GetDirectoryPath(IcotakuDefaultFolder.Animes, itemGuid);
     }
+
+    #endregion
 
     #region Thumbnail operations
 
@@ -225,7 +232,7 @@ public class TanimeBase
         thumbnailPath = await DownloadThumbnailAsync(cancellationToken);
         return thumbnailPath ?? null;
     }
-    
+
     /// <summary>
     /// Retourne le chemin d'accès vers l'affiche de l'anime.
     /// </summary>
@@ -234,19 +241,20 @@ public class TanimeBase
     {
         return GetThumbnailPath(Guid);
     }
-    
+
     public async Task<string?> DownloadThumbnailAsync(CancellationToken? cancellationToken = null)
     {
         if (ThumbnailUrl == null || ThumbnailUrl.IsStringNullOrEmptyOrWhiteSpace())
             return null;
-        
+
         if (!Uri.TryCreate(ThumbnailUrl, UriKind.Absolute, out var uri))
             return null;
-        
+
         return await DownloadThumbnailAsync(Guid, uri, cancellationToken ?? CancellationToken.None);
     }
 
-    public static async Task<string?> GetOrDownloadThumbnailAsync(Uri sheetUri, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public static async Task<string?> GetOrDownloadThumbnailAsync(Uri sheetUri,
+        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         var itemGuid = await GetGuidAsync(sheetUri, cancellationToken ?? CancellationToken.None);
         if (itemGuid == Guid.Empty)
@@ -259,7 +267,7 @@ public class TanimeBase
         thumbnailPath = await DownloadThumbnailAsync(sheetUri, cancellationToken, cmd);
         return thumbnailPath ?? null;
     }
-    
+
     /// <summary>
     /// Retourne le chemin d'accès vers l'affiche de l'anime.
     /// </summary>
@@ -267,43 +275,47 @@ public class TanimeBase
     /// <param name="cancellationToken"></param>
     /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<string?> DownloadThumbnailAsync(Uri sheetUri, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public static async Task<string?> DownloadThumbnailAsync(Uri sheetUri, CancellationToken? cancellationToken = null,
+        SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = 
+        command.CommandText =
             """
-            SELECT 
-                Guid, 
-                ThumbnailUrl 
-            FROM Tanime 
+            SELECT
+                Guid,
+                ThumbnailUrl
+            FROM Tanime
             WHERE Url = $Url COLLATE NOCASE
             """;
-        
+
         command.Parameters.Clear();
-        
+
         command.Parameters.AddWithValue("$Url", sheetUri.ToString());
-        
+
         var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
             return null;
-        
+
         await reader.ReadAsync(cancellationToken ?? CancellationToken.None);
         var itemGuid = reader.GetGuid(reader.GetOrdinal("Guid"));
-        var thumbnailUrl = reader.IsDBNull(reader.GetOrdinal("ThumbnailUrl")) 
-            ? null 
+        var thumbnailUrl = reader.IsDBNull(reader.GetOrdinal("ThumbnailUrl"))
+            ? null
             : reader.GetString(reader.GetOrdinal("ThumbnailUrl"));
-        
+
         if (itemGuid == Guid.Empty || thumbnailUrl == null || thumbnailUrl.IsStringNullOrEmptyOrWhiteSpace())
             return null;
-        
-        return await DownloadThumbnailAsync(itemGuid, new Uri(thumbnailUrl), cancellationToken ?? CancellationToken.None);
+
+        return await DownloadThumbnailAsync(itemGuid, new Uri(thumbnailUrl),
+            cancellationToken ?? CancellationToken.None);
     }
-    
-    public static async Task<string?> DownloadThumbnailAsync(Guid itemGuid, Uri thumbnailUri, CancellationToken? cancellationToken = null)
+
+    public static async Task<string?> DownloadThumbnailAsync(Guid itemGuid, Uri thumbnailUri,
+        CancellationToken? cancellationToken = null)
     {
-        return await IcotakuWebHelpers.DownloadThumbnailAsync(IcotakuSheetType.Anime, itemGuid, thumbnailUri, false, cancellationToken ?? CancellationToken.None);
+        return await IcotakuWebHelpers.DownloadThumbnailAsync(IcotakuSheetType.Anime, itemGuid, thumbnailUri, false,
+            cancellationToken ?? CancellationToken.None);
     }
-    
+
     /// <summary>
     /// Retourne le chemin d'accès vers l'affiche de l'anime.
     /// </summary>
@@ -313,11 +325,11 @@ public class TanimeBase
     public static async Task<string?> GetThumbnailPathAsync(Uri sheetUri, CancellationToken? cancellationToken = null)
     {
         var itemGuid = await GetGuidAsync(sheetUri, cancellationToken ?? CancellationToken.None);
-        return itemGuid == Guid.Empty 
-            ? null 
+        return itemGuid == Guid.Empty
+            ? null
             : GetThumbnailPath(itemGuid);
     }
-    
+
     /// <summary>
     /// Retourne le chemin d'accès vers l'affiche de l'anime.
     /// </summary>
@@ -325,18 +337,19 @@ public class TanimeBase
     /// <returns></returns>
     public static string? GetThumbnailPath(Guid itemGuid)
     {
-        var folderPath = InputOutput.GetDirectoryPath(IcotakuDefaultFolder.Animes, itemGuid, IcotakuDefaultSubFolder.Sheet);
+        var folderPath =
+            InputOutput.GetDirectoryPath(IcotakuDefaultFolder.Animes, itemGuid, IcotakuDefaultSubFolder.Sheet);
         if (folderPath == null)
             return null;
-        
+
         var path = Directory.EnumerateFiles(folderPath, "affiche_*", SearchOption.TopDirectoryOnly)
-            .FirstOrDefault(f => !Path.GetFileNameWithoutExtension(f).Contains("mini", StringComparison.OrdinalIgnoreCase));
+            .FirstOrDefault(f =>
+                !Path.GetFileNameWithoutExtension(f).Contains("mini", StringComparison.OrdinalIgnoreCase));
 
         return path;
-    } 
+    }
 
     #endregion
-
 
     #region Count
 
@@ -369,6 +382,7 @@ public class TanimeBase
         {
             return 0;
         }
+
         command.CommandText = columnSelect switch
         {
             IntColumnSelect.Id => "SELECT COUNT(Id) FROM Tanime WHERE Id = $Id",
@@ -502,30 +516,75 @@ public class TanimeBase
 
     #region Exists
 
+    /// <summary>
+    /// Vérifie si un animé existe dans la base de données.
+    /// </summary>
+    /// <param name="id">Identifiant de base données de la fiche</param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
     public static async Task<bool> ExistsByIdAsync(int id,
         CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
         => await CountAsync(id, IntColumnSelect.Id, cancellationToken, cmd) > 0;
-    
+
+    /// <summary>
+    /// Vérifie si un animé existe dans la base de données.
+    /// </summary>
+    /// <param name="sheetId">Identifiant Icotaku de la fiche</param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
     public static async Task<bool> ExistsBySheetIdAsync(int sheetId,
         CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
         => await CountAsync(sheetId, IntColumnSelect.SheetId, cancellationToken, cmd) > 0;
-    
-    
+
+
+    /// <summary>
+    /// Vérifie si un animé existe dans la base de données.
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="columnSelect"></param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
     internal static async Task<bool> ExistsAsync(int id, IntColumnSelect columnSelect,
         CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
         => await CountAsync(id, columnSelect, cancellationToken, cmd) > 0;
 
+    /// <summary>
+    /// Vérifie si un animé existe dans la base de données.
+    /// </summary>
+    /// <param name="name">Nom de l'animé</param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
     public static async Task<bool> ExistsAsync(string name, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
         => await CountAsync(name, cancellationToken, cmd) > 0;
 
+    /// <summary>
+    /// Vérifie si un animé existe dans la base de données.
+    /// </summary>
+    /// <param name="sheetUri">Url complète de la fiche Icotaku de l'animé</param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
     public static async Task<bool> ExistsAsync(Uri sheetUri, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
         => await CountAsync(sheetUri, cancellationToken, cmd) > 0;
 
+    /// <summary>
+    /// Vériie si un animé existe dans la base de données.
+    /// </summary>
+    /// <param name="name"></param>
+    /// <param name="sheetId"></param>
+    /// <param name="sheetUri"></param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
     public static async Task<bool> ExistsAsync(string name, int sheetId, Uri sheetUri,
         CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
@@ -560,7 +619,8 @@ public class TanimeBase
 
         command.Parameters.Clear();
 
-        command.AddExplicitContentFilter(DbStartFilterMode.And, "Tanime.IsAdultContent", "Tanime.IsExplicitContent", null, null);
+        command.AddExplicitContentFilter(DbStartFilterMode.And, "Tanime.IsAdultContent", "Tanime.IsExplicitContent",
+            null, null);
 
         command.Parameters.AddWithValue("$Id", id);
 
@@ -578,7 +638,8 @@ public class TanimeBase
         command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Tanime.Name = $Name COLLATE NOCASE";
         command.Parameters.Clear();
 
-        command.AddExplicitContentFilter(DbStartFilterMode.And, "Tanime.IsAdultContent", "Tanime.IsExplicitContent", null, null);
+        command.AddExplicitContentFilter(DbStartFilterMode.And, "Tanime.IsAdultContent", "Tanime.IsExplicitContent",
+            null, null);
         command.Parameters.AddWithValue("$Name", name);
 
         var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
@@ -592,14 +653,16 @@ public class TanimeBase
         command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Tanime.Url = $Url COLLATE NOCASE";
         command.Parameters.Clear();
 
-        command.AddExplicitContentFilter(DbStartFilterMode.And, "Tanime.IsAdultContent", "Tanime.IsExplicitContent", null, null);
+        command.AddExplicitContentFilter(DbStartFilterMode.And, "Tanime.IsAdultContent", "Tanime.IsExplicitContent",
+            null, null);
         command.Parameters.AddWithValue("$Url", sheetUri.ToString());
 
         var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         return !reader.HasRows ? null : (await GetRecords(reader, cancellationToken)).FirstOrDefault();
     }
 
-    public static async Task<Guid> GetGuidAsync(int id, IntColumnSelect columnSelect, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public static async Task<Guid> GetGuidAsync(int id, IntColumnSelect columnSelect,
+        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
         var isColumnSelectValid = command.IsIntColumnValidated(columnSelect,
@@ -622,7 +685,8 @@ public class TanimeBase
 
         command.Parameters.Clear();
 
-        command.AddExplicitContentFilter(DbStartFilterMode.And, "Tanime.IsAdultContent", "Tanime.IsExplicitContent", null, null);
+        command.AddExplicitContentFilter(DbStartFilterMode.And, "Tanime.IsAdultContent", "Tanime.IsExplicitContent",
+            null, null);
 
         command.Parameters.AddWithValue("$Id", id);
 
@@ -632,13 +696,15 @@ public class TanimeBase
         return Guid.Empty;
     }
 
-    public static async Task<Guid> GetGuidAsync(Uri sheetUri, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public static async Task<Guid> GetGuidAsync(Uri sheetUri, CancellationToken? cancellationToken = null,
+        SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
         command.CommandText = "SELECT Guid FROM Tanime WHERE Url = $Url COLLATE NOCASE";
         command.Parameters.Clear();
 
-        command.AddExplicitContentFilter(DbStartFilterMode.And, "Tanime.IsAdultContent", "Tanime.IsExplicitContent", null, null);
+        command.AddExplicitContentFilter(DbStartFilterMode.And, "Tanime.IsAdultContent", "Tanime.IsExplicitContent",
+            null, null);
         command.Parameters.AddWithValue("$Url", sheetUri.ToString());
 
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
@@ -649,11 +715,189 @@ public class TanimeBase
 
     #endregion
 
+    #region Insert
+
+    /// <summary>
+    /// Insert la base d'un animé dans la base de données.
+    /// </summary>
+    /// <param name="disableExistenceVerification"></param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
+    public async Task<OperationState<int>> InsertAync(bool disableExistenceVerification = false,
+        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        if (Name.IsStringNullOrEmptyOrWhiteSpace())
+            return new OperationState<int>(false, "Le nom de l'anime ne peut pas être vide");
+
+        if (Url.IsStringNullOrEmptyOrWhiteSpace())
+            return new OperationState<int>(false, "L'url de la fiche de l'anime ne peut pas être vide");
+
+        if (!Uri.TryCreate(Url, UriKind.Absolute, out var uri) || !uri.IsAbsoluteUri)
+            return new OperationState<int>(false, "L'url de la fiche de l'anime n'est pas valide");
+
+        if (SheetId <= 0)
+            return new OperationState<int>(false, "L'id de la fiche icotaku n'est pas valide");
+
+        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+
+        if (!disableExistenceVerification && await ExistsAsync(Name, SheetId, uri, cancellationToken, command))
+            return new OperationState<int>(false, "L'anime existe déjà");
+
+
+        command.CommandText =
+            """
+            INSERT OR REPLACE INTO Tanime
+                (SheetId, Url, IsAdultContent, IsExplicitContent, Note, VoteCount, Name, DiffusionState, EpisodeCount, EpisodeDuration, ReleaseDate, EndDate, Description, ThumbnailUrl, IdFormat, IdTarget, IdOrigine, IdSeason)
+            VALUES
+                ($SheetId, $Url, $IsAdultContent, $IsExplicitContent, $Note, $VoteCount, $Name, $DiffusionState , $EpisodeCount, $EpisodeDuration, $ReleaseDate, $EndDate, $Description, $ThumbnailUrl, $IdFormat, $IdTarget, $IdOrigine, $IdSeason)
+            """;
+
+        command.Parameters.Clear();
+
+        command.Parameters.AddWithValue("$SheetId", SheetId);
+        command.Parameters.AddWithValue("$Url", Url);
+        command.Parameters.AddWithValue("$IsAdultContent", IsAdultContent);
+        command.Parameters.AddWithValue("$IsExplicitContent", IsExplicitContent);
+        command.Parameters.AddWithValue("$Note", Note ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$VoteCount", VoteCount);
+        command.Parameters.AddWithValue("$Name", Name);
+        command.Parameters.AddWithValue("$DiffusionState", (byte)DiffusionState);
+        command.Parameters.AddWithValue("$EpisodeCount", EpisodesCount);
+        command.Parameters.AddWithValue("$EpisodeDuration", Duration.TotalMinutes);
+        command.Parameters.AddWithValue("$ReleaseDate", ReleaseDate ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$EndDate", EndDate ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$Description", Description ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$ThumbnailUrl", ThumbnailUrl ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$IdFormat", Format?.Id ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$IdTarget", Target?.Id ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$IdOrigine", OrigineAdaptation?.Id ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$IdSeason", Season?.Id ?? (object)DBNull.Value);
+
+        try
+        {
+            var result = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
+            if (result <= 0)
+                return new OperationState<int>(false, "L'anime n'a pas été ajouté");
+            Id = await command.GetLastInsertRowIdAsync();
+
+            return new OperationState<int>(true, "L'anime a été ajouté avec succès", Id);
+        }
+        catch (Exception e)
+        {
+            LogServices.LogDebug(e.Message);
+            return new OperationState<int>(false, "Une erreur est survenue lors de l'ajout de l'anime");
+        }
+    }
+
+    #endregion
+
+    #region Update
+
+    /// <summary>
+    /// Met à jour la base d'un animé dans la base de données.
+    /// </summary>
+    /// <param name="disableExistenceVerification"></param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
+    public async Task<OperationState> UpdateAsync(bool disableExistenceVerification = false,
+        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        if (Name.IsStringNullOrEmptyOrWhiteSpace())
+            return new OperationState(false, "Le nom de l'anime ne peut pas être vide");
+
+        if (Url.IsStringNullOrEmptyOrWhiteSpace())
+            return new OperationState(false, "L'url de la fiche de l'anime ne peut pas être vide");
+
+        if (SheetId <= 0)
+            return new OperationState(false, "L'id de la fiche de l'anime Icotaku n'est pas valide");
+
+        if (!Uri.TryCreate(Url, UriKind.Absolute, out var uri) || !uri.IsAbsoluteUri)
+            return new OperationState(false, "L'url de la fiche de l'anime n'est pas valide");
+
+        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        if (Id <= 0 || (!disableExistenceVerification &&
+                        !await ExistsAsync(Id, IntColumnSelect.Id, cancellationToken, command)))
+            return new OperationState(false, "L'id de l'anime ne peut pas être inférieur ou égal à 0");
+
+        if (!disableExistenceVerification)
+        {
+            var existingId = await GetIdOfAsync(Name, SheetId, uri, cancellationToken, command);
+            if (existingId.HasValue && existingId.Value != Id)
+                return new OperationState(false, "L'url de la fiche de l'anime existe déjà");
+        }
+
+        command.CommandText =
+            """
+            UPDATE Tanime SET
+                SheetId = $SheetId,
+                Url = $Url,
+                IsAdultContent = $IsAdultContent,
+                IsExplicitContent = $IsExplicitContent,
+                Note = $Note,
+                VoteCount = $VoteCount,
+                Name = $Name,
+                DiffusionState = $DiffusionState,
+                EpisodeCount = $EpisodeCount,
+                EpisodeDuration = $EpisodeDuration,
+                ReleaseDate = $ReleaseDate,
+                EndDate = $EndDate,
+                Description = $Description,
+                ThumbnailUrl = $ThumbnailUrl,
+                IdFormat = $IdFormat,
+                IdTarget = $IdTarget,
+                IdOrigine = $IdOrigine,
+                IdSeason = $IdSeason
+            WHERE Id = $Id
+            """;
+
+        command.Parameters.Clear();
+
+        command.Parameters.AddWithValue("$SheetId", SheetId);
+        command.Parameters.AddWithValue("$Url", Url);
+        command.Parameters.AddWithValue("$IsAdultContent", IsAdultContent);
+        command.Parameters.AddWithValue("$IsExplicitContent", IsExplicitContent);
+        command.Parameters.AddWithValue("$Note", Note ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$VoteCount", VoteCount);
+        command.Parameters.AddWithValue("$Name", Name);
+        command.Parameters.AddWithValue("$DiffusionState", (byte)DiffusionState);
+        command.Parameters.AddWithValue("$EpisodeCount", EpisodesCount);
+        command.Parameters.AddWithValue("$EpisodeDuration", Duration.TotalMinutes);
+        command.Parameters.AddWithValue("$ReleaseDate", ReleaseDate ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$EndDate", EndDate ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$Description", Description ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$ThumbnailUrl", ThumbnailUrl ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$IdFormat", Format?.Id ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$IdTarget", Target?.Id ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$IdOrigine", OrigineAdaptation?.Id ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$IdSeason", Season?.Id ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$Id", Id);
+
+        try
+        {
+            var result = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
+            return result > 0
+                ? new OperationState(true, "La base de l'anime a été modifiée avec succès")
+                : new OperationState(false, "La base de l'anime n'a pas été modifiée");
+        }
+        catch (Exception e)
+        {
+            LogServices.LogDebug(e.Message);
+            return new OperationState(false, "Une erreur est survenue lors de la mise à jour de la base de l'animé.");
+        }
+    }
+
+    #endregion
+
     #region Delete
-    public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+
+    public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null,
+        SqliteCommand? cmd = null)
         => await DeleteAsync(Id, SheetIntColumnSelect.Id, cancellationToken, cmd);
 
-    public static async Task<OperationState> DeleteAsync(int id, SheetIntColumnSelect columnSelect, CancellationToken? cancellationToken = null,
+    public static async Task<OperationState> DeleteAsync(int id, SheetIntColumnSelect columnSelect,
+        CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();

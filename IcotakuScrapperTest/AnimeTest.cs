@@ -206,11 +206,14 @@ namespace IcotakuScrapperTest
         {
             var parameter = new AnimeFinderParameterStruct()
             {
-                Title = "rosa",
-                OrigineAdaptation = "manga",
-                Year = 2008,
+                Title = null,
+                OrigineAdaptation = null,
+                IncludeGenresId = [9],
+                ExcludeGenresId = [18],
+                IncludeThemesId = [140],
+                ExcludeThemesId = [221]
             };
-            var animes = await Tanime.ScrapAnimeSearchAsync(parameter);
+            var animes = await TanimeBase.FindAsync(parameter);
             Assert.IsNotEmpty(animes);
         }
     }

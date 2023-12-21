@@ -199,176 +199,44 @@ public partial class Tanime : TanimeBase
 
     #region Insert
 
-    public async Task<OperationState<int>> InsertAync(bool disableExistenceVerification = false, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public new async Task<OperationState<int>> InsertAync(bool disableExistenceVerification = false, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
-        if (Name.IsStringNullOrEmptyOrWhiteSpace())
-            return new OperationState<int>(false, "Le nom de l'anime ne peut pas être vide");
-        
-        if (Url.IsStringNullOrEmptyOrWhiteSpace())
-            return new OperationState<int>(false, "L'url de la fiche de l'anime ne peut pas être vide");
-        
-        if (!Uri.TryCreate(Url, UriKind.Absolute, out var uri) || !uri.IsAbsoluteUri)
-            return new OperationState<int>(false, "L'url de la fiche de l'anime n'est pas valide");
-        
-        if (SheetId <= 0)
-            return new OperationState<int>(false, "L'id de la fiche icotaku n'est pas valide");
+        var insertBaseResult = await base.InsertAync(disableExistenceVerification, cancellationToken, cmd);
+        if (!insertBaseResult.IsSuccess || insertBaseResult.Data <= 0)
+            return insertBaseResult;
         
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        
-        if (!disableExistenceVerification && await ExistsAsync(Name, SheetId, uri, cancellationToken, command))
-            return new OperationState<int>(false, "L'anime existe déjà");
-        
-        
-        command.CommandText = 
-            """
-            INSERT OR REPLACE INTO Tanime 
-                (SheetId, Url, IsAdultContent, IsExplicitContent, Note, VoteCount, Name, DiffusionState, EpisodeCount, EpisodeDuration, ReleaseDate, EndDate, Description, ThumbnailUrl, IdFormat, IdTarget, IdOrigine, IdSeason) 
-            VALUES 
-                ($SheetId, $Url, $IsAdultContent, $IsExplicitContent, $Note, $VoteCount, $Name, $DiffusionState , $EpisodeCount, $EpisodeDuration, $ReleaseDate, $EndDate, $Description, $ThumbnailUrl, $IdFormat, $IdTarget, $IdOrigine, $IdSeason)
-            """;
-        
-        command.Parameters.Clear();
-        
-        command.Parameters.AddWithValue("$SheetId", SheetId);
-        command.Parameters.AddWithValue("$Url", Url);
-        command.Parameters.AddWithValue("$IsAdultContent", IsAdultContent);
-        command.Parameters.AddWithValue("$IsExplicitContent", IsExplicitContent);
-        command.Parameters.AddWithValue("$Note", Note ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("$VoteCount", VoteCount);
-        command.Parameters.AddWithValue("$Name", Name);
-        command.Parameters.AddWithValue("$DiffusionState", (byte)DiffusionState);
-        command.Parameters.AddWithValue("$EpisodeCount", EpisodesCount);
-        command.Parameters.AddWithValue("$EpisodeDuration", Duration.TotalMinutes);
-        command.Parameters.AddWithValue("$ReleaseDate", ReleaseDate ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("$EndDate", EndDate ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("$Description", Description ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("$ThumbnailUrl", ThumbnailUrl ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("$IdFormat", Format?.Id ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("$IdTarget", Target?.Id ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("$IdOrigine", OrigineAdaptation?.Id ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("$IdSeason", Season?.Id ?? (object)DBNull.Value);
-        
-        try
-        {
-            var result = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
-            if (result <= 0)
-                return new OperationState<int>(false, "L'anime n'a pas été ajouté");
-            Id = await command.GetLastInsertRowIdAsync();
+        await this.AddOrReplaceAlternativeTitlesAsync(cancellationToken, command);
+        await this.AddOrReplaceWebsitesAsync(cancellationToken, command);
+        await this.AddOrReplaceStudiosAsync(cancellationToken, command);
+        await this.AddOrReplaceCategoriesAsync(cancellationToken, command);
+        await this.AddOrReplaceEpisodesAsync(cancellationToken, command);
+        await this.AddOrReplaceLicensesAsync(cancellationToken, command);
+        await this.AddOrReplaceStaffsAsync(cancellationToken, command);
             
-            await this.AddOrReplaceAlternativeTitlesAsync(cancellationToken, command);
-            await this.AddOrReplaceWebsitesAsync(cancellationToken, command);
-            await this.AddOrReplaceStudiosAsync(cancellationToken, command);
-            await this.AddOrReplaceCategoriesAsync(cancellationToken, command);
-            await this.AddOrReplaceEpisodesAsync(cancellationToken, command);
-            await this.AddOrReplaceLicensesAsync(cancellationToken, command);
-            await this.AddOrReplaceStaffsAsync(cancellationToken, command);
-            
-            return new OperationState<int>(true, "L'anime a été ajouté avec succès", Id);
-
-        }
-        catch (Exception e)
-        {
-            Debug.WriteLine(e.Message);
-            return new OperationState<int>(false, "Une erreur est survenue lors de l'ajout de l'anime");
-        }
+        return new OperationState<int>(true, "L'anime a été ajouté avec succès", insertBaseResult.Data);
     }
     
     #endregion
 
     #region Update
 
-    public async Task<OperationState> UpdateAsync(bool disableExistenceVerification = false, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public new async Task<OperationState> UpdateAsync(bool disableExistenceVerification = false, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
-        if (Name.IsStringNullOrEmptyOrWhiteSpace())
-            return new OperationState(false, "Le nom de l'anime ne peut pas être vide");
+        var updateBaseResult = await base.UpdateAsync(disableExistenceVerification, cancellationToken, cmd);
+        if (!updateBaseResult.IsSuccess)
+            return updateBaseResult;
         
-        if (Url.IsStringNullOrEmptyOrWhiteSpace())
-            return new OperationState(false, "L'url de la fiche de l'anime ne peut pas être vide");
-        
-        if (SheetId <= 0)
-            return new OperationState(false, "L'id de la fiche de l'anime Icotaku n'est pas valide");
-        
-        if (!Uri.TryCreate(Url, UriKind.Absolute, out var uri) || !uri.IsAbsoluteUri)
-            return new OperationState(false, "L'url de la fiche de l'anime n'est pas valide");
-
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        if (Id <= 0 || (!disableExistenceVerification && !await ExistsAsync(Id, IntColumnSelect.Id, cancellationToken, command)))
-            return new OperationState(false, "L'id de l'anime ne peut pas être inférieur ou égal à 0");
-
-        if (!disableExistenceVerification)
-        {
-            var existingId = await GetIdOfAsync(Name, SheetId, uri, cancellationToken, command);
-            if (existingId.HasValue && existingId.Value != Id)
-                return new OperationState(false, "L'url de la fiche de l'anime existe déjà");
-        }
-        
-        command.CommandText = 
-            """
-            UPDATE Tanime SET 
-                SheetId = $SheetId, 
-                Url = $Url, 
-                IsAdultContent = $IsAdultContent,
-                IsExplicitContent = $IsExplicitContent,
-                Note = $Note,
-                VoteCount = $VoteCount,
-                Name = $Name, 
-                DiffusionState = $DiffusionState,
-                EpisodeCount = $EpisodeCount, 
-                EpisodeDuration = $EpisodeDuration, 
-                ReleaseDate = $ReleaseDate, 
-                EndDate = $EndDate, 
-                Description = $Description, 
-                ThumbnailUrl = $ThumbnailUrl, 
-                IdFormat = $IdFormat, 
-                IdTarget = $IdTarget, 
-                IdOrigine = $IdOrigine,
-                IdSeason = $IdSeason
-            WHERE Id = $Id
-            """;
-        
-        command.Parameters.Clear();
-        
-        command.Parameters.AddWithValue("$SheetId", SheetId);
-        command.Parameters.AddWithValue("$Url", Url);
-        command.Parameters.AddWithValue("$IsAdultContent", IsAdultContent);
-        command.Parameters.AddWithValue("$IsExplicitContent", IsExplicitContent);
-        command.Parameters.AddWithValue("$Note", Note ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("$VoteCount", VoteCount);
-        command.Parameters.AddWithValue("$Name", Name);
-        command.Parameters.AddWithValue("$DiffusionState", (byte)DiffusionState);
-        command.Parameters.AddWithValue("$EpisodeCount", EpisodesCount);
-        command.Parameters.AddWithValue("$EpisodeDuration", Duration.TotalMinutes);
-        command.Parameters.AddWithValue("$ReleaseDate", ReleaseDate ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("$EndDate", EndDate ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("$Description", Description ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("$ThumbnailUrl", ThumbnailUrl ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("$IdFormat", Format?.Id ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("$IdTarget", Target?.Id ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("$IdOrigine", OrigineAdaptation?.Id ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("$IdSeason", Season?.Id ?? (object)DBNull.Value);
-        command.Parameters.AddWithValue("$Id", Id);
-        
-        try
-        {
-            var result = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
-
-            await this.UpdateAlternativeTitlesAsync(cancellationToken, command);
-            await this.UpdateWebsitesAsync(cancellationToken, command);
-            await this.UpdateStudiosAsync(cancellationToken, command);
-            await this.UpdateCategoriesAsync(cancellationToken, command);
-            await this.UpdateEpisodesAsync(cancellationToken, command);
-            await this.UpdateLicensesAsync(cancellationToken, command);
-            await this.UpdateStaffsAsync(cancellationToken, command);
+        await this.UpdateAlternativeTitlesAsync(cancellationToken, command);
+        await this.UpdateWebsitesAsync(cancellationToken, command);
+        await this.UpdateStudiosAsync(cancellationToken, command);
+        await this.UpdateCategoriesAsync(cancellationToken, command);
+        await this.UpdateEpisodesAsync(cancellationToken, command);
+        await this.UpdateLicensesAsync(cancellationToken, command);
+        await this.UpdateStaffsAsync(cancellationToken, command);
             
-            return result > 0 
-                ? new OperationState(true, "L'anime a été mis à jour avec succès") 
-                : new OperationState(false, "Une erreur est survenue lors de la modification de l'anime");
-        }
-        catch (Exception e)
-        {
-            Debug.WriteLine(e.Message);
-            return new OperationState(false, "Une erreur est survenue lors de la modification de l'anime");
-        }
+        return new OperationState(true, "L'anime a été mis à jour avec succès") ;
     }
 
     #endregion

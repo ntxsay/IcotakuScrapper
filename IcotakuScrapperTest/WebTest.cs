@@ -22,8 +22,8 @@ namespace IcotakuScrapperTest
                 OrigineAdaptation = "manga",
                 Year = 2013,
             };
-            var url = IcotakuWebHelpers.GetAdvancedSearchUrl(IcotakuSection.Anime, parameter);
-            Assert.IsNotEmpty(url);
+            var url = IcotakuWebHelpers.GetAdvancedSearchUri(IcotakuSection.Anime, parameter);
+            Assert.IsNotNull(url);
         }
 
     }

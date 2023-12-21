@@ -182,7 +182,7 @@ public static class IcotakuWebHelpers
         };
     }
 
-    public static string? GetAdvancedSearchUrl(IcotakuSection section, AnimeFinderParameterStruct findParameter)
+    public static Uri? GetAdvancedSearchUri(IcotakuSection section, AnimeFinderParameterStruct findParameter, uint page = 1)
     {
         
         var baseUrl = section switch
@@ -313,6 +313,14 @@ public static class IcotakuWebHelpers
             baseUrl += "commit=Rechercher";
         }
         
+        //page
+        if (page > 0)
+        {
+            if (!baseUrl.EndsWith('?'))
+                baseUrl += "&";
+            baseUrl += $"&page={page}";
+        }
+        
         if (baseUrl.EndsWith('?'))
             baseUrl = baseUrl.TrimEnd('?');
         else if (baseUrl.EndsWith('&'))
@@ -321,8 +329,8 @@ public static class IcotakuWebHelpers
 
         if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out var uri) || !uri.IsAbsoluteUri)
             return null;
-        
-        return uri.ToString();
+
+        return uri;
     }
 
     /// <summary>
@@ -418,7 +426,7 @@ public static class IcotakuWebHelpers
         var href = node.GetAttributeValue("href", string.Empty);
         if (href.IsStringNullOrEmptyOrWhiteSpace())
             return null;
-
+        
         return GetFullHrefFromRelativePath(href, section);
     }
 
@@ -439,6 +447,8 @@ public static class IcotakuWebHelpers
             href = href.TrimStart('/');
 
         href = $"{GetBaseUrl(section)}/{href}";
+        
+        href = href.Replace("&amp;", "&");
 
         if (Uri.TryCreate(href, UriKind.Absolute, out var uri) && uri.IsAbsoluteUri)
             return uri;
