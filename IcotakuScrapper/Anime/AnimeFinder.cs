@@ -1,18 +1,25 @@
-using System.ComponentModel;
 using HtmlAgilityPack;
-using IcotakuScrapper.Common;
+using System.ComponentModel;
 
 namespace IcotakuScrapper.Anime;
 
-public class AnimeFinder
+public class AnimeFinder : IDisposable
 {
+    public delegate void OperationCompletedEventHandler(RunWorkerCompletedEventArgs args);
+    public event OperationCompletedEventHandler OperationCompletedRequested;
+
+    public delegate void ProgressChangedEventHandler(double percent, OperationState<TanimeBase?> operationState);
+    public event ProgressChangedEventHandler ProgressChangedRequested;
+
+
     private BackgroundWorker _Worker;
 
     private AnimeFinderParameterStruct _parameter = default;
-    
+    private bool disposedValue;
+
     public bool IsRunning => _Worker.IsBusy;
     public bool IsCancelled => _Worker.CancellationPending;
-    
+
     public AnimeFinder()
     {
         _Worker = new BackgroundWorker()
@@ -20,12 +27,12 @@ public class AnimeFinder
             WorkerReportsProgress = true,
             WorkerSupportsCancellation = true
         };
-        
+
         _Worker.DoWork += WorkerOnDoWork;
         _Worker.ProgressChanged += WorkerOnProgressChanged;
         _Worker.RunWorkerCompleted += WorkerOnRunWorkerCompleted;
     }
-    
+
     public void Find(AnimeFinderParameterStruct parameter)
     {
         if (IsRunning)
@@ -33,17 +40,17 @@ public class AnimeFinder
             LogServices.LogDebug("La recherche est déjà en cours.");
             return;
         }
-        
+
         var uri = IcotakuWebHelpers.GetAdvancedSearchUri(IcotakuSection.Anime, parameter);
         if (uri == null)
         {
             LogServices.LogDebug("Impossible de créer l'uri de recherche.");
             return;
         }
-        
+
         HtmlWeb htmlWeb = new();
         var htmlDocument = htmlWeb.Load(uri);
-        
+
         var tableNode = htmlDocument.DocumentNode.SelectSingleNode("//table[contains(@class, 'table_apercufiche')]");
         if (tableNode == null)
         {
@@ -59,13 +66,12 @@ public class AnimeFinder
     {
         if (e.Argument is not HtmlNode htmlNode)
             return;
-        
+
         var (minPage, maxPage) = TanimeBase.GetSearchMinAndMaxPage(htmlNode);
         //Compte appriximativement le nombre de fiches, il y a 15 fiches par page
         var totalItems = (int)(maxPage * 15);
         var count = 0;
 
-        
         //Obtient l'uri des fiches de la première page
         var animeSheetUris = TanimeBase.ScrapSearchResultUri(htmlNode).ToArray();
         foreach (var animeSheetUri in animeSheetUris)
@@ -75,22 +81,22 @@ public class AnimeFinder
                 e.Cancel = true;
                 return;
             }
-            
-            using var animeBaseResult = TanimeBase.ScrapAnimeBaseAsync(animeSheetUri);
-            animeBaseResult.Wait();
-            if (!animeBaseResult.Result.IsSuccess || animeBaseResult.Result.Data == null)
-                continue;
-            
+
             count++;
             var percent = count * 100 / totalItems;
-            _Worker.ReportProgress(percent, animeBaseResult.Result.Data);
+
+            using var animeBaseResult = TanimeBase.ScrapAnimeBaseAsync(animeSheetUri);
+            animeBaseResult.Wait();
+            
+            _Worker.ReportProgress(percent, animeBaseResult.Result);
             Thread.Sleep(100);
         }
-        
+
         //Si il n'y a qu'une seule page, on arrête la recherche
-        if (minPage < 1 || maxPage < 2) 
+        if (minPage < 1 || maxPage < 2)
             return;
-        
+
+        //Sinon on scrap les autres pages
         for (var i = minPage; i <= maxPage; i++)
         {
             if (_Worker.CancellationPending)
@@ -98,18 +104,18 @@ public class AnimeFinder
                 e.Cancel = true;
                 return;
             }
-            
+
             //Obtient l'uri de la page en cours
             var pageUri = IcotakuWebHelpers.GetAdvancedSearchUri(IcotakuSection.Anime, _parameter, i);
             if (pageUri == null)
                 continue;
-            
+
             //Charge le document HTML
             HtmlWeb htmlWeb = new();
             var htmlDocument = htmlWeb.Load(pageUri);
-            
+
             //Obtient l'uri des fiches
-            animeSheetUris= TanimeBase.ScrapSearchResultUri(htmlDocument.DocumentNode).ToArray();
+            animeSheetUris = TanimeBase.ScrapSearchResultUri(htmlDocument.DocumentNode).ToArray();
 
             //Si on est à la dernière page, on vérifie si le nombre de fiches est inférieur à 15 pour ajuster le nombre total de fiches
             if (i == maxPage)
@@ -123,6 +129,7 @@ public class AnimeFinder
                 }
             }
 
+            //Scrap les fiches
             foreach (var sheetUri in animeSheetUris)
             {
                 if (_Worker.CancellationPending)
@@ -130,31 +137,64 @@ public class AnimeFinder
                     e.Cancel = true;
                     return;
                 }
-                
-                using var animeBaseResult2 = TanimeBase.ScrapAnimeBaseAsync(sheetUri);
-                animeBaseResult2.Wait();
-                if (!animeBaseResult2.Result.IsSuccess || animeBaseResult2.Result.Data == null)
-                    continue;
-            
+
                 count++;
                 var percent2 = count * 100 / totalItems;
-                _Worker.ReportProgress(percent2, animeBaseResult2.Result.Data);
+
+                using var animeBaseResult2 = TanimeBase.ScrapAnimeBaseAsync(sheetUri);
+                animeBaseResult2.Wait();
+                
+                _Worker.ReportProgress(percent2, animeBaseResult2.Result);
                 Thread.Sleep(100);
             }
         }
     }
-    
+
     private void WorkerOnProgressChanged(object? sender, ProgressChangedEventArgs e)
     {
-        if (e.UserState is not TanimeBase animeBase)
+        if (e.UserState is not OperationState<TanimeBase?> operationState)
+        {
+            ProgressChangedRequested?.Invoke(e.ProgressPercentage, default);
             return;
-        
+        }
+
+        ProgressChangedRequested?.Invoke(e.ProgressPercentage, operationState);
     }
 
     private void WorkerOnRunWorkerCompleted(object? sender, RunWorkerCompletedEventArgs e)
     {
-        throw new NotImplementedException();
+        OperationCompletedRequested?.Invoke(e);
     }
 
-    
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposedValue)
+        {
+            if (disposing)
+            {
+                // TODO: supprimer l'état managé (objets managés)
+            }
+
+            // TODO: libérer les ressources non managées (objets non managés) et substituer le finaliseur
+            _Worker.Dispose();
+            // TODO: affecter aux grands champs une valeur null
+            _Worker = null!;
+
+            disposedValue = true;
+        }
+    }
+
+    // TODO: substituer le finaliseur uniquement si 'Dispose(bool disposing)' a du code pour libérer les ressources non managées
+    ~AnimeFinder()
+    {
+        // Ne changez pas ce code. Placez le code de nettoyage dans la méthode 'Dispose(bool disposing)'
+        Dispose(disposing: false);
+    }
+
+    public void Dispose()
+    {
+        // Ne changez pas ce code. Placez le code de nettoyage dans la méthode 'Dispose(bool disposing)'
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
 }
