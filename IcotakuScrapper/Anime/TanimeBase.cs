@@ -33,7 +33,7 @@ public partial class TanimeBase : ITableSheetBase
     public string? ReleaseDateAsLiteral => ReleaseDateAsDateOnly?.ToString("dddd dd MMMM yyyy");
 
     /// <summary>
-    /// Obtient ou définit la date de fin de l'anime.
+    /// Obtient ou définit la date de fin de l'anime au format yyyy-MM-dd.
     /// </summary>
     public string? EndDate { get; set; }
 
