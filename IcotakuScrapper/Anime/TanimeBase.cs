@@ -1032,7 +1032,7 @@ public partial class TanimeBase : ITableSheetBase
             }
         }
 
-        return records.ToArray();
+        return [.. records];
     }
 
     private const string SqlSelectScript =

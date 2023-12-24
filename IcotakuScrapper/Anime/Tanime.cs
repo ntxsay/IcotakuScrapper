@@ -154,7 +154,7 @@ public partial class Tanime : TanimeBase
         command.Parameters.AddWithValue("$Id", id);
         
         var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
-        return !reader.HasRows ? null : (await GetRecords(reader, cancellationToken)).FirstOrDefault();
+        return !reader.HasRows ? null : (await GetRecords(reader, cancellationToken)).SingleOrDefault();
     }
     
     /// <summary>

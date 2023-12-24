@@ -209,6 +209,11 @@ public partial class TanimeBase
         if (text == null || text.IsStringNullOrEmptyOrWhiteSpace())
             return null;
         text = text.Replace("/10", string.Empty).Trim();
+        if (text.IsStringNullOrEmptyOrWhiteSpace())
+            return null;
+
+        //Remplace le point par une virgule pour pouvoir convertir en double
+        text = text.Replace('.', ',').Trim();
         if (!double.TryParse(text, out var result))
             return null;
 
@@ -368,21 +373,15 @@ public partial class TanimeBase
             return null;
 
         var seasonNumber = ScrapSeasonNumber(htmlNode);
-        if (seasonNumber == null)
+        if (seasonNumber == null || seasonNumber is < 1 or > 4)
             return null;
 
-        var intSeason = DateHelpers.GetIntSeason(seasonNumber.Value, year.Value);
-        if (intSeason == 0)
-            return null;
-
-        var seasonLiteral = DateHelpers.GetSeasonLiteral((WeatherSeasonKind)seasonNumber.Value, year.Value);
-        if (seasonLiteral == null)
-            return null;
+        WeatherSeason season = new ((WeatherSeasonKind)seasonNumber, year.Value);
 
         var record = new Tseason
         {
-            SeasonNumber = seasonNumber.Value,
-            DisplayName = seasonLiteral,
+            SeasonNumber = season.ToIntSeason(),
+            DisplayName = season.ToString(),
         };
 
         return await Tseason.SingleOrCreateAsync(record, false ,cancellationToken, cmd);

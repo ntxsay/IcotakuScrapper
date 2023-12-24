@@ -42,6 +42,7 @@ public partial class Tcategory
         Name = name;
         Description = description;
     }
+    
 
     public override string ToString()
     {
