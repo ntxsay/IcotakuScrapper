@@ -531,13 +531,19 @@ public static class IcotakuWebHelpers
 
     #endregion
 
-    public static string? GetSubFolderName(IcotakuDefaultSubFolder type, int episodeNumber = 0)
+    /// <summary>
+    /// Retourne le chemin relatif du dossier de téléchargement à partir de la section et de l'id de la fiche
+    /// </summary>
+    /// <param name="type"></param>
+    /// <param name="episodeNumber"></param>
+    /// <returns></returns>
+    public static string? GetRelativeSubFolderPath(IcotakuDefaultSubFolder type, int episodeNumber = 0)
     {
         return type switch
         {
-            IcotakuDefaultSubFolder.Episod => $"/episodes/episode_{episodeNumber}",
-            IcotakuDefaultSubFolder.Tome => $"/tomes/tome_{episodeNumber}",
-            IcotakuDefaultSubFolder.Sheet => "/fiche",
+            IcotakuDefaultSubFolder.Episod => $"{Path.DirectorySeparatorChar}episodes{Path.DirectorySeparatorChar}episode_{episodeNumber}",
+            IcotakuDefaultSubFolder.Tome => $"{Path.DirectorySeparatorChar}tomes{Path.DirectorySeparatorChar}tome_{episodeNumber}",
+            IcotakuDefaultSubFolder.Sheet => $"{Path.DirectorySeparatorChar}fiche",
             IcotakuDefaultSubFolder.None => string.Empty,
             _ => null
         };
@@ -741,15 +747,15 @@ public static class IcotakuWebHelpers
 
         var defaultFolder = sheetType.ConvertToDefaultFolder();
 
-        var partialSubFolderName = GetSubFolderName(IcotakuDefaultSubFolder.Sheet);
-        if (partialSubFolderName == null)
+        var relativeSubFolderPath = GetRelativeSubFolderPath(IcotakuDefaultSubFolder.Sheet);
+        if (relativeSubFolderPath == null)
             return null;
 
         var baseFolderPath = InputOutput.CreateItemDirectory(defaultFolder, itemGuid);
         if (baseFolderPath == null || baseFolderPath.IsStringNullOrEmptyOrWhiteSpace())
             return null;
 
-        var partialPaths = partialSubFolderName
+        var partialPaths = relativeSubFolderPath
             .Split('/', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToList();
         partialPaths.Insert(0, baseFolderPath);
         

@@ -13,11 +13,25 @@ namespace IcotakuScrapper.Services.IOS
         public static string GetDirectoryPath(IcotakuDefaultFolder defaultFolder)
             => Path.Combine(Main.BasePath, defaultFolder.ToString());
 
-        public static string GetDirectoryPath(IcotakuDefaultFolder defaultFolder, Guid itemGuid)
+        /// <summary>
+        /// Retourne le chemin d'accès du dossier de l'item dans le dossier par défaut spécifié
+        /// </summary>
+        /// <param name="defaultFolder"></param>
+        /// <param name="itemGuid"></param>
+        /// <returns></returns>
+        public static string? GetDirectoryPath(IcotakuDefaultFolder defaultFolder, Guid itemGuid)
         {
             if (itemGuid == Guid.Empty)
-                throw new ArgumentException("L'identifiant de l'item ne peut pas être vide.", nameof(itemGuid));
-            return Path.Combine(GetDirectoryPath(defaultFolder), itemGuid.ToString());
+            {
+                LogServices.LogDebug("L'identifiant de l'item est invalide.");
+                return null;
+            }
+            var defaultFolderPath = GetDirectoryPath(defaultFolder);
+            if (!defaultFolderPath.IsStringNullOrEmptyOrWhiteSpace())
+                return Path.Combine(defaultFolderPath, itemGuid.ToString());
+            
+            LogServices.LogDebug("Le chemin d'accès du dossier est invalide.");
+            return null;
         }
 
         public static string GetDirectoryPath(params string[] partialPaths)
@@ -53,21 +67,36 @@ namespace IcotakuScrapper.Services.IOS
             return path;
         } 
         
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="defaultFolder"></param>
+        /// <param name="itemGuid"></param>
+        /// <param name="defaultSubFolder"></param>
+        /// <param name="episodeNumber"></param>
+        /// <returns></returns>
         public static string? GetDirectoryPath(IcotakuDefaultFolder defaultFolder, Guid itemGuid, IcotakuDefaultSubFolder defaultSubFolder, int episodeNumber = 0)
         {
-            var subFolder = IcotakuWebHelpers.GetSubFolderName(defaultSubFolder, episodeNumber);
-            if (subFolder == null || subFolder.IsStringNullOrEmptyOrWhiteSpace())
+            var relativeSubFolderPath = IcotakuWebHelpers.GetRelativeSubFolderPath(defaultSubFolder, episodeNumber);
+            if (relativeSubFolderPath == null || relativeSubFolderPath.IsStringNullOrEmptyOrWhiteSpace())
                 return null;
             
-            var path = GetDirectoryPath(defaultFolder, itemGuid);
-            path = Path.Combine(path, subFolder);
+            var defaultFolderItemPath = GetDirectoryPath(defaultFolder, itemGuid);
+            if (defaultFolderItemPath == null || defaultFolderItemPath.IsStringNullOrEmptyOrWhiteSpace())
+                return null;
+            defaultFolderItemPath = Path.Combine(defaultFolderItemPath, relativeSubFolderPath.TrimStart(Path.DirectorySeparatorChar));
             
-            return !Path.IsPathFullyQualified(path) ? null : path;
+            return !Path.IsPathFullyQualified(defaultFolderItemPath) ? null : defaultFolderItemPath;
         } 
         #endregion
 
         #region Create
 
+        /// <summary>
+        /// Crée le dossier de la <see cref="IcotakuDefaultFolder"/> spécifiée
+        /// </summary>
+        /// <param name="defaultFolder">Dossier par défaut</param>
+        /// <returns></returns>
         public static string? CreateDefaultDirectory(IcotakuDefaultFolder defaultFolder)
         {
             try
@@ -84,6 +113,12 @@ namespace IcotakuScrapper.Services.IOS
             }
         }
 
+        /// <summary>
+        /// Crée le dossier de l'item dans le dossier par défaut spécifié
+        /// </summary>
+        /// <param name="defaultFolder"></param>
+        /// <param name="itemGuid"></param>
+        /// <returns></returns>
         public static string? CreateItemDirectory(IcotakuDefaultFolder defaultFolder, Guid itemGuid)
         {
             try

@@ -357,11 +357,15 @@ public partial class TanimeBase : ITableSheetBase
     /// <returns></returns>
     public static string? GetThumbnailPath(Guid itemGuid)
     {
+        //Retourne le chemin d'accès vers le dossier de l'affiche de l'anime
         var folderPath =
             InputOutput.GetDirectoryPath(IcotakuDefaultFolder.Animes, itemGuid, IcotakuDefaultSubFolder.Sheet);
-        if (folderPath == null)
+        
+        //Si le dossier n'existe pas, on retourne null
+        if (folderPath == null || folderPath.IsStringNullOrEmptyOrWhiteSpace() || !Directory.Exists(folderPath))
             return null;
 
+        //Retourne le chemin d'accès vers l'affiche origniale de l'anime
         var path = Directory.EnumerateFiles(folderPath, "affiche_*", SearchOption.TopDirectoryOnly)
             .FirstOrDefault(f =>
                 !Path.GetFileNameWithoutExtension(f).Contains("mini", StringComparison.OrdinalIgnoreCase));
