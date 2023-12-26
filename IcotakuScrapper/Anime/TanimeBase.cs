@@ -4,6 +4,7 @@ using IcotakuScrapper.Extensions;
 using IcotakuScrapper.Services.IOS;
 using Microsoft.Data.Sqlite;
 using System.Threading;
+using IcotakuScrapper.Contact;
 
 namespace IcotakuScrapper.Anime;
 
@@ -98,6 +99,8 @@ public partial class TanimeBase : ITableSheetBase
     /// Obtient ou définit la description de l'anime.
     /// </summary>
     public string? Description { get; set; }
+    
+    public string? Remark { get; set; }
 
     /// <summary>
     /// Obtient ou définit l'url de la fiche de l'anime.
@@ -115,6 +118,23 @@ public partial class TanimeBase : ITableSheetBase
     /// Obtient ou définit la liste des  catégories de l'anime (genre et thèmes).
     /// </summary>
     public HashSet<Tcategory> Categories { get; } = [];
+    
+    /// <summary>
+    /// Obtient ou définit la liste des titres alternatifs de l'anime.
+    /// </summary>
+    public HashSet<TanimeAlternativeTitle> AlternativeTitles { get; } = [];
+    
+    /// <summary>
+    /// Obtient ou définit la liste des sites web de l'anime.
+    /// </summary>
+    public HashSet<TanimeWebSite> Websites { get; } = [];
+    
+    public HashSet<TanimeLicense> Licenses { get; } = [];
+    /// <summary>
+    /// Obtient ou définit la liste des studios de l'anime.
+    /// </summary>
+    public HashSet<TcontactBase> Studios { get; } = [];
+    public HashSet<TanimeStaff> Staffs { get; } = [];
 
     public TanimeBase()
     {
@@ -949,7 +969,7 @@ public partial class TanimeBase : ITableSheetBase
         List<TanimeBase> records = [];
         while (await reader.ReadAsync(cancellationToken ?? CancellationToken.None))
         {
-            var baseId = reader.GetInt32(reader.GetOrdinal("BaseId"));
+            var baseId = reader.GetInt32(reader.GetOrdinal("AnimeId"));
             var record = records.Find(f => f.Id == baseId);
             if (record == null)
             {
@@ -980,6 +1000,9 @@ public partial class TanimeBase : ITableSheetBase
                     Description = reader.IsDBNull(reader.GetOrdinal("AnimeDescription"))
                         ? null
                         : reader.GetString(reader.GetOrdinal("AnimeDescription")),
+                    Remark = reader.IsDBNull(reader.GetOrdinal("AnimeRemark"))
+                        ? null
+                        : reader.GetString(reader.GetOrdinal("AnimeRemark")),
                     Format = reader.IsDBNull(reader.GetOrdinal("IdFormat"))
                         ? null
                         : Tformat.GetRecord(reader,
@@ -1012,6 +1035,40 @@ public partial class TanimeBase : ITableSheetBase
 
                 records.Add(record);
             }
+            
+            if (!reader.IsDBNull(reader.GetOrdinal("AlternativeTitleId")))
+            {
+                var alternativeTitleId = reader.GetInt32(reader.GetOrdinal("AlternativeTitleId"));
+                var alternativeTitle = record.AlternativeTitles.FirstOrDefault(x => x.Id == alternativeTitleId);
+                if (alternativeTitle == null)
+                {
+                    alternativeTitle = new TanimeAlternativeTitle(alternativeTitleId, baseId)
+                    {
+                        Title = reader.GetString(reader.GetOrdinal("AlternativeTitle")),
+                        Description = reader.IsDBNull(reader.GetOrdinal("AlternativeTitleDescription"))
+                            ? null
+                            : reader.GetString(reader.GetOrdinal("AlternativeTitleDescription"))
+                    };
+                    record.AlternativeTitles.Add(alternativeTitle);
+                }
+            }
+            
+            if (!reader.IsDBNull(reader.GetOrdinal("WebSiteId")))
+            {
+                var webSiteId = reader.GetInt32(reader.GetOrdinal("WebSiteId"));
+                var webSite = record.Websites.FirstOrDefault(x => x.Id == webSiteId);
+                if (webSite == null)
+                {
+                    webSite = new TanimeWebSite(webSiteId, baseId)
+                    {
+                        Url = reader.GetString(reader.GetOrdinal("WebSiteUrl")),
+                        Description = reader.IsDBNull(reader.GetOrdinal("WebSiteDescription"))
+                            ? null
+                            : reader.GetString(reader.GetOrdinal("WebSiteDescription"))
+                    };
+                    record.Websites.Add(webSite);
+                }
+            }
 
             if (!reader.IsDBNull(reader.GetOrdinal("CategoryId")))
             {
@@ -1030,6 +1087,42 @@ public partial class TanimeBase : ITableSheetBase
                     record.Categories.Add(category);
                 }
             }
+            
+            if (!reader.IsDBNull(reader.GetOrdinal("StudioId")))
+            {
+                var studioId = reader.GetInt32(reader.GetOrdinal("StudioId"));
+                var studio = record.Studios.FirstOrDefault(x => x.Id == studioId);
+                if (studio == null)
+                {
+                    studio = await TcontactBase.SingleAsync(studioId, IntColumnSelect.Id, cancellationToken);
+                    if (studio != null)
+                        record.Studios.Add(studio);
+                }
+            }
+            
+            if (!reader.IsDBNull(reader.GetOrdinal("LicenseId")))
+            {
+                var licenseId = reader.GetInt32(reader.GetOrdinal("LicenseId"));
+                var license = record.Licenses.FirstOrDefault(x => x.Id == licenseId);
+                if (license == null)
+                {
+                    license = await TanimeLicense.SingleAsync(licenseId, cancellationToken);
+                    if (license != null)
+                        record.Licenses.Add(license);
+                }
+            }
+
+            if (!reader.IsDBNull(reader.GetOrdinal("StaffId")))
+            {
+                var staffId = reader.GetInt32(reader.GetOrdinal("StaffId"));
+                var staff = record.Staffs.FirstOrDefault(x => x.Id == staffId);
+                if (staff == null)
+                {
+                    staff = await TanimeStaff.SingleAsync(staffId, cancellationToken);
+                    if (staff != null)
+                        record.Staffs.Add(staff);
+                }
+            }
         }
 
         return [.. records];
@@ -1038,7 +1131,7 @@ public partial class TanimeBase : ITableSheetBase
     private const string SqlSelectScript =
         """
         SELECT
-            Tanime.Id AS BaseId,
+            Tanime.Id AS AnimeId,
             Tanime.Guid AS AnimeGuid,
             Tanime.Name AS AnimeName,
             Tanime.IdFormat,
@@ -1058,6 +1151,7 @@ public partial class TanimeBase : ITableSheetBase
             Tanime.EpisodeDuration,
             Tanime.ThumbnailUrl AS AnimeThumbnailUrl,
             Tanime.Description AS AnimeDescription,
+            Tanime.Remark AS AnimeRemark,
             
             Tformat.Name as FormatName,
             Tformat.Section as FormatSection,
@@ -1074,13 +1168,25 @@ public partial class TanimeBase : ITableSheetBase
             Tseason.DisplayName as SeasonDisplayName,
             Tseason.SeasonNumber as SeasonNumber,
             
+            TanimeAlternativeTitle.Id AS AlternativeTitleId,
+            TanimeAlternativeTitle.Title AS AlternativeTitle,
+            TanimeAlternativeTitle.Description AS AlternativeTitleDescription,
+            
+            TanimeWebSite.Id AS WebSiteId,
+            TanimeWebSite.Url AS WebSiteUrl,
+            TanimeWebSite.Description AS WebSiteDescription,
+            
             TanimeCategory.IdCategory AS CategoryId,
             Tcategory.SheetId AS CategorySheetId,
             Tcategory.Type AS CategoryType,
             Tcategory.Url AS CategoryUrl,
             Tcategory.Section AS CategorySection,
             Tcategory.Name AS CategoryName,
-            Tcategory.Description AS CategoryDescription
+            Tcategory.Description AS CategoryDescription,
+            
+            TanimeStudio.IdStudio AS StudioId,
+            TanimeLicense.Id AS LicenseId,
+            TanimeStaff.Id AS StaffId
 
         FROM
             Tanime
@@ -1090,7 +1196,11 @@ public partial class TanimeBase : ITableSheetBase
         LEFT JOIN main.Tseason  on Tseason.Id = Tanime.IdSeason
         LEFT JOIN main.TanimeCategory on Tanime.Id = TanimeCategory.IdAnime
         LEFT JOIN main.Tcategory on Tcategory.Id = TanimeCategory.IdCategory
-
+        LEFT JOIN main.TanimeAlternativeTitle TanimeAlternativeTitle on Tanime.Id = TanimeAlternativeTitle.IdAnime
+        LEFT JOIN main.TanimeWebSite on Tanime.Id = TanimeWebSite.IdAnime
+        LEFT JOIN main.TanimeStudio on Tanime.Id = TanimeStudio.IdAnime
+        LEFT JOIN main.TanimeLicense on Tanime.Id = TanimeLicense.IdAnime
+        LEFT JOIN main.TanimeStaff on Tanime.Id = TanimeStaff.IdAnime
 
         """;
 }

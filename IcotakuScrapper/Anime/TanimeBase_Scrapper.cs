@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using System.Web;
 using HtmlAgilityPack;
 using IcotakuScrapper.Common;
+using IcotakuScrapper.Contact;
 using IcotakuScrapper.Extensions;
 using Microsoft.Data.Sqlite;
 
@@ -75,6 +76,32 @@ public partial class TanimeBase
                 ThumbnailUrl = ScrapFullThumbnail(documentNode),
             };
 
+            //Titres alternatifs
+            var alternativeNames = ScrapAlternativeTitles(documentNode).ToArray();
+            if (alternativeNames.Length > 0)
+            {
+                foreach (var title in alternativeNames)
+                {
+                    if (!anime.AlternativeTitles.Any(a => string.Equals(a.Title, title.Title, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        anime.AlternativeTitles.Add(title);
+                    }
+                }
+            }
+
+            //Websites
+            var websites = ScrapWebsites(documentNode).ToArray();
+            if (websites.Length > 0)
+            {
+                foreach (var url in websites)
+                {
+                    if (!anime.Websites.Any(a => string.Equals(a.Url, url.Url, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        anime.Websites.Add(url);
+                    }
+                }
+            }
+
             //Genres et themes
             var genres = await GetCategoriesAsync(documentNode, CategoryType.Genre, cancellationToken, command).ToArrayAsync();
             var themes = await GetCategoriesAsync(documentNode, CategoryType.Theme, cancellationToken, command).ToArrayAsync();
@@ -87,6 +114,29 @@ public partial class TanimeBase
                         anime.Categories.Add(category);
                 }
             }
+            
+            //Studios
+            var studios = await ScrapStudioAsync(documentNode, cancellationToken, cmd).ToArrayAsync();
+            if (studios.Length > 0)
+            {
+                foreach (var studio in studios)
+                {
+                    if (!anime.Studios.Any(a => string.Equals(a.DisplayName, studio.DisplayName, StringComparison.OrdinalIgnoreCase) && string.Equals(a.Url, studio.Url, StringComparison.OrdinalIgnoreCase)))
+                        anime.Studios.Add(studio);
+                }
+            }
+            
+            //Staff
+            var staff = await ScrapStaffAsync(documentNode, cancellationToken, cmd).ToArrayAsync();
+            if (staff.Length > 0)
+            {
+                foreach (var tanimeStaff in staff)
+                {
+                    if (!anime.Staffs.Any(a => a.Role.Id == tanimeStaff.Role.Id && a.Person.Id == tanimeStaff.Person.Id))
+                        anime.Staffs.Add(tanimeStaff);
+                }
+            }
+
 
             return new OperationState<TanimeBase?>
             {
@@ -102,7 +152,7 @@ public partial class TanimeBase
     }
 
     
-     #region General
+    #region General
     /// <summary>
     /// Obtient le nom principal de l'animé
     /// </summary>
@@ -597,6 +647,208 @@ public partial class TanimeBase
 
     #endregion
 
+        #region Studios
+    /// <summary>
+    /// Retourne les studios d'aimation de l'animé
+    /// </summary>
+    /// <param name="documentNode"></param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
+    protected static async IAsyncEnumerable<Tcontact> ScrapStudioAsync(HtmlNode documentNode, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        var htmlNode = documentNode.SelectSingleNode("//div[contains(@class, 'info_fiche')]//b[starts-with(text(), 'Studio')]/parent::div");
+        if (htmlNode == null)
+            yield break;
+
+        var nodes = htmlNode.SelectNodes("./a")?.ToArray();
+        if (nodes == null || nodes.Length == 0)
+            yield break;
+
+        foreach (var node in nodes)
+        {
+            //Récupère le nom d'affichage du studio
+            var displayName = HttpUtility.HtmlDecode(node?.InnerText?.Trim());
+            if (displayName == null || displayName.IsStringNullOrEmptyOrWhiteSpace())
+                continue;
+
+            //Récupère l'url de la fiche du studio
+            var sheetUri = IcotakuWebHelpers.GetFullHrefFromHtmlNode(node!, IcotakuSection.Anime);
+            if (sheetUri == null)
+                continue;
+            
+            //Récupère l'id de la fiche du studio
+            var sheetId = IcotakuWebHelpers.GetSheetId(sheetUri);
+            if (sheetId < 0)
+                continue;
+
+            await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+            var record = await Tcontact.SingleAsync(sheetUri, cancellationToken, command);
+            if (record != null)
+            {
+                yield return record;
+                continue;
+            }
+
+            record = new Tcontact(sheetId, ContactType.Studio, sheetUri, displayName);
+            var result = await record.InsertAync(cancellationToken, command);
+            if (!result.IsSuccess)
+                continue;
+
+            yield return record;
+        }
+    }
+    #endregion
+
+     #region Licenses
+    protected static async IAsyncEnumerable<TanimeLicense> ScrapLicensesAsync(HtmlNode documentNode, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        var nodes = documentNode.SelectNodes("//div[contains(@class, 'info_fiche')]//b[starts-with(text(), 'Licence')]");
+        if (nodes == null || nodes.Count == 0)
+            yield break;
+
+        foreach (var node in nodes)
+        {
+            var licenseTypeText = node.InnerText?.Trim();
+            if (licenseTypeText == null || licenseTypeText.IsStringNullOrEmptyOrWhiteSpace())
+                continue;
+
+            licenseTypeText = licenseTypeText.Replace("Licence", string.Empty).Trim();
+            licenseTypeText = licenseTypeText.Replace(":", string.Empty).Trim();
+
+            if (licenseTypeText.IsStringNullOrEmptyOrWhiteSpace())
+                continue;
+
+            var distributorANodes = node.ParentNode?.SelectNodes(".//a[contains(@href, '/editeur/')]")?.ToArray();
+            if (distributorANodes == null || distributorANodes.Length == 0)
+                continue;
+
+            var distributors = await ScrapEditorsAsync(distributorANodes, cancellationToken, cmd).ToArrayAsync();
+            if (distributors.Length == 0)
+                continue;
+
+            TlicenseType? licenseType = new()
+            {
+                Name = licenseTypeText,
+                Section = IcotakuSection.Anime,
+            };
+
+            licenseType = await TlicenseType.SingleOrCreateAsync(licenseType, true, cancellationToken, cmd);
+            if (licenseType == null)
+                continue;
+
+            foreach (var distributor in distributors)
+            {
+                yield return new TanimeLicense
+                {
+                    Type = licenseType,
+                    Distributor = distributor,
+                };
+            }
+        }
+    }
+
+    protected static async IAsyncEnumerable<Tcontact> ScrapEditorsAsync(HtmlNode[] distributorNodes, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        foreach (var node in distributorNodes)
+        {
+            //Récupère le nom d'affichage du studio
+            var displayName = HttpUtility.HtmlDecode(node.InnerText?.Trim());
+            if (displayName == null || displayName.IsStringNullOrEmptyOrWhiteSpace())
+                continue;
+
+            //Récupère l'url de la fiche du studio
+            var href = node.Attributes["href"]?.Value;
+            if (href == null || href.IsStringNullOrEmptyOrWhiteSpace())
+                continue;
+
+            //Créer l'url de la fiche du studio
+            href = IcotakuWebHelpers.GetBaseUrl(IcotakuSection.Anime) + href;
+            if (!Uri.TryCreate(href, UriKind.Absolute, out var uri) || !uri.IsAbsoluteUri)
+                continue;
+
+            //Récupère l'id de la fiche du studio
+            var sheetId = IcotakuWebHelpers.GetSheetId(uri);
+            if (sheetId < 0)
+                continue;
+
+            await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+            var record = await Tcontact.SingleAsync(uri, cancellationToken, command);
+            if (record != null)
+            {
+                yield return record;
+                continue;
+            }
+
+            record = new Tcontact(sheetId, ContactType.Distributor, uri, displayName);
+            var result = await record.InsertAync(cancellationToken, command);
+            if (!result.IsSuccess)
+                continue;
+
+            yield return record;
+        }
+    }
+
+    #endregion
+
+    #region Staff
+
+    protected static async IAsyncEnumerable<TanimeStaff> ScrapStaffAsync(HtmlNode documentNode,
+        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        var htmlNodes = documentNode.SelectNodes(
+            "//table[contains(@class, 'staff')]//tr")?.ToArray();
+        if (htmlNodes == null || htmlNodes.Length == 0)
+            yield break;
+
+        foreach (var node in htmlNodes)
+        {
+            var contactNode = node.SelectSingleNode("./td[1]/a");
+
+            var contactHref = contactNode?.Attributes["href"]?.Value;
+            if (contactHref == null || contactHref.IsStringNullOrEmptyOrWhiteSpace())
+                continue;
+            
+            var contactUri = IcotakuWebHelpers.GetFullHrefFromHtmlNode(contactNode!, IcotakuSection.Anime);
+            if (contactUri == null)
+                continue;
+
+            var contact = await Tcontact.ScrapFromUriAsync(contactUri);
+            if (contact == null)
+                continue;
+            
+            contact = await Tcontact.SingleOrCreateAsync(contact, false, cancellationToken, cmd);
+            if (contact == null)
+                continue;
+            
+            //Récupère le rôle du contact
+            var roleNode = node.SelectSingleNode("./td[2]/text()");
+
+            var roleText = HttpUtility.HtmlDecode(roleNode?.InnerText?.Trim());
+            if (roleText == null || roleText.IsStringNullOrEmptyOrWhiteSpace())
+                continue;
+
+            ToeuvreRole? role = new()
+            {
+                Name = roleText,
+                Type = RoleType.Staff,
+            };
+            
+            role = await ToeuvreRole.SingleOrCreateAsync(role, true, cancellationToken, cmd);
+            if (role == null)
+                continue;
+
+            yield return new TanimeStaff
+            {
+                Person = contact,
+                Role = role
+            };
+
+        }
+    }
+
+
+    #endregion
     
     #region finder
     protected static async IAsyncEnumerable<TanimeBase> ScrapAnimeSearchAsync(AnimeFinderParameterStruct finderParameter, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)

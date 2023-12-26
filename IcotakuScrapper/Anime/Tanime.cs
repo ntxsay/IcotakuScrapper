@@ -24,34 +24,44 @@ public enum AnimeSortBy
 
 public partial class Tanime : TanimeBase
 {
-    /// <summary>
-    /// Obtient ou définit la liste des titres alternatifs de l'anime.
-    /// </summary>
-    public HashSet<TanimeAlternativeTitle> AlternativeTitles { get; } = [];
     
-    /// <summary>
-    /// Obtient ou définit la liste des sites web de l'anime.
-    /// </summary>
-    public HashSet<TanimeWebSite> Websites { get; } = [];
-    
-    /// <summary>
-    /// Obtient ou définit la liste des studios de l'anime.
-    /// </summary>
-    public HashSet<TcontactBase> Studios { get; } = [];
     
     /// <summary>
     /// Obtient ou définit la liste des épisodes de l'anime.
     /// </summary>
     public HashSet<TanimeEpisode> Episodes { get; } = [];
     
-    public HashSet<TanimeLicense> Licenses { get; } = [];
-    
-    public HashSet<TanimeStaff> Staffs { get; } = [];
-    
 
     public Tanime()
     {
         
+    }
+    
+    public Tanime(TanimeBase animeBase)
+    {
+        Id = animeBase.Id;
+        Guid = animeBase.Guid;
+        Name = animeBase.Name;
+        Url = animeBase.Url;
+        IsAdultContent = animeBase.IsAdultContent;
+        IsExplicitContent = animeBase.IsExplicitContent;
+        VoteCount = animeBase.VoteCount;
+        SheetId = animeBase.SheetId;
+        Duration = animeBase.Duration;
+        DiffusionState = animeBase.DiffusionState;
+        ReleaseDate = animeBase.ReleaseDate;
+        EndDate = animeBase.EndDate;
+        EpisodesCount = animeBase.EpisodesCount;
+        Note = animeBase.Note;
+        Description = animeBase.Description;
+        Remark = animeBase.Remark;
+        ThumbnailUrl = animeBase.ThumbnailUrl;
+        Format = animeBase.Format;
+        Target = animeBase.Target;
+        OrigineAdaptation = animeBase.OrigineAdaptation;
+        Season = animeBase.Season;
+        AlternativeTitles.ToObservableCollection(animeBase.AlternativeTitles, true);
+        Websites.ToObservableCollection(animeBase.Websites, true);
     }
 
     public Tanime(int id)
@@ -321,6 +331,9 @@ public partial class Tanime : TanimeBase
                     Description = reader.IsDBNull(reader.GetOrdinal("AnimeDescription"))
                         ? null
                         : reader.GetString(reader.GetOrdinal("AnimeDescription")),
+                    Remark = reader.IsDBNull(reader.GetOrdinal("AnimeRemark"))
+                        ? null
+                        : reader.GetString(reader.GetOrdinal("AnimeRemark")),
                     ThumbnailUrl = reader.IsDBNull(reader.GetOrdinal("ThumbnailUrl"))
                         ? null
                         : reader.GetString(reader.GetOrdinal("ThumbnailUrl")),
@@ -496,7 +509,7 @@ public partial class Tanime : TanimeBase
             Tanime.DiffusionState,
             Tanime.Description AS AnimeDescription,
             Tanime.ThumbnailUrl,
-            Tanime.Remark,
+            Tanime.Remark AS AnimeRemark,
             
             Tformat.Name as FormatName,
             Tformat.Section as FormatSection,

@@ -122,6 +122,9 @@ public enum IcotakuDefaultSubFolder : byte
 }
 
 
+/// <summary>
+/// Enumération des types de fiches Icotaku.
+/// </summary>
 public enum IcotakuSheetType : byte
 {
     Unknown,
@@ -143,6 +146,20 @@ public enum IcotakuDefaultFolder : byte
     Dramas,
     Contacts,
     Community,
+}
+
+/// <summary>
+/// Enumère les options de scraping.
+/// </summary>
+[Flags]
+public enum AnimeScrapingOptions
+{
+    None = 0,
+    Episodes = 1,
+    Studios = 2,
+    Characters = 4,
+    Staff = 8,
+    
 }
 
 /// <summary>

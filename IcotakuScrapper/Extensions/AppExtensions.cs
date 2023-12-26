@@ -1,4 +1,6 @@
-﻿namespace IcotakuScrapper.Extensions
+﻿using System.Collections.ObjectModel;
+
+namespace IcotakuScrapper.Extensions
 {
     public static class AppExtensions
     {
@@ -16,6 +18,61 @@
         /// <returns>Une valeur booléenne</returns>
         public static bool IsStringEmptyOrWhiteSpace(this string self) => ExtensionMethods.IsStringEmptyOrWhiteSpace(self);
 
+        /// <summary>
+        /// Convertit une énumération en ObservableCollection
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="source"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        public static ObservableCollection<T> ToObservableNewCollection<T>(this IEnumerable<T> source)
+        {
+            if (source == null)
+                throw new ArgumentNullException(nameof(source));
+
+            return new ObservableCollection<T>(source);
+        }
+
+        public static void ToObservableCollection<T>(this ObservableCollection<T> source, IEnumerable<T>? values, bool clearSource = false)
+        {
+            ArgumentNullException.ThrowIfNull(source);
+
+            if (clearSource && source.Count > 0)
+                source.Clear();
+
+            if (values == null) 
+                return;
+            
+            var enumerable = values as T[] ?? values.ToArray();
+            if (enumerable.Length == 0)
+                return;
+
+            foreach (var value in enumerable)
+            {
+                source.Add(value);
+            }
+        }
+        
+        public static void ToObservableCollection<T>(this HashSet<T> source, IEnumerable<T>? values, bool clearSource = false)
+        {
+            ArgumentNullException.ThrowIfNull(source);
+
+            if (clearSource && source.Count > 0)
+                source.Clear();
+
+            if (values == null) 
+                return;
+            
+            var enumerable = values as T[] ?? values.ToArray();
+            if (enumerable.Length == 0)
+                return;
+
+            foreach (var value in enumerable)
+            {
+                source.Add(value);
+            }
+        }
+        
         public static ContactType ConvertTo(this IcotakuSheetType sheetType)
             => ExtensionMethods.ConvertTo(sheetType);
         public static IcotakuSheetType ConvertTo(this ContactType contactType)
