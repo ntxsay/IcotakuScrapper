@@ -463,14 +463,15 @@ public class TanimeCategory
                 sectionIndex: reader.GetOrdinal("CategorySection"),
                 urlCategoryIndex: reader.GetOrdinal("CategoryUrl"),
                 categoryNameIndex: reader.GetOrdinal("CategoryName"),
-                categoryDescriptionIndex: reader.GetOrdinal("CategoryDescription"));
+                categoryDescriptionIndex: reader.GetOrdinal("CategoryDescription"),
+                categoryIsFullyScrapedIndex: reader.GetOrdinal("CategoryIsFullyScraped"));
         }
     }
 
 
     public static TanimeCategory GetRecord(SqliteDataReader reader, int idIndex, int idAnimeIndex,
         int idCategoryIndex, int sheetCategoryIdIndex, int urlCategoryIndex, int sectionIndex,
-        int categoryTypeIndex, int categoryNameIndex, int categoryDescriptionIndex)
+        int categoryTypeIndex, int categoryNameIndex, int categoryDescriptionIndex, int categoryIsFullyScrapedIndex)
     {
         var record = new TanimeCategory()
         {
@@ -483,7 +484,8 @@ public class TanimeCategory
                 sectionIndex: sectionIndex,
                 typeIndex: categoryTypeIndex,
                 nameIndex: categoryNameIndex,
-                descriptionIndex: categoryDescriptionIndex)
+                descriptionIndex: categoryDescriptionIndex,
+                isFullyScrapedIndex: categoryIsFullyScrapedIndex)
         };
 
         return record;
@@ -501,7 +503,8 @@ public class TanimeCategory
             Tcategory.Url AS CategoryUrl,
             Tcategory.Section AS CategorySection,
             Tcategory.Name AS CategoryName,
-            Tcategory.Description AS CategoryDescription
+            Tcategory.Description AS CategoryDescription,
+            Tcategory.IsFullyScraped AS CategoryIsFullyScraped
 
         FROM TanimeCategory
         LEFT JOIN main.Tcategory on Tcategory.Id = TanimeCategory.IdCategory

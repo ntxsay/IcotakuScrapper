@@ -30,8 +30,8 @@ namespace IcotakuScrapperWebApi.Controllers
         }
 
         [HttpGet("Single/Id/{id}")]
-        public async Task<Tcategory?> SelectByIdAsync([FromRoute] uint id) 
-            => await Tcategory.SingleAsync((int)id);
+        public async Task<Tcategory?> SelectByIdAsync([FromRoute] int id) 
+            => await Tcategory.SingleAsync(id, IntColumnSelect.Id);
 
         [HttpGet("Single/Name")]
         public async Task<Tcategory?> SelectByNameAsync([FromQuery] IcotakuSection section, [FromQuery] CategoryType categoryType, [FromQuery] string name)

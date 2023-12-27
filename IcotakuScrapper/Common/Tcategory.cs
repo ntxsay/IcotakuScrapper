@@ -14,15 +14,21 @@ public enum CategorySortBy
 /// <summary>
 /// Représente un format de diffusion d'un anime ou Manga ou autre
 /// </summary>
-public partial class Tcategory
+public partial class Tcategory : ITableSheetBase<Tcategory>
 {
     public int Id { get; protected set; }
     public int SheetId { get; set; }
+    
     public CategoryType Type { get; set; }
     public IcotakuSection Section { get; set; }
     public string Name { get; set; } = null!;
     public string? Description { get; set; }
     public string Url { get; set; } = null!;
+    
+    /// <summary>
+    /// Obtient ou définit une valeur indiquant si la fiche a été entièrement scrapée
+    /// </summary>
+    public bool IsFullyScraped { get; set; }
 
     public Tcategory()
     {
@@ -311,11 +317,35 @@ public partial class Tcategory
 
     #region Single
 
-    public static async Task<Tcategory?> SingleAsync(int id, CancellationToken? cancellationToken = null,
+    public static async Task<Tcategory?> SingleByIdAsync(int id, CancellationToken? cancellationToken = null,
+        SqliteCommand? cmd = null) 
+        => await SingleAsync(id, IntColumnSelect.Id, cancellationToken, cmd);
+    
+    public static async Task<Tcategory?> SingleBySheetIdAsync(int sheetId, CancellationToken? cancellationToken = null,
+        SqliteCommand? cmd = null) 
+        => await SingleAsync(sheetId, IntColumnSelect.SheetId, cancellationToken, cmd);
+    
+    public static async Task<Tcategory?> SingleAsync(int id, IntColumnSelect columnSelect, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Id = $Id";
+        var isColumnSelectValid = command.IsIntColumnValidated(columnSelect,
+        [
+            IntColumnSelect.Id,
+            IntColumnSelect.SheetId,
+        ]);
+
+        if (!isColumnSelectValid)
+        {
+            return null;
+        }
+
+        command.CommandText = SqlSelectScript + Environment.NewLine + columnSelect switch
+        {
+            IntColumnSelect.Id => "WHERE Id = $Id",
+            IntColumnSelect.SheetId => "SheetId = $Id",
+            _ => throw new ArgumentOutOfRangeException(nameof(columnSelect), columnSelect, null)
+        };
 
         command.Parameters.Clear();
 
@@ -327,7 +357,7 @@ public partial class Tcategory
         return await GetRecords(reader, cancellationToken)
             .FirstOrDefaultAsync(cancellationToken ?? CancellationToken.None);
     }
-
+    
     /// <summary>
     /// Retourne un enregistrement de la table Tcategory ayant le nom spécifié
     /// </summary>
@@ -388,7 +418,7 @@ public partial class Tcategory
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
         var existingId = await GetIdOfAsync(name, section, categoryType, cancellationToken, command);
         if (existingId.HasValue)
-            return await SingleAsync(existingId.Value, cancellationToken, command);
+            return await SingleAsync(existingId.Value, IntColumnSelect.Id, cancellationToken, command);
 
         Tcategory tcategory = new()
         {
@@ -442,9 +472,9 @@ public partial class Tcategory
         command.CommandText =
             """
             INSERT INTO Tcategory
-                (Name, Section, Type, Description, SheetId, Url)
+                (Name, Section, Type, Description, SheetId, Url, IsFullyScraped)
             VALUES
-                ($Name, $Section, $Type, $Description, $SheetId, $Url)
+                ($Name, $Section, $Type, $Description, $SheetId, $Url, $IsFullyScraped)
             """;
 
         command.Parameters.Clear();
@@ -455,6 +485,7 @@ public partial class Tcategory
         command.Parameters.AddWithValue("$Description", Description ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$SheetId", SheetId);
         command.Parameters.AddWithValue("$Url", uri.ToString());
+        command.Parameters.AddWithValue("$IsFullyScraped", IsFullyScraped);
 
         try
         {
@@ -480,7 +511,7 @@ public partial class Tcategory
 
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
         command.StartWithInsertMode(insertMode);
-        command.CommandText += " INTO Tcategory (Name, Section, Type, Description, SheetId, Url)";
+        command.CommandText += " INTO Tcategory (Name, Section, Type, Description, SheetId, Url, IsFullyScraped)";
 
         command.Parameters.Clear();
 
@@ -501,7 +532,7 @@ public partial class Tcategory
             }
 
             command.CommandText += i == 0 ? "VALUES" : "," + Environment.NewLine;
-            command.CommandText += $"($Name{i}, $Section{i}, $Type{i}, $Description{i}, $SheetId{i}, $Url{i})";
+            command.CommandText += $"($Name{i}, $Section{i}, $Type{i}, $Description{i}, $SheetId{i}, $Url{i}, $IsFullyScraped{i})";
 
             command.Parameters.AddWithValue($"$Name{i}", value.Name.Trim());
             command.Parameters.AddWithValue($"$Section{i}", (byte)value.Section);
@@ -509,6 +540,7 @@ public partial class Tcategory
             command.Parameters.AddWithValue($"$Description{i}", value.Description ?? (object)DBNull.Value);
             command.Parameters.AddWithValue($"$SheetId{i}", value.SheetId);
             command.Parameters.AddWithValue($"$Url{i}", uri.ToString());
+            command.Parameters.AddWithValue($"$IsFullyScraped{i}", value.IsFullyScraped);
 
             LogServices.LogDebug("Ajout de l'item " + value.Name + " à la commande.");
         }
@@ -564,10 +596,11 @@ public partial class Tcategory
     /// <summary>
     /// Met à jour cet enregistrement de la table Tcategory
     /// </summary>
+    /// <param name="disableValidation"></param>
     /// <param name="cancellationToken"></param>
     /// <param name="cmd"></param>
     /// <returns></returns>
-    public async Task<OperationState> UpdateAsync(CancellationToken? cancellationToken = null,
+    public async Task<OperationState> UpdateAsync(bool disableValidation, CancellationToken? cancellationToken = null,
         SqliteCommand? cmd = null)
     {
         if (Name.IsStringNullOrEmptyOrWhiteSpace())
@@ -589,7 +622,8 @@ public partial class Tcategory
                 Type = $Type,
                 Description = $Description,
                 SheetId = $SheetId,
-                Url = $Url
+                Url = $Url,
+                IsFullyScraped = $IsFullyScraped
             WHERE Id = $Id
             """;
 
@@ -602,6 +636,7 @@ public partial class Tcategory
         command.Parameters.AddWithValue("$Description", Description ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$SheetId", SheetId);
         command.Parameters.AddWithValue("$Url", Url.Trim());
+        command.Parameters.AddWithValue("$IsFullyScraped", IsFullyScraped);
 
         try
         {
@@ -715,7 +750,7 @@ public partial class Tcategory
     #endregion
 
     internal static Tcategory GetRecord(SqliteDataReader reader, int idIndex, int sectionIndex, int typeIndex, int nameIndex, int descriptionIndex,
-        int sheetIdIndex, int urlIndex)
+        int sheetIdIndex, int urlIndex, int isFullyScrapedIndex)
     {
         return new Tcategory()
         {
@@ -725,7 +760,8 @@ public partial class Tcategory
             Section = (IcotakuSection)reader.GetByte(sectionIndex),
             Description = reader.IsDBNull(descriptionIndex) ? null : reader.GetString(descriptionIndex),
             SheetId = reader.GetInt32(sheetIdIndex),
-            Url = reader.GetString(urlIndex)
+            Url = reader.GetString(urlIndex),
+            IsFullyScraped = reader.GetBoolean(isFullyScrapedIndex)
         };
     }
 
@@ -742,7 +778,8 @@ public partial class Tcategory
                 nameIndex: reader.GetOrdinal("Name"),
                 descriptionIndex: reader.GetOrdinal("Description"),
                 sheetIdIndex: reader.GetOrdinal("SheetId"),
-                urlIndex: reader.GetOrdinal("Url"));
+                urlIndex: reader.GetOrdinal("Url"),
+                isFullyScrapedIndex: reader.GetOrdinal("IsFullyScraped"));
         }
     }
 
@@ -755,7 +792,8 @@ public partial class Tcategory
             Name,
             Section,
             Type,
-            Description
+            Description,
+            IsFullyScraped
         FROM Tcategory
         """;
 }

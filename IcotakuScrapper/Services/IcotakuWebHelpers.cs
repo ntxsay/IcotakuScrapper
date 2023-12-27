@@ -181,6 +181,27 @@ public static class IcotakuWebHelpers
             _ => throw new ArgumentOutOfRangeException(nameof(contentSection), contentSection, "Cette section du site Icotaku n'est pas prise en charge.")
         };
     }
+    
+    /// <summary>
+    /// Retourne l'url de la page de catégorie en fonction du type de contenu (Anime, Manga, etc) depuis icotaku.com
+    /// </summary>
+    /// <param name="section"></param>
+    /// <param name="categoryType"></param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentOutOfRangeException"></exception>
+    internal static string GetCategoriesUrl(IcotakuSection section, CategoryType categoryType)
+    {
+        return section switch
+        {
+            IcotakuSection.Anime => categoryType switch
+            {
+                CategoryType.Theme => IcotakuWebHelpers.GetBaseUrl(section) + "/themes.html",
+                CategoryType.Genre => IcotakuWebHelpers.GetBaseUrl(section) + "/genres.html",
+                _ => throw new ArgumentOutOfRangeException(nameof(categoryType), categoryType, "Ce type de catégorie n'est pas pris en charge")
+            },
+            _ => throw new ArgumentOutOfRangeException(nameof(section), section, "Ce type de contenu n'est pas pris en charge")
+        };
+    }
 
     public static Uri? GetAdvancedSearchUri(IcotakuSection section, AnimeFinderParameterStruct findParameter, uint page = 1)
     {
@@ -441,7 +462,7 @@ public static class IcotakuWebHelpers
         if (relativePath.IsStringNullOrEmptyOrWhiteSpace())
             return null;
 
-        var href = relativePath.ToString();
+        var href = new string(relativePath);
 
         if (href.StartsWith('/'))
             href = href.TrimStart('/');
@@ -514,14 +535,7 @@ public static class IcotakuWebHelpers
         if (url == null)
             return null;
 
-        url += type switch
-        {
-            IcotakuDefaultSubFolder.Episod => $"/episodes/episode_{episodeNumber}",
-            IcotakuDefaultSubFolder.Tome => $"/tomes/tome_{episodeNumber}",
-            IcotakuDefaultSubFolder.Sheet => $"/fiche",
-            IcotakuDefaultSubFolder.None => string.Empty,
-            _ => null
-        };
+        url += GetRelativeSubFolderPath(type, episodeNumber, '/');
 
         if (Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.IsAbsoluteUri)
             return uri.ToString();
@@ -536,14 +550,16 @@ public static class IcotakuWebHelpers
     /// </summary>
     /// <param name="type"></param>
     /// <param name="episodeNumber"></param>
+    /// <param name="separatorPath">Caractère permettant de séparer un chemin d'accès. Si ce paramètre est null alors <see cref="Path.DirectorySeparatorChar"/> sera utilisé à la place.</param>
     /// <returns></returns>
-    public static string? GetRelativeSubFolderPath(IcotakuDefaultSubFolder type, int episodeNumber = 0)
+    public static string? GetRelativeSubFolderPath(IcotakuDefaultSubFolder type, int episodeNumber = 0, char? separatorPath = null)
     {
+        var separator = separatorPath ?? Path.DirectorySeparatorChar;
         return type switch
         {
-            IcotakuDefaultSubFolder.Episod => $"{Path.DirectorySeparatorChar}episodes{Path.DirectorySeparatorChar}episode_{episodeNumber}",
-            IcotakuDefaultSubFolder.Tome => $"{Path.DirectorySeparatorChar}tomes{Path.DirectorySeparatorChar}tome_{episodeNumber}",
-            IcotakuDefaultSubFolder.Sheet => $"{Path.DirectorySeparatorChar}fiche",
+            IcotakuDefaultSubFolder.Episod => $"{separator}episodes{separator}episode_{episodeNumber}",
+            IcotakuDefaultSubFolder.Tome => $"{separator}tomes{separator}tome_{episodeNumber}",
+            IcotakuDefaultSubFolder.Sheet => $"{separator}fiche",
             IcotakuDefaultSubFolder.None => string.Empty,
             _ => null
         };
@@ -736,41 +752,59 @@ public static class IcotakuWebHelpers
 
     #region Download
 
+    /// <summary>
+    /// Télécharge l'affiche de la fiche
+    /// </summary>
+    /// <param name="sheetType"></param>
+    /// <param name="itemGuid"></param>
+    /// <param name="thumbnailUri"></param>
+    /// <param name="deleteIfExists"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns>Le chemin complet local du fichier (Image)</returns>
     internal static async Task<string?> DownloadThumbnailAsync(IcotakuSheetType sheetType, Guid itemGuid,
         Uri thumbnailUri, bool deleteIfExists, CancellationToken cancellationToken)
     {
+        //Si le guid est vide alors on ne peut pas créer le dossier
         if (itemGuid == Guid.Empty)
         {
             LogServices.LogDebug($"Impossible de récupérer le Guid de l'item {sheetType}");
             return null;
         }
 
+        //Convertit le type de fiche en dossier par défaut
         var defaultFolder = sheetType.ConvertToDefaultFolder();
 
+        //Récupère le chemin relatif du dossier de la fiche
         var relativeSubFolderPath = GetRelativeSubFolderPath(IcotakuDefaultSubFolder.Sheet);
         if (relativeSubFolderPath == null)
             return null;
 
+        //Crée le dossier parent de la fiche
         var baseFolderPath = InputOutput.CreateItemDirectory(defaultFolder, itemGuid);
         if (baseFolderPath == null || baseFolderPath.IsStringNullOrEmptyOrWhiteSpace())
             return null;
 
+        //Retourne le chemin d'accès complet du dossier de la fiche
         var partialPaths = relativeSubFolderPath
-            .Split('/', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToList();
+            .Split(Path.DirectorySeparatorChar, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToList();
         partialPaths.Insert(0, baseFolderPath);
         
+        //Crée le chemin d'accès complet du dossier de la fiche
         var folderPath = Path.Combine(partialPaths.ToArray());
         if (!Directory.Exists(folderPath))
             Directory.CreateDirectory(folderPath);
 
+        //Récupère le nom du fichier à partir de l'url
         var fileName = Path.GetFileName(thumbnailUri.LocalPath);
         if (fileName.IsStringNullOrEmptyOrWhiteSpace() || !Path.HasExtension(fileName))
             return null;
 
+        //Retourne le chemin d'accès complet du fichier
         var thumbnailPath = Path.Combine(folderPath, fileName);
         if (!Path.IsPathFullyQualified(thumbnailPath))
             return null;
         
+        //Si le fichier existe déjà alors on le supprime si l'option est activée sinon on retourne le chemin d'accès
         if (File.Exists(thumbnailPath))
         {
             if (!deleteIfExists)
@@ -779,6 +813,7 @@ public static class IcotakuWebHelpers
             File.Delete(thumbnailPath);
         }
 
+        //Télécharge le fichier et retourne le chemin d'accès si le téléchargement est un succès
         var isSuccess = await WebServices.DownloadFileAsync(thumbnailUri, thumbnailPath, cancellationToken);
         if (!isSuccess || !File.Exists(thumbnailPath))
             return null;

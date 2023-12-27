@@ -62,6 +62,7 @@ public partial class Tanime : TanimeBase
         Season = animeBase.Season;
         AlternativeTitles.ToObservableCollection(animeBase.AlternativeTitles, true);
         Websites.ToObservableCollection(animeBase.Websites, true);
+        Categories.ToObservableCollection(animeBase.Categories, true);
     }
 
     public Tanime(int id)
@@ -216,14 +217,7 @@ public partial class Tanime : TanimeBase
             return insertBaseResult;
         
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        await this.AddOrReplaceAlternativeTitlesAsync(cancellationToken, command);
-        await this.AddOrReplaceWebsitesAsync(cancellationToken, command);
-        await this.AddOrReplaceStudiosAsync(cancellationToken, command);
-        await this.AddOrReplaceCategoriesAsync(cancellationToken, command);
         await this.AddOrReplaceEpisodesAsync(cancellationToken, command);
-        await this.AddOrReplaceLicensesAsync(cancellationToken, command);
-        await this.AddOrReplaceStaffsAsync(cancellationToken, command);
-            
         return new OperationState<int>(true, "L'anime a été ajouté avec succès", insertBaseResult.Data);
     }
     
@@ -421,7 +415,8 @@ public partial class Tanime : TanimeBase
                         urlIndex: reader.GetOrdinal("CategoryUrl"),
                         sectionIndex: reader.GetOrdinal("CategorySection"),
                         nameIndex: reader.GetOrdinal("CategoryName"),
-                        descriptionIndex: reader.GetOrdinal("CategoryDescription"));
+                        descriptionIndex: reader.GetOrdinal("CategoryDescription"),
+                        isFullyScrapedIndex: reader.GetOrdinal("CategoryIsFullyScraped"));
                     anime.Categories.Add(category);
                 }
             }
@@ -544,7 +539,8 @@ public partial class Tanime : TanimeBase
             Tcategory.Url AS CategoryUrl,
             Tcategory.Section AS CategorySection,
             Tcategory.Name AS CategoryName,
-            Tcategory.Description AS CategoryDescription
+            Tcategory.Description AS CategoryDescription,
+            Tcategory.IsFullyScraped AS CategoryIsFullyScraped
         
         FROM Tanime
         LEFT JOIN main.Tformat  on Tformat.Id = Tanime.IdFormat

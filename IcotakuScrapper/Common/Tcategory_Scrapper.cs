@@ -9,26 +9,7 @@ namespace IcotakuScrapper.Common
 {
     public partial class Tcategory
     {
-        /// <summary>
-        /// Retourne l'url de la page de catégorie en fonction du type de contenu (Anime, Manga, etc) depuis icotaku.com
-        /// </summary>
-        /// <param name="section"></param>
-        /// <param name="categoryType"></param>
-        /// <returns></returns>
-        /// <exception cref="ArgumentOutOfRangeException"></exception>
-        public static string GetCategoriesUrl(IcotakuSection section, CategoryType categoryType)
-        {
-            return section switch
-            {
-                IcotakuSection.Anime => categoryType switch
-                {
-                    CategoryType.Theme => IcotakuWebHelpers.GetBaseUrl(section) + "/themes.html",
-                    CategoryType.Genre => IcotakuWebHelpers.GetBaseUrl(section) + "/genres.html",
-                    _ => throw new ArgumentOutOfRangeException(nameof(categoryType), categoryType, "Ce type de catégorie n'est pas pris en charge")
-                },
-                _ => throw new ArgumentOutOfRangeException(nameof(section), section, "Ce type de contenu n'est pas pris en charge")
-            };
-        }
+       
 
         /// <summary>
         /// Retourne le type de catégorie en fonction de l'url de la page de catégorie depuis icotaku.com
@@ -99,7 +80,7 @@ namespace IcotakuScrapper.Common
         /// <returns></returns>
         private static IEnumerable<Tcategory> ScrapFromCategoriesArrayPage(IcotakuSection section, CategoryType categoryType)
         {
-            var pageUrl = GetCategoriesUrl(section, categoryType);
+            var pageUrl = IcotakuWebHelpers.GetCategoriesUrl(section, categoryType);
             HtmlWeb web = new();
             var htmlDocument = web.Load(pageUrl);
 
@@ -130,8 +111,11 @@ namespace IcotakuScrapper.Common
         /// Scrape les informations de la catégorie depuis la page contenant la fiche de la catégorie depuis icotaku.com
         /// </summary>
         /// <param name="sheetId">Id Icotaku de la fiche</param>
+        /// <param name="sheetUri"></param>
+        /// <param name="categorySection"></param>
+        /// <param name="categoryTypeToCheck"></param>
         /// <returns></returns>
-        internal static Tcategory? ScrapCategoryFromSheetPage(Uri sheetUri, IcotakuSection? sectionToCheck = null, CategoryType? categoryTypeToCheck = null)
+        internal static Tcategory? ScrapCategoryFromSheetPage(Uri sheetUri, IcotakuSection? categorySection = null, CategoryType? categoryTypeToCheck = null)
         {
             // On récupère l'id de la fiche de la catégorie
             var sheetId = IcotakuWebHelpers.GetSheetId(sheetUri);
@@ -143,7 +127,7 @@ namespace IcotakuScrapper.Common
             if (!section.HasValue)
                 return null;
 
-            if (sectionToCheck.HasValue && section.Value != sectionToCheck.Value)
+            if (categorySection.HasValue && section.Value != categorySection.Value)
                 return null;
 
             // On vérifie que le type de la catégorie est bien celui demandé

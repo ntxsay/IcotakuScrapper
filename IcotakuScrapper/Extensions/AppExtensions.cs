@@ -81,6 +81,11 @@ namespace IcotakuScrapper.Extensions
         public static IcotakuDefaultFolder ConvertDefaultFolderTo(this IcotakuSection section)
             => ExtensionMethods.ConvertDefaultFolderTo(section);
 
+        /// <summary>
+        /// Convertit valeur de l'énumération <see cref="IcotakuSheetType"/> en <see cref="IcotakuDefaultFolder"/>
+        /// </summary>
+        /// <param name="sheetType"></param>
+        /// <returns></returns>
         public static IcotakuDefaultFolder ConvertToDefaultFolder(this IcotakuSheetType sheetType)
             => ExtensionMethods.ConvertToDefaultFolder(sheetType);
 
@@ -143,6 +148,11 @@ namespace IcotakuScrapper.Extensions
             _ => throw new ArgumentOutOfRangeException(nameof(section), section, "La valeur spécifiée est invalide")
         };
 
+        /// <summary>
+        /// Convertit valeur de l'énumération <see cref="IcotakuSheetType"/> en <see cref="IcotakuDefaultFolder"/>
+        /// </summary>
+        /// <param name="sheetType"></param>
+        /// <returns></returns>
         public static IcotakuDefaultFolder ConvertToDefaultFolder(IcotakuSheetType sheetType) => sheetType switch
         {
             IcotakuSheetType.Anime => IcotakuDefaultFolder.Animes,

@@ -8,7 +8,7 @@ namespace IcotakuScrapper.Contact;
 /// <summary>
 /// Représente un contact sans les informations détaillées de <see cref="Tcontact"/>.
 /// </summary>
-public class TcontactBase : ITableSheetBase
+public class TcontactBase : ITableSheetBase<TcontactBase>
 {
     /// <summary>
     /// Obtient ou définit l'id du contact.

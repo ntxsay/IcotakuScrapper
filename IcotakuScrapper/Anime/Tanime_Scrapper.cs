@@ -127,7 +127,7 @@ public partial class Tanime
     {
         try
         {
-            var animeBaseResult = await ScrapAnimeBaseAsync(documentNode, sheetUri, cancellationToken, cmd);
+            var animeBaseResult = await ScrapAnimeBaseAsync(documentNode, sheetUri, options, cancellationToken, cmd);
             if (!animeBaseResult.IsSuccess || animeBaseResult.Data == null)
                 return new OperationState<Tanime?>(false, animeBaseResult.Message);
             

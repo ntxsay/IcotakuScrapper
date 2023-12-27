@@ -85,7 +85,7 @@ public class AnimeFinder : IDisposable
             count++;
             var percent = count * 100 / totalItems;
 
-            using var animeBaseResult = TanimeBase.ScrapAnimeBaseAsync(animeSheetUri);
+            using var animeBaseResult = TanimeBase.ScrapAnimeBaseAsync(animeSheetUri, AnimeScrapingOptions.All);
             animeBaseResult.Wait();
             
             _Worker.ReportProgress(percent, animeBaseResult.Result);
@@ -141,7 +141,7 @@ public class AnimeFinder : IDisposable
                 count++;
                 var percent2 = count * 100 / totalItems;
 
-                using var animeBaseResult2 = TanimeBase.ScrapAnimeBaseAsync(sheetUri);
+                using var animeBaseResult2 = TanimeBase.ScrapAnimeBaseAsync(sheetUri, AnimeScrapingOptions.All);
                 animeBaseResult2.Wait();
                 
                 _Worker.ReportProgress(percent2, animeBaseResult2.Result);

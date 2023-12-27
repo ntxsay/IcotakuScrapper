@@ -98,13 +98,14 @@ CREATE TABLE IF NOT EXISTS Tcountry
 DROP TABLE IF EXISTS Tcategory;
 CREATE TABLE IF NOT EXISTS Tcategory
 (
-    Id          INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
-    SheetId     INTEGER NOT NULL DEFAULT 0, -- Id de la fiche
-    Url         TEXT    NULL UNIQUE,        -- Url de la fiche
-    Name        TEXT    NOT NULL,           -- Nom de la catégorie
-    Section     INTEGER NOT NULL,           -- Section de la catégorie (ANime, Manga, etc)
-    Type        INTEGER NOT NULL,           -- Type de la catégorie (genre ou thème)
-    Description TEXT    NULL                -- description de la catégorie
+    "Id"             INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
+    "SheetId"        INTEGER NOT NULL DEFAULT 0, -- Id de la fiche
+    "Url"            TEXT    NULL UNIQUE,        -- Url de la fiche
+    "Name"           TEXT    NOT NULL,           -- Nom de la catégorie
+    "Section"        INTEGER NOT NULL,           -- Section de la catégorie (ANime, Manga, etc)
+    "Type"           INTEGER NOT NULL,           -- Type de la catégorie (genre ou thème)
+    "Description"    TEXT    NULL,               -- description de la catégorie
+    "IsFullyScraped" INTEGER NOT NULL DEFAULT 0  -- Est-ce que la catégorie a été entièrement scrapée ?
 );
 -- endregion
 

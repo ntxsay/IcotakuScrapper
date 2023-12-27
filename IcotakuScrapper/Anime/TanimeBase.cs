@@ -8,7 +8,7 @@ using IcotakuScrapper.Contact;
 
 namespace IcotakuScrapper.Anime;
 
-public partial class TanimeBase : ITableSheetBase
+public partial class TanimeBase : ITableSheetBase<TanimeBase>
 {
     /// <summary>
     /// Obtient ou définit l'id de l'anime.
@@ -772,9 +772,9 @@ public partial class TanimeBase : ITableSheetBase
         command.CommandText =
             """
             INSERT OR REPLACE INTO Tanime
-                (SheetId, Url, IsAdultContent, IsExplicitContent, Note, VoteCount, Name, DiffusionState, EpisodeCount, EpisodeDuration, ReleaseDate, EndDate, Description, ThumbnailUrl, IdFormat, IdTarget, IdOrigine, IdSeason)
+                (SheetId, Url, IsAdultContent, IsExplicitContent, Note, VoteCount, Name, DiffusionState, EpisodeCount, EpisodeDuration, ReleaseDate, EndDate, Description, ThumbnailUrl, IdFormat, IdTarget, IdOrigine, IdSeason, Remark)
             VALUES
-                ($SheetId, $Url, $IsAdultContent, $IsExplicitContent, $Note, $VoteCount, $Name, $DiffusionState , $EpisodeCount, $EpisodeDuration, $ReleaseDate, $EndDate, $Description, $ThumbnailUrl, $IdFormat, $IdTarget, $IdOrigine, $IdSeason)
+                ($SheetId, $Url, $IsAdultContent, $IsExplicitContent, $Note, $VoteCount, $Name, $DiffusionState , $EpisodeCount, $EpisodeDuration, $ReleaseDate, $EndDate, $Description, $ThumbnailUrl, $IdFormat, $IdTarget, $IdOrigine, $IdSeason, $Remark)
             """;
 
         command.Parameters.Clear();
@@ -797,6 +797,8 @@ public partial class TanimeBase : ITableSheetBase
         command.Parameters.AddWithValue("$IdTarget", Target?.Id ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$IdOrigine", OrigineAdaptation?.Id ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$IdSeason", Season?.Id ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$Remark", Remark ?? (object)DBNull.Value);
+        
 
         try
         {
@@ -804,6 +806,14 @@ public partial class TanimeBase : ITableSheetBase
             if (result <= 0)
                 return new OperationState<int>(false, "L'anime n'a pas été ajouté");
             Id = await command.GetLastInsertRowIdAsync();
+            
+            await this.AddOrReplaceAlternativeTitlesAsync(cancellationToken, command);
+            await this.AddOrReplaceWebsitesAsync(cancellationToken, command);
+            await this.AddOrReplaceStudiosAsync(cancellationToken, command);
+            await this.AddOrReplaceCategoriesAsync(cancellationToken, command);
+            await this.AddOrReplaceLicensesAsync(cancellationToken, command);
+            await this.AddOrReplaceStaffsAsync(cancellationToken, command);
+
 
             return new OperationState<int>(true, "L'anime a été ajouté avec succès", Id);
         }
@@ -872,7 +882,8 @@ public partial class TanimeBase : ITableSheetBase
                 IdFormat = $IdFormat,
                 IdTarget = $IdTarget,
                 IdOrigine = $IdOrigine,
-                IdSeason = $IdSeason
+                IdSeason = $IdSeason,
+                Remark = $Remark
             WHERE Id = $Id
             """;
 
@@ -896,6 +907,7 @@ public partial class TanimeBase : ITableSheetBase
         command.Parameters.AddWithValue("$IdTarget", Target?.Id ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$IdOrigine", OrigineAdaptation?.Id ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$IdSeason", Season?.Id ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$Remark", Remark ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$Id", Id);
 
         try
@@ -1087,7 +1099,8 @@ public partial class TanimeBase : ITableSheetBase
                         urlIndex: reader.GetOrdinal("CategoryUrl"),
                         sectionIndex: reader.GetOrdinal("CategorySection"),
                         nameIndex: reader.GetOrdinal("CategoryName"),
-                        descriptionIndex: reader.GetOrdinal("CategoryDescription"));
+                        descriptionIndex: reader.GetOrdinal("CategoryDescription"),
+                        isFullyScrapedIndex: reader.GetOrdinal("CategoryIsFullyScraped"));
                     record.Categories.Add(category);
                 }
             }
@@ -1187,6 +1200,7 @@ public partial class TanimeBase : ITableSheetBase
             Tcategory.Section AS CategorySection,
             Tcategory.Name AS CategoryName,
             Tcategory.Description AS CategoryDescription,
+            Tcategory.IsFullyScraped AS CategoryIsFullyScraped,
             
             TanimeStudio.IdStudio AS StudioId,
             TanimeLicense.Id AS LicenseId,
