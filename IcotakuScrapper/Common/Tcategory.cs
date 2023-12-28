@@ -17,6 +17,7 @@ public enum CategorySortBy
 public partial class Tcategory : ITableSheetBase<Tcategory>
 {
     public int Id { get; protected set; }
+
     public int SheetId { get; set; }
     
     public CategoryType Type { get; set; }
@@ -447,14 +448,8 @@ public partial class Tcategory : ITableSheetBase<Tcategory>
 
     #region Insert
 
-    /// <summary>
-    /// Insert un nouvel enregistrement dans la table Tcategory
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
-    /// <returns></returns>
-    public async Task<OperationState<int>> InsertAsync(CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public async Task<OperationState<int>> InsertAsync(bool disableVerification = false,
+        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         if (Name.IsStringNullOrEmptyOrWhiteSpace())
             return new OperationState<int>(false, "Le nom de l'item ne peut pas être vide");
@@ -465,7 +460,7 @@ public partial class Tcategory : ITableSheetBase<Tcategory>
         if (!Uri.TryCreate(Url, UriKind.Absolute, out var uri))
             return new OperationState<int>(false, "L'url n'est pas valide");
 
-        if (await ExistsAsync(Name, cancellationToken, cmd))
+        if (!disableVerification && await ExistsAsync(Name, cancellationToken, cmd))
             return new OperationState<int>(false, "Le nom de l'item existe déjà");
 
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
@@ -585,7 +580,7 @@ public partial class Tcategory : ITableSheetBase<Tcategory>
                 return record;
         }
 
-        var result = await value.InsertAsync(cancellationToken, command);
+        var result = await value.InsertAsync(false, cancellationToken, command);
         return !result.IsSuccess ? null : value;
     }
 

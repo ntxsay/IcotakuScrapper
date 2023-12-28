@@ -56,9 +56,11 @@ namespace IcotakuScrapper.Services.IOS
             return path;
         }
 
-        public static string GetDirectoryPath(IcotakuDefaultFolder defaultFolder, Guid itemGuid, params string[] partialPaths)
+        public static string? GetDirectoryPath(IcotakuDefaultFolder defaultFolder, Guid itemGuid, params string[] partialPaths)
         {
             var path = GetDirectoryPath(defaultFolder, itemGuid);
+            if (path == null || path.IsStringNullOrEmptyOrWhiteSpace())
+                return null;
             foreach (var partialPath in partialPaths)
             {
                 path = Path.Combine(path, partialPath);
@@ -123,10 +125,12 @@ namespace IcotakuScrapper.Services.IOS
         {
             try
             {
-                var path = GetDirectoryPath(defaultFolder, itemGuid);
-                if (!Directory.Exists(path))
-                    Directory.CreateDirectory(path);
-                return path;
+                var defaultFolderItemPath = GetDirectoryPath(defaultFolder, itemGuid);
+                if (defaultFolderItemPath == null || defaultFolderItemPath.IsStringNullOrEmptyOrWhiteSpace())
+                    return null;
+                if (!Directory.Exists(defaultFolderItemPath))
+                    Directory.CreateDirectory(defaultFolderItemPath);
+                return defaultFolderItemPath;
             }
             catch (Exception e)
             {
@@ -172,6 +176,9 @@ namespace IcotakuScrapper.Services.IOS
             try
             {
                 var path = GetDirectoryPath(defaultFolder, itemGuid, partialPaths);
+                if (path == null || path.IsStringNullOrEmptyOrWhiteSpace())
+                    return null;
+                
                 if (!Directory.Exists(path))
                     Directory.CreateDirectory(path);
                 return path;

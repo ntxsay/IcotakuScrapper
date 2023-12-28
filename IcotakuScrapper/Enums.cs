@@ -157,19 +157,24 @@ public enum AnimeScrapingOptions
     None = 0,
     Episodes = 1,
     Studios = 2,
-    Characters = 4,
-    Staff = 8,
+    FullStudios = 4,
+    Characters = 8,
+    FullCharacters = 16,
+    Staff = 32,
+    FullStaff = 64,
     /// <summary>
     /// Inclut les catégories sans la description 
     /// </summary>
-    Categories = 16,
+    Categories = 128,
     /// <summary>
     /// Inclut les catégories avec la description 
     /// </summary>
     /// <remarks>La fiche anime n'inclut pas naturellement la description de la catégorie, il faut scrapper la fiche de la catégorie elle-même pour obtenir cette information</remarks>
-    FullCategories = 32,
+    FullCategories = 256,
+    Licenses = 512,
+    FullLicenses = 1024,
     
-    All = Episodes | Studios | Characters | Staff | Categories | FullCategories,
+    All = Episodes | Studios | FullStudios | Characters | FullCharacters | Staff | FullStaff | Categories | FullCategories | Licenses | FullLicenses,
 }
 
 /// <summary>

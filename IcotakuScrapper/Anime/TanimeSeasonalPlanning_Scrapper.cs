@@ -12,22 +12,7 @@ namespace IcotakuScrapper.Anime;
 
 public partial class TanimeSeasonalPlanning
 {
-    private static string? GetAnimeSeasonalPlanningUrl(WeatherSeason season)
-    {
-        var seasonName = season.Season switch
-        {
-            WeatherSeasonKind.Spring => "printemps",
-            WeatherSeasonKind.Summer => "ete",
-            WeatherSeasonKind.Fall => "automne",
-            WeatherSeasonKind.Winter => "hiver",
-            _ => null,
-        };
-
-        if (seasonName is null)
-            return null;
-
-        return $"https://anime.icotaku.com/planning/planningSaisonnier/saison/{seasonName}/annee/{season.Year}";
-    }
+   
 
     public static async Task<OperationState> ScrapAsync(WeatherSeason season,
         DbInsertMode insertMode = DbInsertMode.InsertOrReplace,
@@ -50,7 +35,7 @@ public partial class TanimeSeasonalPlanning
 
     internal static async IAsyncEnumerable<TanimeSeasonalPlanning> GetAnimeSeasonalPlanning(WeatherSeason season, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
-        var url = GetAnimeSeasonalPlanningUrl(season);
+        var url = IcotakuWebHelpers.GetAnimeSeasonalPlanningUrl(season);
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || !uri.IsAbsoluteUri)
             yield break;
 
@@ -87,10 +72,7 @@ public partial class TanimeSeasonalPlanning
                 if (title == null || title.IsStringNullOrEmptyOrWhiteSpace())
                     continue;
 
-                if (aNode.Attributes["href"]?.Value == null || aNode.Attributes["href"].Value.IsStringNullOrEmptyOrWhiteSpace())
-                    continue;
-
-                var animeUri = IcotakuWebHelpers.GetFullHrefFromRelativePath(aNode.Attributes["href"].Value, IcotakuSection.Anime);
+                var animeUri = IcotakuWebHelpers.GetFullHrefFromHtmlNode(aNode, IcotakuSection.Anime);
                 if (animeUri is null)
                     continue;
 
@@ -107,7 +89,8 @@ public partial class TanimeSeasonalPlanning
                     Season = seasonRecord,
                 };
 
-                AddAdditionalInfos(record, animeUri, ref additionalContentList);
+                var task  = Task.Run(() => AddAdditionalInfos(ref record, animeUri, ref additionalContentList));
+                //AddAdditionalInfos(record, animeUri, ref additionalContentList);
 
                 var descriptionNode = tableNode.SelectSingleNode(".//td[contains(@class, 'histoire')]/text()[1]");
                 if (descriptionNode != null)
@@ -147,14 +130,23 @@ public partial class TanimeSeasonalPlanning
                             record.Studios.Add(studioName);
                 }
 
+                while (!task.IsCompleted)
+                {
+                    await Task.Delay(100, cancellationToken ?? CancellationToken.None);
+                }
+
+                task.Dispose();
+                task = null;
+
                 yield return record;
             }
         }
     }
 
-    private static void AddAdditionalInfos(TanimeSeasonalPlanning planning, Uri animeSheetUri, ref HashSet<(int sheetId, bool isAdultContent, bool isExplicitContent, string? thumbnailUrl)> additionalContentList)
+    private static void AddAdditionalInfos(ref TanimeSeasonalPlanning planning, Uri animeSheetUri, ref HashSet<(int sheetId, bool isAdultContent, bool isExplicitContent, string? thumbnailUrl)> additionalContentList)
     {
-        var additionalContent = additionalContentList.FirstOrDefault(w => w.sheetId == planning.SheetId);
+        var sheetId = planning.SheetId;
+        var additionalContent = additionalContentList.FirstOrDefault(w => w.sheetId == sheetId);
         if (!additionalContent.Equals(default))
         {
             planning.IsAdultContent = additionalContent.isAdultContent;
@@ -167,9 +159,9 @@ public partial class TanimeSeasonalPlanning
         HtmlWeb web = new();
         var htmlDocument = web.Load(animeSheetUri.ToString());
 
-        planning.IsAdultContent = Tanime.ScrapIsAdultContent(htmlDocument.DocumentNode);
-        planning.IsExplicitContent = planning.IsAdultContent || Tanime.ScrapIsExplicitContent(htmlDocument.DocumentNode);
-        planning.ThumbnailUrl = Tanime.ScrapFullThumbnail(htmlDocument.DocumentNode);
+        planning.IsAdultContent = TanimeBase.ScrapIsAdultContent(htmlDocument.DocumentNode);
+        planning.IsExplicitContent = planning.IsAdultContent || TanimeBase.ScrapIsExplicitContent(htmlDocument.DocumentNode);
+        planning.ThumbnailUrl = TanimeBase.ScrapFullThumbnail(htmlDocument.DocumentNode);
 
         additionalContentList.Add((planning.SheetId, planning.IsAdultContent, planning.IsExplicitContent, planning.ThumbnailUrl));
     }

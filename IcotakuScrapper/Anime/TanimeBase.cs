@@ -744,11 +744,11 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
     /// <summary>
     /// Insert la base d'un animé dans la base de données.
     /// </summary>
-    /// <param name="disableExistenceVerification"></param>
+    /// <param name="disableVerification"></param>
     /// <param name="cancellationToken"></param>
     /// <param name="cmd"></param>
     /// <returns></returns>
-    public async Task<OperationState<int>> InsertAync(bool disableExistenceVerification = false,
+    public async Task<OperationState<int>> InsertAsync(bool disableVerification = false,
         CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
         if (Name.IsStringNullOrEmptyOrWhiteSpace())
@@ -765,7 +765,7 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
 
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
 
-        if (!disableExistenceVerification && await ExistsAsync(Name, SheetId, uri, cancellationToken, command))
+        if (!disableVerification && await ExistsAsync(Name, SheetId, uri, cancellationToken, command))
             return new OperationState<int>(false, "L'anime existe déjà");
 
 

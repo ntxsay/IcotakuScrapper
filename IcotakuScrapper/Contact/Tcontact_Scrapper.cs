@@ -135,4 +135,22 @@ public partial class Tcontact
         var uri = IcotakuWebHelpers.GetImageFromSrc(section, src);
         return uri?.ToString();
     }
+
+    internal static string? ScrapFullThumbnail(Uri contactUri)
+    {
+        HtmlWeb web = new();
+        var htmlDocument = web.Load(contactUri.ToString());
+
+        var documentNode = htmlDocument.DocumentNode;
+
+        var contactType = IcotakuWebHelpers.GetContactType(contactUri);
+        if (contactType is null or ContactType.Unknown)
+            return null;
+
+        var section = IcotakuWebHelpers.GetIcotakuSection(contactUri);
+        if (section is null)
+            return null;
+
+        return ScrapFullThumbnail(documentNode, (ContactType)contactType, (IcotakuSection)section);
+    }
 }

@@ -63,6 +63,9 @@ public partial class Tanime : TanimeBase
         AlternativeTitles.ToObservableCollection(animeBase.AlternativeTitles, true);
         Websites.ToObservableCollection(animeBase.Websites, true);
         Categories.ToObservableCollection(animeBase.Categories, true);
+        Studios.ToObservableCollection(animeBase.Studios, true);
+        Licenses.ToObservableCollection(animeBase.Licenses, true);
+        Staffs.ToObservableCollection(animeBase.Staffs, true);
     }
 
     public Tanime(int id)
@@ -76,8 +79,98 @@ public partial class Tanime : TanimeBase
 
     private static async Task<OperationState<int>> CreateIndexAsync(string animeName, string animeUrl, int animeSheetId, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
         => await TsheetIndex.InsertAsync(IcotakuSection.Anime, IcotakuSheetType.Anime, animeName, animeUrl, animeSheetId, 0, cancellationToken, cmd);
-    
 
+    #region Scrap
+
+    #region Scrap from sheetId
+    /// <summary>
+    /// Récupère les informations de l'anime via l'id Icotaku de la fiche
+    /// </summary>
+    /// <param name="sheetId">Id Icotaku de la fiche</param>
+    /// <param name="options"></param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
+    public static async Task<OperationState<int>> ScrapFromSheetIdAsync(int sheetId, AnimeScrapingOptions options = AnimeScrapingOptions.None,
+        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        //Récupère l'url de l'animé depuis le dictionnaire
+        var index = await TsheetIndex.SingleAsync(sheetId, IntColumnSelect.SheetId, cancellationToken, cmd);
+        if (index == null)
+            return new OperationState<int>(false, "L'index permettant de récupérer l'url de la fiche de l'anime n'a pas été trouvé dans la base de données.");
+
+        if (!Uri.TryCreate(index.Url, UriKind.Absolute, out var sheetUri) || !sheetUri.IsAbsoluteUri)
+            return new OperationState<int>(false, "L'url de la fiche de l'anime est invalide.");
+
+        return await ScrapFromUrlAsync(sheetUri, options, cancellationToken, cmd);
+    }
+
+    public static async Task<Tanime?> ScrapAndGetFromSheetIdAsync(int sheetId, AnimeScrapingOptions options = AnimeScrapingOptions.None,
+        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        var operationResult = await ScrapFromSheetIdAsync(sheetId, options, cancellationToken, cmd);
+        if (!operationResult.IsSuccess)
+            return null;
+
+        var anime = await SingleByIdAsync(operationResult.Data, cancellationToken, cmd);
+        return anime;
+    }
+    #endregion
+
+    #region Scrap from Url
+    /// <summary>
+    /// Récupère les informations de l'anime via l'url de la fiche
+    /// </summary>
+    /// <param name="sheetUri"></param>
+    /// <param name="userName"></param>
+    /// <param name="passWord"></param>
+    /// <param name="options"></param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
+    public static async Task<OperationState<int>> ScrapFromUrlAsync(Uri sheetUri, string userName, string passWord, AnimeScrapingOptions options = AnimeScrapingOptions.None,
+        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        var htmlContent = await IcotakuWebHelpers.GetRestrictedHtmlAsync(IcotakuSection.Anime, sheetUri, userName, passWord);
+        if (htmlContent == null || htmlContent.IsStringNullOrEmptyOrWhiteSpace())
+            return new OperationState<int>(false, "Le contenu de la fiche est introuvable.");
+
+        if (!IcotakuWebHelpers.IsHostNameValid(IcotakuSection.Anime, sheetUri))
+            return new OperationState<int>(false, "L'url de la fiche de l'anime n'est pas une url icotaku.");
+
+        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+
+        var animeResult = await ScrapAnimeAsync(htmlContent, sheetUri, options, cancellationToken, command);
+
+        return await ScrapAndAnimeFromUrlAsync(animeResult, cancellationToken, command);
+    }
+
+    public static async Task<OperationState<int>> ScrapFromUrlAsync(Uri sheetUri, AnimeScrapingOptions options = AnimeScrapingOptions.All,
+        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        if (!IcotakuWebHelpers.IsHostNameValid(IcotakuSection.Anime, sheetUri))
+            return new OperationState<int>(false, "L'url de la fiche de l'anime n'est pas une url icotaku.");
+
+        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+
+        var animeResult = await ScrapAnimeAsync(sheetUri, options, cancellationToken, command);
+
+        return await ScrapAndAnimeFromUrlAsync(animeResult, cancellationToken, command);
+    }
+
+    public static async Task<Tanime?> ScrapAndGetFromUrlAsync(Uri sheetUri, AnimeScrapingOptions options = AnimeScrapingOptions.All,
+        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        var operationResult = await ScrapFromUrlAsync(sheetUri, options, cancellationToken, cmd);
+        if (!operationResult.IsSuccess)
+            return null;
+
+        var anime = await SingleByIdAsync(operationResult.Data, cancellationToken, cmd);
+        return anime;
+    }
+    #endregion
+
+    #endregion
 
     #region Select
 
@@ -210,9 +303,9 @@ public partial class Tanime : TanimeBase
 
     #region Insert
 
-    public new async Task<OperationState<int>> InsertAync(bool disableExistenceVerification = false, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public async Task<OperationState<int>> InsertAync(bool disableExistenceVerification = false, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
-        var insertBaseResult = await base.InsertAync(disableExistenceVerification, cancellationToken, cmd);
+        var insertBaseResult = await base.InsertAsync(disableExistenceVerification, cancellationToken, cmd);
         if (!insertBaseResult.IsSuccess || insertBaseResult.Data <= 0)
             return insertBaseResult;
         

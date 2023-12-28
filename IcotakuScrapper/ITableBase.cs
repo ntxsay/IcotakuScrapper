@@ -9,6 +9,16 @@ public interface ITableBase<T>  where T : class
     /// </summary>
     public int Id { get;  }
 
+    /// <summary>
+    /// Insère l'objet <typeparamref name="T"/> dans la base de données.
+    /// </summary>
+    /// <param name="disableVerification">Active ou désactive la validation en base de données avant l'insertion</param>
+    /// <param name="cancellationToken">Permet d'annuler l'opération</param>
+    /// <param name="cmd">Permet d'utiliser un objet <see cref="SqliteCommand"/> extérieur à la méthode</param>
+    /// <returns></returns>
+    public Task<OperationState<int>> InsertAsync(bool disableVerification = false,
+        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null);
+
     /*/// <summary>
     /// Retourne une valeur booléenne indiquant si l'objet <typeparamref name="T"/>.
     /// </summary>

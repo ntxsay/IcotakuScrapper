@@ -29,18 +29,8 @@ namespace IcotakuScrapperTest
         public async Task GetAnimeFromUrlAsync()
         {
             //Récupère les informations de l'anime via l'url de la fiche
-            OperationState<int> animeCreationResult =
-                await Tanime.ScrapFromUrlAsync(new Uri("https://anime.icotaku.com/anime/5633/Dr-STONE.html"), AnimeScrapingOptions.All &~ AnimeScrapingOptions.FullCategories &~ AnimeScrapingOptions.Episodes, null, null);
-
-            //Vérifie que l'opération s'est bien déroulée
-            if (!animeCreationResult.IsSuccess)
-            {
-                Console.WriteLine(animeCreationResult.Message);
-                return;
-            }
-            
-            //Récupère les informations de l'anime précédement "scrapé" via l'url de la fiche
-            Tanime? anime = await Tanime.SingleAsync(new Uri("https://anime.icotaku.com/anime/5633/Dr-STONE.html"));
+            var anime =
+                await Tanime.ScrapAndGetFromUrlAsync(new Uri("https://anime.icotaku.com/anime/5633/Dr-STONE.html"), AnimeScrapingOptions.All &~ AnimeScrapingOptions.FullCategories &~ AnimeScrapingOptions.Episodes);
 
             if (anime is null)
             {
@@ -56,14 +46,6 @@ namespace IcotakuScrapperTest
 
             //obtient le synopsis
             Console.WriteLine(anime.Description);
-
-            //Obtient des informations supplémentaires sur l'opération
-            Console.WriteLine(animeCreationResult.Message);
-
-            //Obtient l'id (SQLite) de l'anime
-            Console.WriteLine(animeCreationResult.Data);
-
-            Assert.That(animeCreationResult.IsSuccess, Is.True);
         }
 
         [Test]

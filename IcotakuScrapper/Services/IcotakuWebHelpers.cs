@@ -4,6 +4,7 @@ using IcotakuScrapper.Services.IOS;
 using System.Net;
 using System.Net.Http.Headers;
 using IcotakuScrapper.Anime;
+using IcotakuScrapper.Common;
 
 namespace IcotakuScrapper.Services;
 
@@ -151,6 +152,28 @@ public static class IcotakuWebHelpers
     }
 
     #region Get Url
+
+    /// <summary>
+    /// Retourne l'url complète du planning saisonnier à partir de la saison
+    /// </summary>
+    /// <param name="season"></param>
+    /// <returns></returns>
+    internal static string? GetAnimeSeasonalPlanningUrl(WeatherSeason season)
+    {
+        var seasonName = season.Season switch
+        {
+            WeatherSeasonKind.Spring => "printemps",
+            WeatherSeasonKind.Summer => "ete",
+            WeatherSeasonKind.Fall => "automne",
+            WeatherSeasonKind.Winter => "hiver",
+            _ => null,
+        };
+
+        if (seasonName is null)
+            return null;
+
+        return $"https://anime.icotaku.com/planning/planningSaisonnier/saison/{seasonName}/annee/{season.Year}";
+    }
 
     /// <summary>
     /// Obtient l'url de la page de la liste des animes

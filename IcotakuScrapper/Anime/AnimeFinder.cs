@@ -6,31 +6,31 @@ namespace IcotakuScrapper.Anime;
 public class AnimeFinder : IDisposable
 {
     public delegate void OperationCompletedEventHandler(RunWorkerCompletedEventArgs args);
-    public event OperationCompletedEventHandler OperationCompletedRequested;
+    public event OperationCompletedEventHandler? OperationCompletedRequested;
 
     public delegate void ProgressChangedEventHandler(double percent, OperationState<TanimeBase?> operationState);
-    public event ProgressChangedEventHandler ProgressChangedRequested;
+    public event ProgressChangedEventHandler? ProgressChangedRequested;
 
 
-    private BackgroundWorker _Worker;
+    private BackgroundWorker _worker;
 
     private AnimeFinderParameterStruct _parameter = default;
     private bool disposedValue;
 
-    public bool IsRunning => _Worker.IsBusy;
-    public bool IsCancelled => _Worker.CancellationPending;
+    public bool IsRunning => _worker.IsBusy;
+    public bool IsCancelled => _worker.CancellationPending;
 
     public AnimeFinder()
     {
-        _Worker = new BackgroundWorker()
+        _worker = new BackgroundWorker()
         {
             WorkerReportsProgress = true,
             WorkerSupportsCancellation = true
         };
 
-        _Worker.DoWork += WorkerOnDoWork;
-        _Worker.ProgressChanged += WorkerOnProgressChanged;
-        _Worker.RunWorkerCompleted += WorkerOnRunWorkerCompleted;
+        _worker.DoWork += WorkerOnDoWork;
+        _worker.ProgressChanged += WorkerOnProgressChanged;
+        _worker.RunWorkerCompleted += WorkerOnRunWorkerCompleted;
     }
 
     public void Find(AnimeFinderParameterStruct parameter)
@@ -59,7 +59,7 @@ public class AnimeFinder : IDisposable
         }
 
         _parameter = parameter;
-        _Worker.RunWorkerAsync(htmlDocument.DocumentNode);
+        _worker.RunWorkerAsync(htmlDocument.DocumentNode);
     }
 
     private void WorkerOnDoWork(object? sender, DoWorkEventArgs e)
@@ -76,7 +76,7 @@ public class AnimeFinder : IDisposable
         var animeSheetUris = TanimeBase.ScrapSearchResultUri(htmlNode).ToArray();
         foreach (var animeSheetUri in animeSheetUris)
         {
-            if (_Worker.CancellationPending)
+            if (_worker.CancellationPending)
             {
                 e.Cancel = true;
                 return;
@@ -88,7 +88,7 @@ public class AnimeFinder : IDisposable
             using var animeBaseResult = TanimeBase.ScrapAnimeBaseAsync(animeSheetUri, AnimeScrapingOptions.All);
             animeBaseResult.Wait();
             
-            _Worker.ReportProgress(percent, animeBaseResult.Result);
+            _worker.ReportProgress(percent, animeBaseResult.Result);
             Thread.Sleep(100);
         }
 
@@ -99,7 +99,7 @@ public class AnimeFinder : IDisposable
         //Sinon on scrap les autres pages
         for (var i = minPage; i <= maxPage; i++)
         {
-            if (_Worker.CancellationPending)
+            if (_worker.CancellationPending)
             {
                 e.Cancel = true;
                 return;
@@ -132,7 +132,7 @@ public class AnimeFinder : IDisposable
             //Scrap les fiches
             foreach (var sheetUri in animeSheetUris)
             {
-                if (_Worker.CancellationPending)
+                if (_worker.CancellationPending)
                 {
                     e.Cancel = true;
                     return;
@@ -144,7 +144,7 @@ public class AnimeFinder : IDisposable
                 using var animeBaseResult2 = TanimeBase.ScrapAnimeBaseAsync(sheetUri, AnimeScrapingOptions.All);
                 animeBaseResult2.Wait();
                 
-                _Worker.ReportProgress(percent2, animeBaseResult2.Result);
+                _worker.ReportProgress(percent2, animeBaseResult2.Result);
                 Thread.Sleep(100);
             }
         }
@@ -176,9 +176,9 @@ public class AnimeFinder : IDisposable
             }
 
             // TODO: libérer les ressources non managées (objets non managés) et substituer le finaliseur
-            _Worker.Dispose();
+            _worker.Dispose();
             // TODO: affecter aux grands champs une valeur null
-            _Worker = null!;
+            _worker = null!;
 
             disposedValue = true;
         }
