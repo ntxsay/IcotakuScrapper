@@ -26,6 +26,7 @@ public partial class TanimeSeasonalPlanning
                         TorigineAdaptation.Name AS ItemName,
                         TorigineAdaptation.Id AS ItemData,
                         TorigineAdaptation.Description AS ItemDescription,
+                        'Origine de l''adaptation' AS GroupName,
                         COUNT(TanimeSeasonalPlanning.Id) AS ItemCount
                     FROM
                         main.TanimeSeasonalPlanning
@@ -42,6 +43,7 @@ public partial class TanimeSeasonalPlanning
                         Tseason.DisplayName AS ItemName,
                         Tseason.SeasonNumber AS ItemData,
                         'Recherche les animes dont la saison de diffusion est « ' || Tseason.DisplayName || ' »' AS ItemDescription,
+                        'Saison' AS GroupName,
                         COUNT(TanimeSeasonalPlanning.Id) AS ItemCount
                     FROM main.Tseason
                     LEFT JOIN main.TanimeSeasonalPlanning on TanimeSeasonalPlanning.IdSeason = Tseason.Id
@@ -57,6 +59,10 @@ public partial class TanimeSeasonalPlanning
                         Tcategory.Name AS ItemName,
                         Tcategory.Id AS ItemData,
                         Tcategory.Description AS ItemDescription,
+                        CASE
+                            WHEN Tcategory.Type = 0 THEN 'Thème'
+                            WHEN Tcategory.Type = 1 THEN 'Genre'
+                        END AS GroupName,
                         Tanime.SheetId AS AnimeSheetId,
                         COUNT(TanimeSeasonalPlanning.Id) AS ItemCount
                     FROM main.TanimeSeasonalPlanning
@@ -75,6 +81,7 @@ public partial class TanimeSeasonalPlanning
                         TanimeSeasonalPlanning.ReleaseMonth AS ItemName,
                         TanimeSeasonalPlanning.ReleaseMonth AS ItemData,
                         'Recherche les animes dont le mois de diffusion est celui-ci ' AS ItemDescription,
+                        'Date de diffusion' AS GroupName,
                         COUNT(TanimeSeasonalPlanning.Id) AS ItemCount
                     FROM main.TanimeSeasonalPlanning
                     WHERE
@@ -89,6 +96,7 @@ public partial class TanimeSeasonalPlanning
                         TanimeSeasonalPlanning.GroupName AS ItemName,
                         TanimeSeasonalPlanning.GroupName AS ItemData,
                         'Recherche les animes dont le format est « ' || TanimeSeasonalPlanning.GroupName AS ItemDescription,
+                        'Format' AS GroupName,
                         COUNT(TanimeSeasonalPlanning.Id) AS ItemCount
                     FROM main.TanimeSeasonalPlanning
                     WHERE
@@ -103,6 +111,7 @@ public partial class TanimeSeasonalPlanning
                         UPPER(SUBSTR(AnimeName, 1, 1)) AS ItemName,
                         UPPER(SUBSTR(AnimeName, 1, 1)) AS ItemData,
                         'Recherche les animes dont la première lettre commence par « ' || UPPER(SUBSTR(AnimeName, 1, 1)) || ' »' AS ItemDescription,
+                        'Lettre' AS GroupName,
                         COUNT(TanimeSeasonalPlanning.Id) AS ItemCount
                     FROM main.TanimeSeasonalPlanning
                     WHERE
@@ -128,6 +137,7 @@ public partial class TanimeSeasonalPlanning
 
         while (await reader.ReadAsync(cancellationToken ?? CancellationToken.None))
         {
+            var groupName = reader.IsDBNull(reader.GetOrdinal("GroupName")) ? null : reader.GetString(reader.GetOrdinal("GroupName"));
             var itemName = reader.IsDBNull(reader.GetOrdinal("ItemName")) ? null : reader.GetString(reader.GetOrdinal("ItemName"));
             var itemDescription = reader.IsDBNull(reader.GetOrdinal("ItemDescription")) ? null : reader.GetString(reader.GetOrdinal("ItemDescription"));
             var itemData = reader.IsDBNull(reader.GetOrdinal("ItemData")) ? null : reader.GetValue(reader.GetOrdinal("ItemData"));
@@ -139,7 +149,7 @@ public partial class TanimeSeasonalPlanning
                 itemData == null)
                 continue;
             
-            var groupName = selectionMode switch
+            /*var groupName = selectionMode switch
             {
                 SeasonalAnimeSelectionMode.OrigineAdaptation => "Origine de l'adaptation",
                 SeasonalAnimeSelectionMode.Season => "Saison",
@@ -149,12 +159,12 @@ public partial class TanimeSeasonalPlanning
                 SeasonalAnimeSelectionMode.None => "Aucun",
                 SeasonalAnimeSelectionMode.Category => "Catégories",
                 _ => throw new ArgumentOutOfRangeException(nameof(selectionMode), selectionMode, null)
-            };
+            };*/
             
             yield return new ItemGroupCountStruct
             {
                 IdentifierKind = ConvertSelectionModeToItemGroupCountKind(selectionMode),
-                GroupName = groupName,
+                GroupName = groupName ?? "Groupe inconnu",
                 Name = ConvertItemCountName(selectionMode, itemName),
                 Data = ConvertItemCountData(selectionMode, itemData),
                 Description = itemDescription,
@@ -265,7 +275,7 @@ public partial class TanimeSeasonalPlanning
                 totalItems: 0,
                 items: []);
 
-        var totalPages = (uint)ExtensionMethods.CountPage(totalItems, (int)maxContentByPage);
+        var totalPages = ExtensionMethods.CountPage((uint)totalItems, (uint)maxContentByPage);
 
 
         _ = GetSqlSelectScript(command, DbScriptMode.Select, options, sortBy, orderBy);

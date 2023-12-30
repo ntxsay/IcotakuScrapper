@@ -350,10 +350,9 @@ public partial class Ttarget
     /// <param name="cancellationToken"></param>
     /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<Ttarget?> SingleOrCreateAsync(Ttarget value, bool reloadIfExist= false, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public static async Task<Ttarget?> SingleOrCreateAsync(Ttarget value, bool reloadIfExist= false, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.Parameters.Clear();
+        var command = await Main.GetSqliteCommandAsync();
         if (!reloadIfExist)
         {
             var id = await GetIdOfAsync(value.Name, value.Section, cancellationToken, command);

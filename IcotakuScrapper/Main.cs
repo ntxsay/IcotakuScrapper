@@ -156,6 +156,7 @@ namespace IcotakuScrapper
         }
 
         private static SqliteConnection? _connection;
+        private static SqliteCommand? _command;
 
         /// <summary>
         /// Initialise et retourne une connexion à la base de données SQLite
@@ -187,6 +188,56 @@ namespace IcotakuScrapper
             }
 
             return _connection;
+        }
+
+        /// <summary>
+        /// Retourne une commande SQL à partir de la connexion à la base de données SQLite
+        /// </summary>
+        /// <returns></returns>
+        internal static async Task<SqliteCommand> GetSqliteCommandAsync()
+        {
+            if (_connection == null)
+            {
+                _connection = new SqliteConnection(ConnexionString);
+                await _connection.OpenAsync();
+            }
+
+            if (_command == null)
+            {
+                _command = _connection.CreateCommand();
+            }
+            else
+            {
+                _command.Parameters.Clear();
+                _command.CommandText = null;
+            }
+
+            return _command;
+        }
+
+        /// <summary>
+        /// Retourne une commande SQL à partir de la connexion à la base de données SQLite
+        /// </summary>
+        /// <returns></returns>
+        internal static SqliteCommand GetSqliteCommand()
+        {
+            if (_connection == null)
+            {
+                _connection = new SqliteConnection(ConnexionString);
+                _connection.Open();
+            }
+
+            if (_command == null)
+            {
+                _command = _connection.CreateCommand();
+            }
+            else
+            {
+                _command.Parameters.Clear();
+                _command.CommandText = null;
+            }
+
+            return _command;
         }
         #endregion
 

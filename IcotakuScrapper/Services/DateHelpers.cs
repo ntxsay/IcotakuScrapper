@@ -162,6 +162,38 @@ public static class DateHelpers
         return (day, month, year);
     }
 
+    /// <summary>
+    /// Convertit une date en chaîne de caractère en nombre entier yyyyMM
+    /// </summary>
+    /// <param name="date">date en chaine de caractères au format MMMM yyyy (ex : Janvier 2013)</param>
+    /// <returns>Retourne un nombre entier qui suit la logique yyyyMM</returns>
+    internal static uint GetNumberedMonthAndYear(string? date)
+    {
+        if (date == null || date.IsStringNullOrEmptyOrWhiteSpace())
+            return 0;
+
+        var _date = date.Trim();
+
+        var split = _date.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (split.Length == 1)
+        {
+            if (!ushort.TryParse(split[0], out ushort year))
+                return uint.Parse($"{year:0000}00");
+        }
+        else if (split.Length == 2)
+        {
+            var monthNumber = GetMonthNumber(split[0]);
+
+            if (!ushort.TryParse(split[1], out ushort year))
+                return 0;
+
+            return uint.Parse($"{year:0000}{monthNumber:00}");
+        }
+
+        return 0;
+    }
+
+
     public static string? GetYearMonthLiteral(uint intDate, string format = "MMMM yyyy")
     {
         if (intDate == 0)

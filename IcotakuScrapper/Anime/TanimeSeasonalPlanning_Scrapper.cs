@@ -2,23 +2,29 @@
 using IcotakuScrapper.Common;
 using IcotakuScrapper.Contact;
 using IcotakuScrapper.Extensions;
-
 using Microsoft.Data.Sqlite;
-using System;
-using System.Text.RegularExpressions;
 using System.Web;
 
 namespace IcotakuScrapper.Anime;
 
 public partial class TanimeSeasonalPlanning
 {
-   
+    private static readonly HashSet<AnimeAdditionalInfosStruct> additionalContentList = [];
 
+    /// <summary>
+    /// Scrappe le planning saisonnier d'animé
+    /// </summary>
+    /// <param name="season">Saison à scrapper</param>
+    /// <param name="insertMode"></param>
+    /// <param name="isDeleteSectionRecords"></param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
     public static async Task<OperationState> ScrapAsync(WeatherSeason season,
         DbInsertMode insertMode = DbInsertMode.InsertOrReplace,
         bool isDeleteSectionRecords = true, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
-        var planning = await GetAnimeSeasonalPlanning(season, cancellationToken, cmd).ToArrayAsync();
+        var planning = await ScrapAnimeSeasonalPlanning(season, cancellationToken, cmd).ToArrayAsync();
         if (planning.Length == 0)
             return new OperationState(false, "Le planning est vide");
 
@@ -29,12 +35,14 @@ public partial class TanimeSeasonalPlanning
                 return deleteAllResult;
         }
 
-        return await InsertAsync(planning,insertMode, cancellationToken, cmd);
+        return await InsertAsync(planning, insertMode, cancellationToken, cmd);
     }
 
 
-    internal static async IAsyncEnumerable<TanimeSeasonalPlanning> GetAnimeSeasonalPlanning(WeatherSeason season, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    internal static async IAsyncEnumerable<TanimeSeasonalPlanning> ScrapAnimeSeasonalPlanning(WeatherSeason season, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
     {
+        additionalContentList.Clear();
+
         var url = IcotakuWebHelpers.GetAnimeSeasonalPlanningUrl(season);
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || !uri.IsAbsoluteUri)
             yield break;
@@ -50,10 +58,10 @@ public partial class TanimeSeasonalPlanning
         if (seasonRecord is null)
             yield break;
 
-        HashSet<(int sheetId, bool isAdultContent, bool isExplicitContent, string? thumbnailUrl)> additionalContentList = [];
-
+        List<Task<TanimeSeasonalPlanning?>> tasks = [];
         foreach (var categoryNode in htmlNodes)
         {
+            //obtient le nom de la catégorie
             var categoryName = HttpUtility.HtmlDecode(categoryNode.SelectSingleNode("./h2[1]")?.InnerText?.Trim())?.Trim();
             if (categoryName == null || categoryName.IsStringNullOrEmptyOrWhiteSpace())
                 continue;
@@ -64,106 +72,126 @@ public partial class TanimeSeasonalPlanning
 
             foreach (var tableNode in tableNodes)
             {
-                var aNode = tableNode.SelectSingleNode(".//th[contains(@class, 'titre')]/a");
-                if (aNode == null)
-                    continue;
-
-                var title = HttpUtility.HtmlDecode(aNode.InnerText?.Trim())?.Trim();
-                if (title == null || title.IsStringNullOrEmptyOrWhiteSpace())
-                    continue;
-
-                var animeUri = IcotakuWebHelpers.GetFullHrefFromHtmlNode(aNode, IcotakuSection.Anime);
-                if (animeUri is null)
-                    continue;
-
-                var animeSheetId = IcotakuWebHelpers.GetSheetId(animeUri);
-                if (animeSheetId < 0)
-                    continue;
-
-                TanimeSeasonalPlanning record = new()
-                {
-                    AnimeName = title,
-                    GroupName = categoryName,
-                    SheetId = animeSheetId,
-                    Url = animeUri.ToString(),
-                    Season = seasonRecord,
-                };
-
-                var task  = Task.Run(() => AddAdditionalInfos(ref record, animeUri, ref additionalContentList));
-                //AddAdditionalInfos(record, animeUri, ref additionalContentList);
-
-                var descriptionNode = tableNode.SelectSingleNode(".//td[contains(@class, 'histoire')]/text()[1]");
-                if (descriptionNode != null)
-                {
-                    record.Description = HttpUtility.HtmlDecode(descriptionNode.InnerText?.Trim())?.Trim();
-                }
-
-                var dateNode = tableNode.SelectSingleNode(".//td/span[contains(@class, 'date')]/text()");
-                if (dateNode != null)
-                {
-                    var date = HttpUtility.HtmlDecode(dateNode.InnerText?.Trim())?.Trim();
-                    record.ReleaseMonth = GetBeginDate(date);
-                }
-
-                var origineNode = tableNode.SelectSingleNode(".//span[contains(@class, 'origine')]/text()");
-                if (origineNode != null)
-                {
-                    var origine = HttpUtility.HtmlDecode(origineNode.InnerText?.Trim())?.Trim();
-                    record.OrigineAdaptation = await GetOrigineAdaptationAsync(origine);
-                }
-
-                var distributorsNode = tableNode.SelectSingleNode(".//span[contains(@class, 'editeur')]/text()");
-                if (distributorsNode != null)
-                {
-                    var distributorsName = await GetContact(distributorsNode, ContactType.Distributor, cancellationToken, cmd).ToArrayAsync();
-                    if (distributorsName.Length > 0)
-                        foreach (var distributorName in distributorsName)
-                            record.Distributors.Add(distributorName);
-                }
-
-                var studiosNode = tableNode.SelectSingleNode(".//span[contains(@class, 'studio')]/text()");
-                if (studiosNode != null)
-                {
-                    var studiosName = await GetContact(studiosNode, ContactType.Studio, cancellationToken, cmd).ToArrayAsync();
-                    if (studiosName.Length > 0)
-                        foreach (var studioName in studiosName)
-                            record.Studios.Add(studioName);
-                }
-
-                while (!task.IsCompleted)
-                {
-                    await Task.Delay(100, cancellationToken ?? CancellationToken.None);
-                }
-
-                task.Dispose();
-                task = null;
-
-                yield return record;
+                tasks.Add(ScrapItemAndGetAdditionalInfosAsync(tableNode, categoryName, cancellationToken, cmd));
             }
         }
-    }
 
-    private static void AddAdditionalInfos(ref TanimeSeasonalPlanning planning, Uri animeSheetUri, ref HashSet<(int sheetId, bool isAdultContent, bool isExplicitContent, string? thumbnailUrl)> additionalContentList)
-    {
-        var sheetId = planning.SheetId;
-        var additionalContent = additionalContentList.FirstOrDefault(w => w.sheetId == sheetId);
-        if (!additionalContent.Equals(default))
+        var results = await Task.WhenAll(tasks);
+        foreach (var result in results.Where(w => w != null))
         {
-            planning.IsAdultContent = additionalContent.isAdultContent;
-            planning.IsExplicitContent = additionalContent.isExplicitContent;
-            planning.ThumbnailUrl = additionalContent.thumbnailUrl;
+            if (result is null)
+                continue;
 
-            return;
+            result.Season = seasonRecord;
+            yield return result;
         }
 
+        tasks.ForEach(f => f.Dispose());
+        tasks.Clear();
+    }
+
+    /// <summary>
+    /// Scrappe l'anime sur le planning ainsi que ses informations supplémentaires
+    /// </summary>
+    /// <param name="tableItemNode">Correspond au noeud de type Table qui contient des informations pour un animé</param>
+    /// <param name="categoryName"></param>
+    /// <param name="cancellationToken"></param>
+    /// <param name="cmd"></param>
+    /// <returns></returns>
+    private static async Task<TanimeSeasonalPlanning?> ScrapItemAndGetAdditionalInfosAsync(HtmlNode tableItemNode, string categoryName, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    {
+        //Si le noeud est null, on retourne null
+        if (tableItemNode is null)
+            return null;
+
+        //obtient le noeud a qui contient le titre et lien de la fiche de l'animé 
+        var aNode = tableItemNode.SelectSingleNode(".//th[contains(@class, 'titre')]/a");
+        if (aNode == null)
+            return null;
+
+        //obtient le titre de l'animé
+        var title = HttpUtility.HtmlDecode(aNode.InnerText?.Trim())?.Trim();
+        if (title == null || title.IsStringNullOrEmptyOrWhiteSpace())
+            return null;
+
+        //obtient l'url de la fiche de l'animé
+        var animeUri = IcotakuWebHelpers.GetFullHrefFromHtmlNode(aNode, IcotakuSection.Anime);
+        if (animeUri is null)
+            return null;
+
+        //obtient l'id de la fiche de l'animé
+        var animeSheetId = IcotakuWebHelpers.GetSheetId(animeUri);
+        if (animeSheetId < 0)
+            return null;
+
+        //Charge la fiche de l'animé
         HtmlWeb web = new();
-        var htmlDocument = web.Load(animeSheetUri.ToString());
+        Task<HtmlDocument> htmlDocumentTask = web.LoadFromWebAsync(animeUri.ToString());
 
-        planning.IsAdultContent = TanimeBase.ScrapIsAdultContent(htmlDocument.DocumentNode);
-        planning.IsExplicitContent = planning.IsAdultContent || TanimeBase.ScrapIsExplicitContent(htmlDocument.DocumentNode);
-        planning.ThumbnailUrl = TanimeBase.ScrapFullThumbnail(htmlDocument.DocumentNode);
+        TanimeSeasonalPlanning record = new()
+        {
+            AnimeName = title,
+            SheetId = animeSheetId,
+            Url = animeUri.ToString(),
+            GroupName = categoryName,
+        };
 
-        additionalContentList.Add((planning.SheetId, planning.IsAdultContent, planning.IsExplicitContent, planning.ThumbnailUrl));
+        //obtient le synopsis partiel de l'animé
+        var descriptionNode = tableItemNode.SelectSingleNode(".//td[contains(@class, 'histoire')]/text()[1]");
+        if (descriptionNode != null)
+        {
+            record.Description = HttpUtility.HtmlDecode(descriptionNode.InnerText?.Trim())?.Trim();
+        }
+
+        //obtient le mois et/ou l'année de sortie de l'animé
+        var dateNode = tableItemNode.SelectSingleNode(".//td/span[contains(@class, 'date')]/text()");
+        if (dateNode != null)
+        {
+            var date = HttpUtility.HtmlDecode(dateNode.InnerText?.Trim())?.Trim();
+            record.ReleaseMonth = DateHelpers.GetNumberedMonthAndYear(date);
+        }
+
+        //obtient l'origine de l'animé
+        var origineNode = tableItemNode.SelectSingleNode(".//span[contains(@class, 'origine')]/text()");
+        if (origineNode != null)
+        {
+            var origine = HttpUtility.HtmlDecode(origineNode.InnerText?.Trim())?.Trim();
+            record.OrigineAdaptation = GetOrigineAdaptationAsync(origine).Result;
+        }
+
+        //obtient les distributeurs de l'animé
+        var distributorsNode = tableItemNode.SelectSingleNode(".//span[contains(@class, 'editeur')]/text()");
+        if (distributorsNode != null)
+        {
+            var distributorsName = await GetContact(distributorsNode, ContactType.Distributor, cancellationToken, cmd).ToArrayAsync();
+            if (distributorsName.Length > 0)
+                foreach (var distributorName in distributorsName)
+                    record.Distributors.Add(distributorName);
+        }
+
+        //obtient les studios de l'animé
+        var studiosNode = tableItemNode.SelectSingleNode(".//span[contains(@class, 'studio')]/text()");
+        if (studiosNode != null)
+        {
+            var studiosName = await GetContact(studiosNode, ContactType.Studio, cancellationToken, cmd).ToArrayAsync();
+            if (studiosName.Length > 0)
+                foreach (var studioName in studiosName)
+                    record.Studios.Add(studioName);
+        }
+
+        //Si fiche de l'animé chargée, on scrappe les informations supplémentaires sinon on attend
+        while (!htmlDocumentTask.IsCompleted)
+            await Task.Delay(100);
+
+        //Préparation du scrapping des informations supplémentaires
+        var htmlDocument = htmlDocumentTask.Result.DocumentNode;
+        htmlDocumentTask.Dispose();
+
+        record.IsAdultContent = TanimeBase.ScrapIsAdultContent(ref htmlDocument);
+        record.IsExplicitContent = record.IsAdultContent || TanimeBase.ScrapIsExplicitContent(ref htmlDocument);
+        record.ThumbnailUrl = TanimeBase.ScrapFullThumbnail(ref htmlDocument);
+
+        return record;
     }
 
     private static async Task<Tseason?> GetSeasonAsync(WeatherSeason season, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
@@ -182,7 +210,7 @@ public partial class TanimeSeasonalPlanning
             DisplayName = seasonLiteral,
         };
 
-        return await Tseason.SingleOrCreateAsync(seasonRecord, false ,cancellationToken, cmd);
+        return await Tseason.SingleOrCreateAsync(seasonRecord, false, cancellationToken, cmd);
     }
 
     private static async Task<TorigineAdaptation?> GetOrigineAdaptationAsync(string? value,
@@ -198,31 +226,6 @@ public partial class TanimeSeasonalPlanning
         };
 
         return await TorigineAdaptation.SingleOrCreateAsync(record, true, cancellationToken, cmd);
-    }
-
-    private static uint GetBeginDate(string? date)
-    {
-        if (date == null || date.IsStringNullOrEmptyOrWhiteSpace())
-            return 0;
-        var _date = date.Trim();
-
-        var split = _date.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (split.Length == 1)
-        {
-            if (!ushort.TryParse(split[0], out ushort year))
-                return uint.Parse($"{year}00");
-        }
-        else if (split.Length == 2)
-        {
-            var monthNumber = DateHelpers.GetMonthNumber(split[0]);
-
-            if (!ushort.TryParse(split[1], out ushort year))
-                return 0;
-
-            return uint.Parse($"{year}{monthNumber:00}");
-        }
-
-        return 0;
     }
 
     private static async IAsyncEnumerable<string> GetContact(HtmlNode htmlNode, ContactType contactType,
@@ -258,10 +261,4 @@ public partial class TanimeSeasonalPlanning
             }
         }
     }
-
-    [GeneratedRegex("(\\d+)")]
-    private static partial Regex GetEpisodeNumberRegex();
-
-    [GeneratedRegex(@"\b\d{2}/\d{2}/\d{4}\b")]
-    private static partial Regex GetReleaseDateRegex();
 }

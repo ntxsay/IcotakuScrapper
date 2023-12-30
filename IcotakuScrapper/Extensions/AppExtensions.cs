@@ -166,18 +166,56 @@ namespace IcotakuScrapper.Extensions
             _ => throw new ArgumentOutOfRangeException(nameof(sheetType), sheetType, "La valeur spécifiée est invalide")
         };
 
-        internal static int CountPage(int countItems, int maxContentByPage = 20)
+        /// <summary>
+        /// Compte le nombre de pages en fonction du nombre d'éléments et du nombre d'éléments par page
+        /// </summary>
+        /// <param name="countItems"></param>
+        /// <param name="maxContentByPage"></param>
+        /// <returns></returns>
+        internal static uint CountPage(uint countItems, uint maxContentByPage = 20)
         {
             try
             {
                 if (countItems == 0)
                     return 10;
-                return maxContentByPage <= 0 ? 10 : (int)Math.Ceiling((double)countItems / maxContentByPage);
+                return maxContentByPage <= 0 ? 10 : (uint)Math.Ceiling((double)countItems / maxContentByPage);
             }
             catch (Exception)
             {
                 return 1;
             }
         }
+
+        /// <summary>
+        /// Retourne un tableau d'éléments en fonction de la page courante et du nombre d'éléments par page
+        /// </summary>
+        /// <param name="values"></param>
+        /// <param name="currentPage"></param>
+        /// <param name="maxContentByPage"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        internal static T[] GetPage<T>(IEnumerable<T>? values, uint currentPage = 1, uint maxContentByPage = 20)
+        {
+            if (values == null)
+                return [];
+
+            var enumerable = values as T[] ?? values.ToArray();
+            if (enumerable.Length == 0)
+                return [];
+
+            var countItems = (uint)enumerable.Length;
+            var totalPages = CountPage(countItems, maxContentByPage);
+            if (currentPage > totalPages)
+                currentPage = totalPages;
+            else if (currentPage <= 0)
+                currentPage = 1;
+
+            var skip = (int)((currentPage - 1) * maxContentByPage);
+            var take = (int)maxContentByPage;
+
+            return enumerable.Skip(skip).Take(take).ToArray();
+        }
+        
+        
     }
 }

@@ -32,6 +32,8 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
 
     public DateOnly? ReleaseDateAsDateOnly => GetReleaseDate();
     public string? ReleaseDateAsLiteral => ReleaseDateAsDateOnly?.ToString("dddd dd MMMM yyyy");
+    public string? MinimalReleaseMonthLiteral => ReleaseDateAsDateOnly?.ToString("MMM yyyy");
+
 
     /// <summary>
     /// Obtient ou définit la date de fin de l'anime au format yyyy-MM-dd.
@@ -151,6 +153,38 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
         Guid = guid;
     }
 
+    public void Copy(TanimeBase value)
+    {
+        Id = value.Id;
+        Guid = value.Guid;
+        SheetId = value.SheetId;
+        ReleaseDate = value.ReleaseDate;
+        EndDate = value.EndDate;
+        Note = value.Note;
+        VoteCount = value.VoteCount;
+        IsAdultContent = value.IsAdultContent;
+        IsExplicitContent = value.IsExplicitContent;
+        Name = value.Name;
+        DiffusionState = value.DiffusionState;
+        EpisodesCount = value.EpisodesCount;
+        Duration = value.Duration;
+        Format = value.Format;
+        Target = value.Target;
+        OrigineAdaptation = value.OrigineAdaptation;
+        Season = value.Season;
+        Description = value.Description;
+        Remark = value.Remark;
+        Url = value.Url;
+        ThumbnailUrl = value.ThumbnailUrl;
+        Categories.ToObservableCollection(value.Categories, true);
+        AlternativeTitles.ToObservableCollection(value.AlternativeTitles, true);
+        Websites.ToObservableCollection(value.Websites, true);
+        Licenses.ToObservableCollection(value.Licenses, true);
+        Studios.ToObservableCollection(value.Studios, true);
+        Staffs.ToObservableCollection(value.Staffs, true);
+        
+    }
+
     public override string ToString() => $"{Name} ({Id}/{SheetId})";
 
     #region Folder et download
@@ -243,6 +277,11 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
 
     #region Thumbnail operations
 
+    /// <summary>
+    /// Télécharge l'affiche de l'anime et retourne le chemin d'accès vers l'affiche.
+    /// </summary>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     public async Task<string?> GetOrDownloadThumbnailAsync(CancellationToken? cancellationToken = null)
     {
         var thumbnailPath = GetThumbnailPath();

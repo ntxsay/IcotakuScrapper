@@ -220,11 +220,11 @@ public partial class TanimeDailyPlanning
         }
 
         HtmlWeb web = new();
-        var htmlDocument = web.Load(animeSheetUri.ToString());
+        var htmlDocument = web.Load(animeSheetUri.ToString()).DocumentNode;
 
-        planning.IsAdultContent = Tanime.ScrapIsAdultContent(htmlDocument.DocumentNode);
-        planning.IsExplicitContent = planning.IsAdultContent || Tanime.ScrapIsExplicitContent(htmlDocument.DocumentNode);
-        planning.ThumbnailUrl = Tanime.ScrapFullThumbnail(htmlDocument.DocumentNode);
+        planning.IsAdultContent = TanimeBase.ScrapIsAdultContent(ref htmlDocument);
+        planning.IsExplicitContent = planning.IsAdultContent || TanimeBase.ScrapIsExplicitContent(ref htmlDocument);
+        planning.ThumbnailUrl = TanimeBase.ScrapFullThumbnail(ref htmlDocument);
 
         additionalContentList.Add((planning.SheetId, planning.IsAdultContent, planning.IsExplicitContent, planning.ThumbnailUrl));
     }
@@ -232,6 +232,4 @@ public partial class TanimeDailyPlanning
     [GeneratedRegex("(\\d+)")]
     private static partial Regex GetEpisodeNumberRegex();
 
-    [GeneratedRegex(@"\b\d{2}/\d{2}/\d{4}\b")]
-    private static partial Regex GetReleaseDateRegex();
 }
