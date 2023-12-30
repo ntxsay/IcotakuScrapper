@@ -140,9 +140,9 @@ public partial class Tanime : TanimeBase
 
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
 
-        var animeResult = await ScrapAnimeAsync(htmlContent, sheetUri, options, cancellationToken, command);
+        var animeResult = await ScrapAnimeAsync(htmlContent, sheetUri, options, cancellationToken);
 
-        return await ScrapAndAnimeFromUrlAsync(animeResult, cancellationToken, command);
+        return await ScrapAndAnimeFromUrlAsync(animeResult, cancellationToken);
     }
 
     public static async Task<OperationState<int>> ScrapFromUrlAsync(Uri sheetUri, AnimeScrapingOptions options = AnimeScrapingOptions.All,
@@ -153,9 +153,9 @@ public partial class Tanime : TanimeBase
 
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
 
-        var animeResult = await ScrapAnimeAsync(sheetUri, options, cancellationToken, command);
+        var animeResult = await ScrapAnimeAsync(sheetUri, options, cancellationToken);
 
-        return await ScrapAndAnimeFromUrlAsync(animeResult, cancellationToken, command);
+        return await ScrapAndAnimeFromUrlAsync(animeResult, cancellationToken);
     }
 
     public static async Task<Tanime?> ScrapAndGetFromUrlAsync(Uri sheetUri, AnimeScrapingOptions options = AnimeScrapingOptions.All,
@@ -310,7 +310,7 @@ public partial class Tanime : TanimeBase
             return insertBaseResult;
         
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        await this.AddOrReplaceEpisodesAsync(cancellationToken, command);
+        await this.AddOrReplaceEpisodesAsync(cancellationToken);
         return new OperationState<int>(true, "L'anime a été ajouté avec succès", insertBaseResult.Data);
     }
     
@@ -325,13 +325,13 @@ public partial class Tanime : TanimeBase
             return updateBaseResult;
         
         await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        await this.UpdateAlternativeTitlesAsync(cancellationToken, command);
-        await this.UpdateWebsitesAsync(cancellationToken, command);
-        await this.UpdateStudiosAsync(cancellationToken, command);
-        await this.UpdateCategoriesAsync(cancellationToken, command);
-        await this.UpdateEpisodesAsync(cancellationToken, command);
-        await this.UpdateLicensesAsync(cancellationToken, command);
-        await this.UpdateStaffsAsync(cancellationToken, command);
+        await this.UpdateAlternativeTitlesAsync(cancellationToken);
+        await this.UpdateWebsitesAsync(cancellationToken);
+        await this.UpdateStudiosAsync(cancellationToken);
+        await this.UpdateCategoriesAsync(cancellationToken);
+        await this.UpdateEpisodesAsync(cancellationToken);
+        await this.UpdateLicensesAsync(cancellationToken);
+        await this.UpdateStaffsAsync(cancellationToken);
             
         return new OperationState(true, "L'anime a été mis à jour avec succès") ;
     }

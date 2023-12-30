@@ -13,7 +13,7 @@ public enum TargetSortBy
 /// <summary>
 /// Représente le public visé (ou cible démographique)  d'un anime ou Manga ou autre
 /// </summary>
-public partial class Ttarget
+public partial class Ttarget : ITableNameDescriptionBase<Ttarget>
 {
     public int Id { get; protected set; }
     public IcotakuSection Section { get; set; }
@@ -49,46 +49,44 @@ public partial class Ttarget
 
     #region Count
 
-    /// <summary>
-    /// Compte le nombre d'entrées dans la table Ttarget
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
-    /// <returns></returns>
-    public static async Task<int> CountAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    
+    public static async Task<int> CountAsync(CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "SELECT COUNT(Id) FROM Ttarget";
+        Main.Command.ClearCommand();
+        Main.Command.CommandText = "SELECT COUNT(Id) FROM Ttarget";
 
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
-
-        var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
-        if (result is long count)
-            return (int)count;
-        return 0;
+        try
+        {
+            var result = await Main.Command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
+            if (result is long count)
+                return (int)count;
+            return 0;
+        }
+        catch (Exception e)
+        {
+            LogServices.LogDebug(e);
+            return 0;
+        }
     }
 
-    /// <summary>
-    /// Compte le nombre d'entrées dans la table Ttarget ayant l'identifiant spécifié
-    /// </summary>
-    /// <param name="id"></param>
-    /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
-    /// <returns></returns>
-    public static async Task<int> CountAsync(int id, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<int> CountAsync(int id, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "SELECT COUNT(Id) FROM Ttarget WHERE Id = $Id";
+        Main.Command.ClearCommand();
+        Main.Command.CommandText = "SELECT COUNT(Id) FROM Ttarget WHERE Id = $Id";
 
-        command.Parameters.Clear();
-
-        command.Parameters.AddWithValue("$Id", id);
-        var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
-        if (result is long count)
-            return (int)count;
-        return 0;
+        Main.Command.Parameters.AddWithValue("$Id", id);
+        try
+        {
+            var result = await Main.Command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
+            if (result is long count)
+                return (int)count;
+            return 0;
+        }
+        catch (Exception e)
+        {
+            LogServices.LogDebug(e);
+            return 0;
+        }
     }
 
     /// <summary>
@@ -99,56 +97,66 @@ public partial class Ttarget
     /// <param name="cancellationToken"></param>
     /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<int> CountAsync(string name, IcotakuSection section, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<int> CountAsync(string name, IcotakuSection section, CancellationToken? cancellationToken = null)
     {
         if (name.IsStringNullOrEmptyOrWhiteSpace())
             return 0;
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "SELECT COUNT(Id) FROM Ttarget WHERE Section = $Section AND Name = $Name COLLATE NOCASE";
+        Main.Command.ClearCommand();
+        Main.Command.CommandText = "SELECT COUNT(Id) FROM Ttarget WHERE Section = $Section AND Name = $Name COLLATE NOCASE";
 
-        command.Parameters.Clear();
+        Main.Command.Parameters.AddWithValue("$Name", name.Trim());
+        Main.Command.Parameters.AddWithValue("$Section", (byte)section);
 
-        command.Parameters.AddWithValue("$Name", name.Trim());
-        command.Parameters.AddWithValue("$Section", (byte)section);
-        var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
-        if (result is long count)
-            return (int)count;
-        return 0;
+        try
+        {
+            var result = await Main.Command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
+            if (result is long count)
+                return (int)count;
+            return 0;
+        }
+        catch (Exception e)
+        {
+            LogServices.LogDebug(e);
+            return 0;
+        }
     }
 
     public static async Task<int?> GetIdOfAsync(string name, IcotakuSection section,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
         if (name.IsStringNullOrEmptyOrWhiteSpace())
             return null;
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "SELECT Id FROM Ttarget WHERE Section = $Section AND Name = $Name COLLATE NOCASE";
+        Main.Command.ClearCommand();
+        Main.Command.CommandText = "SELECT Id FROM Ttarget WHERE Section = $Section AND Name = $Name COLLATE NOCASE";
 
-        command.Parameters.Clear();
+        Main.Command.Parameters.AddWithValue("$Name", name.Trim());
+        Main.Command.Parameters.AddWithValue("$Section", (byte)section);
 
-        command.Parameters.AddWithValue("$Name", name.Trim());
-        command.Parameters.AddWithValue("$Section", (byte)section);
-        var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
-        if (result is long count)
-            return (int)count;
-        return null;
+        try
+        {
+            var result = await Main.Command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
+            if (result is long count)
+                return (int)count;
+            return null;
+        }
+        catch (Exception e)
+        {
+            LogServices.LogDebug(e);
+            return null;
+        }
     }
 
     #endregion
 
     #region Exists
 
-    public static async Task<bool> ExistsAsync(int id, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(id, cancellationToken, cmd) > 0;
+    public static async Task<bool> ExistsAsync(int id, CancellationToken? cancellationToken = null)
+        => await CountAsync(id, cancellationToken) > 0;
 
-    public static async Task<bool> ExistsAsync(string name, IcotakuSection section, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(name, section, cancellationToken, cmd) > 0;
+    public static async Task<bool> ExistsAsync(string name, IcotakuSection section, CancellationToken? cancellationToken = null)
+        => await CountAsync(name, section, cancellationToken) > 0;
 
     #endregion
 
@@ -157,132 +165,143 @@ public partial class Ttarget
     public static async Task<Ttarget[]> SelectAsync(TargetSortBy sortBy = TargetSortBy.Name,
         OrderBy orderBy = OrderBy.Asc,
         uint limit = 0, uint skip = 0,
-        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = SqlSelectScript;
+        Main.Command.ClearCommand();
+        Main.Command.CommandText = SqlSelectScript;
 
-        command.CommandText += Environment.NewLine + $"ORDER BY {sortBy} {orderBy}";
+        Main.Command.CommandText += Environment.NewLine + $"ORDER BY {sortBy} {orderBy}";
 
         if (limit > 0)
-            command.CommandText += Environment.NewLine + $"LIMIT {limit} OFFSET {skip}";
+            Main.Command.CommandText += Environment.NewLine + $"LIMIT {limit} OFFSET {skip}";
 
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
+        try
+        {
+            await using var reader = await Main.Command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
+            if (!reader.HasRows)
+                return [];
 
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
-        if (!reader.HasRows)
+            return await GetRecords(reader, cancellationToken).ToArrayAsync(cancellationToken ?? CancellationToken.None);
+        }
+        catch (Exception e)
+        {
+            LogServices.LogDebug(e);
             return [];
-
-        return await GetRecords(reader, cancellationToken).ToArrayAsync(cancellationToken ?? CancellationToken.None);
+        }
     }
     
     public static async Task<Ttarget[]> SelectAsync(IcotakuSection section, TargetSortBy sortBy = TargetSortBy.Name,
         OrderBy orderBy = OrderBy.Asc,
         uint limit = 0, uint skip = 0,
-        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Section = $Section";
+        Main.Command.ClearCommand();
+        Main.Command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Section = $Section";
 
-        command.CommandText += Environment.NewLine + $"ORDER BY {sortBy} {orderBy}";
+        Main.Command.CommandText += Environment.NewLine + $"ORDER BY {sortBy} {orderBy}";
 
         if (limit > 0)
-            command.CommandText += Environment.NewLine + $"LIMIT {limit} OFFSET {skip}";
+            Main.Command.CommandText += Environment.NewLine + $"LIMIT {limit} OFFSET {skip}";
 
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
-        
-        command.Parameters.AddWithValue("$Section", (byte)section);
+        Main.Command.Parameters.AddWithValue("$Section", (byte)section);
 
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
-        if (!reader.HasRows)
+        try
+        {
+            await using var reader = await Main.Command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
+            if (!reader.HasRows)
+                return [];
+
+            return await GetRecords(reader, cancellationToken).ToArrayAsync(cancellationToken ?? CancellationToken.None);
+        }
+        catch (Exception e)
+        {
+            LogServices.LogDebug(e);
             return [];
-
-        return await GetRecords(reader, cancellationToken).ToArrayAsync(cancellationToken ?? CancellationToken.None);
+        }
     }
 
     #endregion
 
     #region Single
 
-    public static async Task<Ttarget?> SingleAsync(int id, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<Ttarget?> SingleAsync(int id, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Id = $Id";
+        Main.Command.ClearCommand();
+        Main.Command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Id = $Id";
+        try
+        {
+            Main.Command.Parameters.AddWithValue("$Id", id);
+            await using var reader = await Main.Command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
+            if (!reader.HasRows)
+                return null;
 
-        command.Parameters.Clear();
+            return await GetRecords(reader, cancellationToken)
+                .SingleOrDefaultAsync(cancellationToken ?? CancellationToken.None);
 
-        command.Parameters.AddWithValue("$Id", id);
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
-        if (!reader.HasRows)
+        }
+        catch (Exception e)
+        {
+            LogServices.LogDebug(e);
             return null;
-
-        return await GetRecords(reader, cancellationToken)
-            .FirstOrDefaultAsync(cancellationToken ?? CancellationToken.None);
+        }
     }
 
-    public static async Task<Ttarget?> SingleAsync(string name, IcotakuSection section, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<Ttarget?> SingleAsync(string name, IcotakuSection section, CancellationToken? cancellationToken = null)
     {
         if (name.IsStringNullOrEmptyOrWhiteSpace())
             return null;
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Section = $Section AND Name = $Name COLLATE NOCASE";
+        Main.Command.ClearCommand();
+        Main.Command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Section = $Section AND Name = $Name COLLATE NOCASE";
 
-        command.Parameters.Clear();
+        Main.Command.Parameters.AddWithValue("$Name", name.Trim());
+        Main.Command.Parameters.AddWithValue("$Section", (byte)section);
 
-        command.Parameters.AddWithValue("$Name", name.Trim());
-        command.Parameters.AddWithValue("$Section", (byte)section);
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
-        if (!reader.HasRows)
+        try
+        {
+            await using var reader = await Main.Command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
+            if (!reader.HasRows)
+                return null;
+
+            return await GetRecords(reader, cancellationToken)
+                .FirstOrDefaultAsync(cancellationToken ?? CancellationToken.None);
+        }
+        catch (Exception e)
+        {
+            LogServices.LogDebug(e);
             return null;
-
-        return await GetRecords(reader, cancellationToken)
-            .FirstOrDefaultAsync(cancellationToken ?? CancellationToken.None);
+        }
     }
 
     #endregion
 
     #region Insert
 
-    /// <summary>
-    /// Insert un nouvel enregistrement dans la table Ttarget
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
-    /// <returns></returns>
-    public async Task<OperationState<int>> InsertAsync(CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public async Task<OperationState<int>> InsertAsync(bool disableVerification, CancellationToken? cancellationToken = null)
     {
         if (Name.IsStringNullOrEmptyOrWhiteSpace())
             return new OperationState<int>(false, "Le nom de l'item ne peut pas être vide");
-        if (await ExistsAsync(Name, Section, cancellationToken, cmd))
+        if (!disableVerification && await ExistsAsync(Name, Section, cancellationToken))
             return new OperationState<int>(false, "Le nom de l'item existe déjà");
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText =
+        Main.Command.ClearCommand();
+        Main.Command.CommandText =
             """
             INSERT INTO Ttarget
                 (Name, Section, Description)
             VALUES
                 ($Name, $Section, $Description)
             """;
-
-        command.Parameters.Clear();
-
-        command.Parameters.AddWithValue("$Section", (byte)Section);
-        command.Parameters.AddWithValue("$Name", Name.Trim());
-        command.Parameters.AddWithValue("$Description", Description ?? (object)DBNull.Value);
+        Main.Command.Parameters.AddWithValue("$Section", (byte)Section);
+        Main.Command.Parameters.AddWithValue("$Name", Name.Trim());
+        Main.Command.Parameters.AddWithValue("$Description", Description ?? (object)DBNull.Value);
 
         try
         {
-            if (await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None) <= 0)
+            if (await Main.Command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None) <= 0)
                 return new OperationState<int>(false, "Une erreur est survenue lors de l'insertion");
 
-            Id = await command.GetLastInsertRowIdAsync();
+            Id = await Main.Command.GetLastInsertRowIdAsync();
             return new OperationState<int>(true, "Insertion réussie", Id);
         }
         catch (Exception e)
@@ -293,19 +312,15 @@ public partial class Ttarget
     }
 
     public static async Task<OperationState> InsertOrReplaceAsync(IReadOnlyCollection<Ttarget> values, 
-        DbInsertMode insertMode = DbInsertMode.InsertOrReplace, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        DbInsertMode insertMode = DbInsertMode.InsertOrReplace, CancellationToken? cancellationToken = null)
     {
         if (values.Count == 0)
             return new OperationState(false, "La liste des valeurs ne peut pas être vide");
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.StartWithInsertMode(insertMode);
+        Main.Command.ClearCommand();
+        Main.Command.StartWithInsertMode(insertMode);
         
-        command.CommandText += " INTO Ttarget (Name, Section, Description) VALUES ";
-
-        command.Parameters.Clear();
-
+        Main.Command.CommandText += " INTO Ttarget (Name, Section, Description) VALUES ";
         for (uint i = 0; i < values.Count; i++)
         {
             var value = values.ElementAt((int)i);
@@ -316,23 +331,23 @@ public partial class Ttarget
                 continue;
             }
 
-            command.CommandText += Environment.NewLine + $"($Name{i}, $Section{i}, $Description{i})";
+            Main.Command.CommandText += Environment.NewLine + $"($Name{i}, $Section{i}, $Description{i})";
 
-            command.Parameters.AddWithValue($"$Name{i}", value.Name.Trim());
-            command.Parameters.AddWithValue($"$Section{i}", (byte)value.Section);
-            command.Parameters.AddWithValue($"$Description{i}", value.Description ?? (object)DBNull.Value);
+            Main.Command.Parameters.AddWithValue($"$Name{i}", value.Name.Trim());
+            Main.Command.Parameters.AddWithValue($"$Section{i}", (byte)value.Section);
+            Main.Command.Parameters.AddWithValue($"$Description{i}", value.Description ?? (object)DBNull.Value);
 
             if (i == values.Count - 1)
-                command.CommandText += ";";
+                Main.Command.CommandText += ";";
             else
-                command.CommandText += ",";
+                Main.Command.CommandText += ",";
             
             LogServices.LogDebug("Ajout de l'item " + value.Name + " à la commande.");
         }
 
         try
         {
-            var count = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
+            var count = await Main.Command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
             return new OperationState(count > 0, $"{count} enregistrement(s) sur {values.Count} ont été insérés avec succès.");
         }
         catch (Exception e)
@@ -352,10 +367,9 @@ public partial class Ttarget
     /// <returns></returns>
     public static async Task<Ttarget?> SingleOrCreateAsync(Ttarget value, bool reloadIfExist= false, CancellationToken? cancellationToken = null)
     {
-        var command = await Main.GetSqliteCommandAsync();
         if (!reloadIfExist)
         {
-            var id = await GetIdOfAsync(value.Name, value.Section, cancellationToken, command);
+            var id = await GetIdOfAsync(value.Name, value.Section, cancellationToken);
             if (id.HasValue)
             {
                 value.Id = id.Value;
@@ -364,36 +378,32 @@ public partial class Ttarget
         }
         else
         {
-            var record = await SingleAsync(value.Name, value.Section, cancellationToken, command);
+            var record = await SingleAsync(value.Name, value.Section, cancellationToken);
             if (record != null)
                 return record;
         }
 
-        var result = await value.InsertAsync(cancellationToken, command);
+        var result = await value.InsertAsync(false, cancellationToken);
         return !result.IsSuccess ? null : value;
     }
     #endregion
 
     #region Update
 
-    /// <summary>
-    /// Met à jour cet enregistrement de la table Ttarget
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
-    /// <returns></returns>
-    public async Task<OperationState> UpdateAsync(CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public async Task<OperationState> UpdateAsync(bool disableVerification, CancellationToken? cancellationToken = null)
     {
         if (Name.IsStringNullOrEmptyOrWhiteSpace())
             return new OperationState(false, "Le nom de l'item ne peut pas être vide");
 
-        var existingId = await GetIdOfAsync(Name, Section, cancellationToken, cmd);
-        if (existingId.HasValue && existingId.Value != Id)
-            return new OperationState(false, "Le nom de l'item existe déjà");
-
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText =
+        if (!disableVerification)
+        {
+            var existingId = await GetIdOfAsync(Name, Section, cancellationToken);
+            if (existingId.HasValue && existingId.Value != Id)
+                return new OperationState(false, "Le nom de l'item existe déjà");
+        }
+        
+        Main.Command.ClearCommand();
+        Main.Command.CommandText =
             """
             UPDATE Ttarget SET
                 Section = $Section,
@@ -401,17 +411,14 @@ public partial class Ttarget
                 Description = $Description
             WHERE Id = $Id
             """;
-
-        command.Parameters.Clear();
-
-        command.Parameters.AddWithValue("$Id", Id);
-        command.Parameters.AddWithValue("$Section", (byte)Section);
-        command.Parameters.AddWithValue("$Name", Name.Trim());
-        command.Parameters.AddWithValue("$Description", Description ?? (object)DBNull.Value);
+        Main.Command.Parameters.AddWithValue("$Id", Id);
+        Main.Command.Parameters.AddWithValue("$Section", (byte)Section);
+        Main.Command.Parameters.AddWithValue("$Name", Name.Trim());
+        Main.Command.Parameters.AddWithValue("$Description", Description ?? (object)DBNull.Value);
 
         try
         {
-            return await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None) <= 0
+            return await Main.Command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None) <= 0
                 ? new OperationState(false, "Une erreur est survenue lors de la mise à jour")
                 : new OperationState(true, "Mise à jour réussie");
         }
@@ -432,30 +439,24 @@ public partial class Ttarget
     /// <param name="cancellationToken"></param>
     /// <param name="cmd"></param>
     /// <returns></returns>
-    public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await DeleteAsync(Id, cancellationToken, cmd);
+    public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null)
+        => await DeleteAsync(Id, cancellationToken);
 
     /// <summary>
     /// Supprime un enregistrement de la table Ttarget ayant l'identifiant spécifié
     /// </summary>
     /// <param name="id"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<OperationState> DeleteAsync(int id, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<OperationState> DeleteAsync(int id, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "DELETE FROM Ttarget WHERE Id = $Id";
-
-        command.Parameters.Clear();
-
-        command.Parameters.AddWithValue("$Id", id);
+        Main.Command.ClearCommand();
+        Main.Command.CommandText = "DELETE FROM Ttarget WHERE Id = $Id";
+        Main.Command.Parameters.AddWithValue("$Id", id);
 
         try
         {
-            var count = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
+            var count = await Main.Command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
             return new OperationState(true, $"{count} enregistrement(s) ont été supprimés.");
         }
         catch (Exception e)
@@ -465,19 +466,15 @@ public partial class Ttarget
         }
     }
     
-    public static async Task<OperationState> DeleteAllAsync(IcotakuSection section, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    internal static async Task<OperationState> DeleteAsync(IcotakuSection section, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "DELETE FROM Ttarget WHERE Section = $Section";
-
-        command.Parameters.Clear();
-
-        command.Parameters.AddWithValue("$Section", section);
+        Main.Command.ClearCommand();
+        Main.Command.CommandText = "DELETE FROM Ttarget WHERE Section = $Section";
+        Main.Command.Parameters.AddWithValue("$Section", section);
 
         try
         {
-            var count = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
+            var count = await Main.Command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
             return new OperationState(true, $"{count} enregistrement(s) ont été supprimés.");
         }
         catch (Exception e)
@@ -501,7 +498,7 @@ public partial class Ttarget
     }
 
 
-    private static async IAsyncEnumerable<Ttarget> GetRecords(SqliteDataReader reader,
+     private static async IAsyncEnumerable<Ttarget> GetRecords(SqliteDataReader reader,
         CancellationToken? cancellationToken = null)
     {
         while (await reader.ReadAsync(cancellationToken ?? CancellationToken.None))

@@ -44,7 +44,7 @@ public partial class Ttarget
         {
             if (isDeleteSectionRecords)
             {
-                var deleteAllResult = await DeleteAllAsync(section, cancellationToken, command);
+                var deleteAllResult = await DeleteAsync(section, cancellationToken, command);
                 if (!deleteAllResult.IsSuccess)
                     continue;
             }

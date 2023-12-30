@@ -158,6 +158,20 @@ namespace IcotakuScrapper
         private static SqliteConnection? _connection;
         private static SqliteCommand? _command;
 
+        internal static SqliteCommand Command
+        {
+            get
+            {
+                if (_connection != null) 
+                    return _command ??= _connection.CreateCommand();
+                
+                _connection = new SqliteConnection(ConnexionString);
+                _connection.Open();
+
+                return _command ??= _connection.CreateCommand();
+            }
+        }
+
         /// <summary>
         /// Initialise et retourne une connexion à la base de données SQLite
         /// </summary>

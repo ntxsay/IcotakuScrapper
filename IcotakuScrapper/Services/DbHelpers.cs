@@ -207,5 +207,17 @@ namespace IcotakuScrapper.Services
 
             return true;
         }
+        
+        /// <summary>
+        /// Efface le texte de la commande SQL et vide la liste des paramètres.
+        /// </summary>
+        /// <param name="command"></param>
+        internal static void ClearCommand(ref SqliteCommand? command)
+        {
+            if (command == null)
+                return;
+            command.CommandText = string.Empty;
+            command.Parameters.Clear();
+        }
     }
 }

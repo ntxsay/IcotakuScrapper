@@ -5,6 +5,13 @@ namespace IcotakuScrapper.Extensions
 {
     internal static class DbExtensions
     {
+        
+        /// <summary>
+        /// Efface le texte de la commande SQL et vide la liste des paramètres.
+        /// </summary>
+        /// <param name="command"></param>
+        internal static void ClearCommand(this SqliteCommand command) => DbHelpers.ClearCommand(ref command);
+        
         /// <summary>
         /// Retourne l'identifiant de la dernière ligne insérée dans la base de données.
         /// </summary>

@@ -15,7 +15,7 @@ public partial class Tanime
     /// <param name="cancellationToken"></param>
     /// <param name="cmd"></param>
     /// <returns></returns>
-    private static async Task<OperationState<int>> ScrapAndAnimeFromUrlAsync(OperationState<Tanime?> animeResult, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    private static async Task<OperationState<int>> ScrapAndAnimeFromUrlAsync(OperationState<Tanime?> animeResult, CancellationToken? cancellationToken = null)
     {
         //Si le scraping a échoué alors on sort de la méthode en retournant le message d'erreur
         if (!animeResult.IsSuccess)
@@ -28,25 +28,25 @@ public partial class Tanime
         if (anime.Url.IsStringNullOrEmptyOrWhiteSpace())
             return new OperationState<int>(false, "L'url de la fiche de l'anime est introuvable.");
 
-        _ = await CreateIndexAsync(anime.Name, anime.Url, anime.SheetId, cancellationToken, cmd);
+        _ = await CreateIndexAsync(anime.Name, anime.Url, anime.SheetId, cancellationToken);
 
-        return await anime.AddOrUpdateAsync(cancellationToken, cmd);
+        return await anime.AddOrUpdateAsync(cancellationToken);
     }
 
-    private static async Task<OperationState<Tanime?>> ScrapAnimeAsync(string htmlContent, Uri sheetUri, AnimeScrapingOptions options, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    private static async Task<OperationState<Tanime?>> ScrapAnimeAsync(string htmlContent, Uri sheetUri, AnimeScrapingOptions options, CancellationToken? cancellationToken = null)
     {
         HtmlDocument htmlDocument = new();
         htmlDocument.LoadHtml(htmlContent);
 
-        return await ScrapAnimeAsync(htmlDocument.DocumentNode, sheetUri, options, cancellationToken, cmd);
+        return await ScrapAnimeAsync(htmlDocument.DocumentNode, sheetUri, options, cancellationToken);
     }
 
-    private static async Task<OperationState<Tanime?>> ScrapAnimeAsync(Uri sheetUri, AnimeScrapingOptions options, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    private static async Task<OperationState<Tanime?>> ScrapAnimeAsync(Uri sheetUri, AnimeScrapingOptions options, CancellationToken? cancellationToken = null)
     {
         HtmlWeb web = new();
         var htmlDocument = web.Load(sheetUri.OriginalString);
 
-        return await ScrapAnimeAsync(htmlDocument.DocumentNode, sheetUri, options, cancellationToken, cmd);
+        return await ScrapAnimeAsync(htmlDocument.DocumentNode, sheetUri, options, cancellationToken);
     }
 
     /// <summary>
@@ -58,7 +58,7 @@ public partial class Tanime
     /// <param name="cmd"></param>
     /// <param name="documentNode"></param>
     /// <returns></returns>
-    private static async Task<OperationState<Tanime?>> ScrapAnimeAsync(HtmlNode documentNode, Uri sheetUri, AnimeScrapingOptions options, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    private static async Task<OperationState<Tanime?>> ScrapAnimeAsync(HtmlNode documentNode, Uri sheetUri, AnimeScrapingOptions options, CancellationToken? cancellationToken = null)
     {
         try
         {
