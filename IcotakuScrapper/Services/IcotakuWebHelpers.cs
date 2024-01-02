@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using IcotakuScrapper.Anime;
 using IcotakuScrapper.Common;
+using IcotakuScrapper.Objects;
 
 namespace IcotakuScrapper.Services;
 
@@ -218,14 +219,36 @@ public static class IcotakuWebHelpers
         {
             IcotakuSection.Anime => categoryType switch
             {
-                CategoryType.Theme => IcotakuWebHelpers.GetBaseUrl(section) + "/themes.html",
-                CategoryType.Genre => IcotakuWebHelpers.GetBaseUrl(section) + "/genres.html",
+                CategoryType.Theme => GetBaseUrl(section) + "/themes.html",
+                CategoryType.Genre => GetBaseUrl(section) + "/genres.html",
                 _ => throw new ArgumentOutOfRangeException(nameof(categoryType), categoryType, "Ce type de catégorie n'est pas pris en charge")
             },
             _ => throw new ArgumentOutOfRangeException(nameof(section), section, "Ce type de contenu n'est pas pris en charge")
         };
     }
 
+    /// <summary>
+    /// Obtient l'url de la page de la liste des animes les plus attendus
+    /// </summary>
+    /// <param name="section"></param>
+    /// <param name="page"></param>
+    /// <returns></returns>
+    internal static string GetMostAwaitedUrl(IcotakuSection section, uint page = 1)
+    {
+        return GetBaseUrl(section) + $"/classement/attendus/all/{page}.html";
+    }
+    
+    /// <summary>
+    /// Obtient l'url de la page de la liste des animes les plus populaires
+    /// </summary>
+    /// <param name="section"></param>
+    /// <param name="page"></param>
+    /// <returns></returns>
+    internal static string GetMostPopularUrl(IcotakuSection section, uint page = 1)
+    {
+        return GetBaseUrl(section) + $"/classement/top/all/{page}.html";
+    }
+    
     public static Uri? GetAdvancedSearchUri(IcotakuSection section, AnimeFinderParameterStruct findParameter, uint page = 1)
     {
         

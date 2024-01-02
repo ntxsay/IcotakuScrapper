@@ -35,7 +35,7 @@ public partial class Tformat
         Name = name;
         Description = description;
     }
-    
+
     public Tformat(int id, IcotakuSection section, string name, string? description = null)
     {
         Id = id;
@@ -55,15 +55,14 @@ public partial class Tformat
     /// Compte le nombre d'entrées dans la table Tformat
     /// </summary>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<int> CountAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public static async Task<int> CountAsync(CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT COUNT(Id) FROM Tformat";
 
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
+        
+            
 
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
         if (result is long count)
@@ -76,15 +75,11 @@ public partial class Tformat
     /// </summary>
     /// <param name="id"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<int> CountAsync(int id, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<int> CountAsync(int id, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT COUNT(Id) FROM Tformat WHERE Id = $Id";
-
-        command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$Id", id);
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
@@ -98,18 +93,16 @@ public partial class Tformat
     /// </summary>
     /// <param name="name"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<int> CountAsync(string name, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<int> CountAsync(string name, CancellationToken? cancellationToken = null)
     {
         if (name.IsStringNullOrEmptyOrWhiteSpace())
             return 0;
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT COUNT(Id) FROM Tformat WHERE Name = $Name COLLATE NOCASE";
 
-        command.Parameters.Clear();
+        
 
         command.Parameters.AddWithValue("$Name", name.Trim());
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
@@ -117,21 +110,20 @@ public partial class Tformat
             return (int)count;
         return 0;
     }
-    
-    public static async Task<int> CountAsync(string name, IcotakuSection section, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+
+    public static async Task<int> CountAsync(string name, IcotakuSection section, CancellationToken? cancellationToken = null)
     {
         if (name.IsStringNullOrEmptyOrWhiteSpace())
             return 0;
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT COUNT(Id) FROM Tformat WHERE Section = $Section AND Name = $Name COLLATE NOCASE";
 
-        command.Parameters.Clear();
+        
 
         command.Parameters.AddWithValue("$Name", name.Trim());
         command.Parameters.AddWithValue("$Section", (byte)section);
-        
+
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
         if (result is long count)
             return (int)count;
@@ -139,16 +131,15 @@ public partial class Tformat
     }
 
     public static async Task<int?> GetIdOfAsync(string name, IcotakuSection section,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
         if (name.IsStringNullOrEmptyOrWhiteSpace())
             return null;
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT Id FROM Tformat WHERE Section = $Section AND Name = $Name COLLATE NOCASE";
 
-        command.Parameters.Clear();
+        
 
         command.Parameters.AddWithValue("$Name", name.Trim());
         command.Parameters.AddWithValue("$Section", (byte)section);
@@ -162,17 +153,14 @@ public partial class Tformat
 
     #region Exists
 
-    public static async Task<bool> ExistsAsync(int id, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(id, cancellationToken, cmd) > 0;
+    public static async Task<bool> ExistsAsync(int id, CancellationToken? cancellationToken = null)
+        => await CountAsync(id, cancellationToken) > 0;
 
-    public static async Task<bool> ExistsAsync(string name, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(name, cancellationToken, cmd) > 0;
-    
-    public static async Task<bool> ExistsAsync(string name, IcotakuSection section, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(name, section, cancellationToken, cmd) > 0;
+    public static async Task<bool> ExistsAsync(string name, CancellationToken? cancellationToken = null)
+        => await CountAsync(name, cancellationToken) > 0;
+
+    public static async Task<bool> ExistsAsync(string name, IcotakuSection section, CancellationToken? cancellationToken = null)
+        => await CountAsync(name, section, cancellationToken) > 0;
 
     #endregion
 
@@ -181,9 +169,9 @@ public partial class Tformat
     public static async Task<Tformat[]> SelectAsync(FormatSortBy sortBy = FormatSortBy.Name,
         OrderBy orderBy = OrderBy.Asc,
         uint limit = 0, uint skip = 0,
-        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = IcotakuSqlSelectScript;
 
         command.CommandText += Environment.NewLine + $"ORDER BY {sortBy} {orderBy}";
@@ -191,8 +179,6 @@ public partial class Tformat
         if (limit > 0)
             command.CommandText += Environment.NewLine + $"LIMIT {limit} OFFSET {skip}";
 
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
@@ -200,14 +186,14 @@ public partial class Tformat
 
         return await GetRecords(reader, cancellationToken).ToArrayAsync(cancellationToken ?? CancellationToken.None);
     }
-    
-    
+
+
     public static async Task<Tformat[]> SelectAsync(IcotakuSection section, FormatSortBy sortBy = FormatSortBy.Name,
         OrderBy orderBy = OrderBy.Asc,
         uint limit = 0, uint skip = 0,
-        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = IcotakuSqlSelectScript + Environment.NewLine + "WHERE Section = $Section";
 
         command.CommandText += Environment.NewLine + $"ORDER BY {sortBy} {orderBy}";
@@ -215,9 +201,9 @@ public partial class Tformat
         if (limit > 0)
             command.CommandText += Environment.NewLine + $"LIMIT {limit} OFFSET {skip}";
 
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
         
+            
+
         command.Parameters.AddWithValue("$Section", (byte)section);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
@@ -231,13 +217,12 @@ public partial class Tformat
 
     #region Single
 
-    public static async Task<Tformat?> SingleAsync(int id, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<Tformat?> SingleAsync(int id, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = IcotakuSqlSelectScript + Environment.NewLine + "WHERE Id = $Id";
 
-        command.Parameters.Clear();
+        
 
         command.Parameters.AddWithValue("$Id", id);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
@@ -248,16 +233,15 @@ public partial class Tformat
             .FirstOrDefaultAsync(cancellationToken ?? CancellationToken.None);
     }
 
-    public static async Task<Tformat?> SingleAsync(string name, IcotakuSection section, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<Tformat?> SingleAsync(string name, IcotakuSection section, CancellationToken? cancellationToken = null)
     {
         if (name.IsStringNullOrEmptyOrWhiteSpace())
             return null;
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = IcotakuSqlSelectScript + Environment.NewLine + "WHERE Section = $Section AND Name = $Name COLLATE NOCASE";
 
-        command.Parameters.Clear();
+        
 
         command.Parameters.AddWithValue("$Name", name.Trim());
         command.Parameters.AddWithValue("$Section", (byte)section);
@@ -277,19 +261,17 @@ public partial class Tformat
     /// Insert un nouvel enregistrement dans la table Tformat
     /// </summary>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
-    /// <param name="disableExistenceVerification">Active ou désactive les opération de vérification de l'existence de l'item</param>
+    /// <param name="disableVerification">Active ou désactive les opération de vérification de l'existence de l'item</param>
     /// <returns></returns>
-    public async Task<OperationState<int>> InsertAsync(bool disableExistenceVerification = false, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public async Task<OperationState<int>> InsertAsync(bool disableVerification = false, CancellationToken? cancellationToken = null)
     {
         if (Name.IsStringNullOrEmptyOrWhiteSpace())
             return new OperationState<int>(false, "Le nom de l'item ne peut pas être vide");
-        
-        if (!disableExistenceVerification && await ExistsAsync(Name, Section, cancellationToken, cmd))
+
+        if (!disableVerification && await ExistsAsync(Name, Section, cancellationToken))
             return new OperationState<int>(false, "Le nom de l'item existe déjà");
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText =
             """
             INSERT INTO Tformat
@@ -298,7 +280,7 @@ public partial class Tformat
                 ($Name, $Section, $Description)
             """;
 
-        command.Parameters.Clear();
+        
 
         command.Parameters.AddWithValue("$Name", Name.Trim());
         command.Parameters.AddWithValue("$Section", (byte)Section);
@@ -318,7 +300,7 @@ public partial class Tformat
             return new OperationState<int>(false, "Une erreur est survenue lors de l'insertion");
         }
     }
-    
+
     #endregion
 
     #region Update
@@ -326,24 +308,22 @@ public partial class Tformat
     /// <summary>
     /// Met à jour cet enregistrement de la table Tformat
     /// </summary>
-    /// <param name="disableExistenceVerification"></param>
+    /// <param name="disableVerification"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public async Task<OperationState> UpdateAsync(bool disableExistenceVerification = false, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public async Task<OperationState> UpdateAsync(bool disableVerification = false, CancellationToken? cancellationToken = null)
     {
         if (Name.IsStringNullOrEmptyOrWhiteSpace())
             return new OperationState(false, "Le nom de l'item ne peut pas être vide");
 
-        if (!disableExistenceVerification)
+        if (!disableVerification)
         {
-            var existingId = await GetIdOfAsync(Name, Section, cancellationToken, cmd);
+            var existingId = await GetIdOfAsync(Name, Section, cancellationToken);
             if (existingId.HasValue && existingId.Value != Id)
                 return new OperationState(false, "Le nom de l'item existe déjà");
         }
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText =
             """
             UPDATE Tformat SET
@@ -353,7 +333,7 @@ public partial class Tformat
             WHERE Id = $Id
             """;
 
-        command.Parameters.Clear();
+        
 
         command.Parameters.AddWithValue("$Id", Id);
         command.Parameters.AddWithValue("$Section", (byte)Section);
@@ -378,17 +358,16 @@ public partial class Tformat
     #region Single or Create or Update
 
     public static async Task<OperationState> InsertOrReplaceAsync(IReadOnlyCollection<Tformat> values,
-        DbInsertMode insertMode = DbInsertMode.InsertOrReplace, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        DbInsertMode insertMode = DbInsertMode.InsertOrReplace, CancellationToken? cancellationToken = null)
     {
         if (values.Count == 0)
             return new OperationState(false, "La liste des valeurs ne peut pas être vide");
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.StartWithInsertMode(insertMode);
         command.CommandText += " INTO Tformat (Name, Section, Description)";
 
-        command.Parameters.Clear();
+        
 
         for (uint i = 0; i < values.Count; i++)
         {
@@ -421,22 +400,21 @@ public partial class Tformat
             return new OperationState(false, "Une erreur est survenue lors de l'insertion");
         }
     }
-    
+
     /// <summary>
     /// Retourne l'enregistrement de la table Tformat ayant l'identifiant spécifié ou l'insert si l'enregistrement n'existe pas
     /// </summary>
     /// <param name="value"></param>
     /// <param name="reloadIfExist"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<Tformat?> SingleOrCreateAsync(Tformat value, bool reloadIfExist= false, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public static async Task<Tformat?> SingleOrCreateAsync(Tformat value, bool reloadIfExist = false, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.Parameters.Clear();
+        await using var command = Main.Connection.CreateCommand();
+        
         if (!reloadIfExist)
         {
-            var id = await GetIdOfAsync(value.Name, value.Section, cancellationToken, command);
+            var id = await GetIdOfAsync(value.Name, value.Section, cancellationToken);
             if (id.HasValue)
             {
                 value.Id = id.Value;
@@ -445,47 +423,46 @@ public partial class Tformat
         }
         else
         {
-            var record = await SingleAsync(value.Name, value.Section, cancellationToken, command);
+            var record = await SingleAsync(value.Name, value.Section, cancellationToken);
             if (record != null)
                 return record;
         }
 
-        var result = await value.InsertAsync(false, cancellationToken, command);
+        var result = await value.InsertAsync(false, cancellationToken);
         return !result.IsSuccess ? null : value;
     }
 
-    public async Task<OperationState> AddOrUpdateAsync(CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await AddOrUpdateAsync(this, cancellationToken, cmd);
-    
+    public async Task<OperationState> AddOrUpdateAsync(CancellationToken? cancellationToken = null)
+        => await AddOrUpdateAsync(this, cancellationToken);
+
     public static async Task<OperationState> AddOrUpdateAsync(Tformat value,
-        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
         //Si la validation échoue, on retourne le résultat de la validation
         if (value.Name.IsStringNullOrEmptyOrWhiteSpace())
             return new OperationState(false, "Le nom de l'item ne peut pas être vide");
 
         //Vérifie si l'item existe déjà
-        var existingId = await GetIdOfAsync(value.Name, value.Section, cancellationToken, cmd);
-        
+        var existingId = await GetIdOfAsync(value.Name, value.Section, cancellationToken);
+
         //Si l'item existe déjà
         if (existingId.HasValue)
         {
             //Si l'id n'appartient pas à l'item alors l'enregistrement existe déjà on annule l'opération
             if (existingId.Value != value.Id)
                 return new OperationState(false, "Le nom de l'item existe déjà");
-            
+
             //Si l'id appartient à l'item alors on met à jour l'enregistrement
             if (value.Id > 0 && existingId.Value != value.Id)
                 value.Id = existingId.Value;
-            return await value.UpdateAsync(true, cancellationToken, cmd);
+            return await value.UpdateAsync(true, cancellationToken);
         }
 
         //Si l'item n'existe pas, on l'ajoute
-        var addResult = await value.InsertAsync(true, cancellationToken, cmd);
+        var addResult = await value.InsertAsync(true, cancellationToken);
         if (addResult.IsSuccess)
             value.Id = addResult.Data;
-        
+
         return addResult.ToBaseState();
     }
 
@@ -498,15 +475,13 @@ public partial class Tformat
     /// </summary>
     /// <param name="actualValues">valeurs actuellement utilisées</param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<OperationState> DeleteUnusedAsync(HashSet<(string formatName, IcotakuSection formatSection)> actualValues, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<OperationState> DeleteUnusedAsync(HashSet<(string formatName, IcotakuSection formatSection)> actualValues, CancellationToken? cancellationToken = null)
     {
-        
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "DELETE FROM Tformat WHERE Name NOT IN (";
-        command.Parameters.Clear();
+        
         var i = 0;
         foreach (var (formatName, _) in actualValues)
         {
@@ -535,31 +510,27 @@ public partial class Tformat
             return new OperationState(false, "Une erreur est survenue lors de la suppression");
         }
     }
-    
+
     /// <summary>
     /// Supprime cet enregistrement de la table Tformat
     /// </summary>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await DeleteAsync(Id, cancellationToken, cmd);
+    public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null)
+        => await DeleteAsync(Id, cancellationToken);
 
     /// <summary>
     /// Supprime un enregistrement de la table Tformat ayant l'identifiant spécifié
     /// </summary>
     /// <param name="id"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<OperationState> DeleteAsync(int id, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<OperationState> DeleteAsync(int id, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "DELETE FROM Tformat WHERE Id = $Id";
 
-        command.Parameters.Clear();
+        
 
         command.Parameters.AddWithValue("$Id", id);
 
@@ -574,15 +545,14 @@ public partial class Tformat
             return new OperationState(false, "Une erreur est survenue lors de la suppression");
         }
     }
-    
-    public static async Task<OperationState> DeleteAllAsync(IcotakuSection section, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+
+    public static async Task<OperationState> DeleteAllAsync(IcotakuSection section, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "DELETE FROM Tformat WHERE Section = $Section";
 
-        command.Parameters.Clear();
         
+
         command.Parameters.AddWithValue("$Section", (byte)section);
 
         try

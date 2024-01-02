@@ -1,20 +1,14 @@
 ﻿using HtmlAgilityPack;
 using IcotakuScrapper.Extensions;
-
-using System;
 using System.Web;
-using static System.Collections.Specialized.BitVector32;
 
 namespace IcotakuScrapper.Common
 {
     public partial class Tcategory
     {
-       
-
         /// <summary>
         /// Retourne le type de catégorie en fonction de l'url de la page de catégorie depuis icotaku.com
         /// </summary>
-        /// <param name="sheetId">Id Icotaku de la fiche</param>
         /// <returns></returns>
         public static CategoryType? GetCategoryType(Uri sheetUri)
         {
@@ -34,7 +28,9 @@ namespace IcotakuScrapper.Common
         /// Ajoute à la base de données les catégories en fonction du type de contenu (Anime, Manga, etc) depuis icotaku.com
         /// </summary>
         /// <param name="sections"></param>
+        /// <param name="isDeleteSectionRecords"></param>
         /// <param name="cancellationToken"></param>
+        /// <param name="insertMode"></param>
         /// <returns></returns>
         public static async Task<OperationState> ScrapAsync(HashSet<IcotakuSection> sections,
              DbInsertMode insertMode = DbInsertMode.InsertOrReplace,
@@ -43,15 +39,13 @@ namespace IcotakuScrapper.Common
             if (sections.Count == 0)
                 return new OperationState(false, "Aucune section n'a été spécifiée");
 
-            await using var command = (await Main.GetSqliteConnectionAsync()).CreateCommand();
-
             List<Tcategory> listOfCategories = [];
 
             foreach (var section in sections)
             {
                 if (isDeleteSectionRecords)
                 {
-                    var deleteResult = await DeleteAllAsync(section, cancellationToken, command);
+                    var deleteResult = await DeleteAsync(section, cancellationToken);
                     if (!deleteResult.IsSuccess)
                         return deleteResult;
                 }
@@ -69,7 +63,7 @@ namespace IcotakuScrapper.Common
                 return new OperationState(false, "Aucune catégorie n'a été trouvée");
 
 
-            return await InsertOrReplaceAsync(listOfCategories, insertMode, cancellationToken, command);
+            return await InsertOrReplaceAsync(listOfCategories, insertMode, cancellationToken);
         }
 
         /// <summary>
@@ -110,7 +104,6 @@ namespace IcotakuScrapper.Common
         /// <summary>
         /// Scrape les informations de la catégorie depuis la page contenant la fiche de la catégorie depuis icotaku.com
         /// </summary>
-        /// <param name="sheetId">Id Icotaku de la fiche</param>
         /// <param name="sheetUri"></param>
         /// <param name="categorySection"></param>
         /// <param name="categoryTypeToCheck"></param>

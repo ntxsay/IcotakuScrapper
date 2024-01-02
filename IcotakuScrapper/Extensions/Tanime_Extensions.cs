@@ -8,8 +8,7 @@ namespace IcotakuScrapper.Extensions
         #region AlternativeTitles
 
         public static async Task AddOrReplaceAlternativeTitlesAsync(this TanimeBase anime,
-            CancellationToken? cancellationToken = null,
-            SqliteCommand? cmd = null)
+            CancellationToken? cancellationToken = null)
         {
             ArgumentNullException.ThrowIfNull(anime);
 
@@ -24,19 +23,17 @@ namespace IcotakuScrapper.Extensions
                 alternativeTitle.Id = anime.Id;
             }
 
-            await TanimeAlternativeTitle.InsertOrReplaceAsync(anime.Id, anime.AlternativeTitles, DbInsertMode.InsertOrReplace, cancellationToken, cmd);
+            await TanimeAlternativeTitle.InsertOrReplaceAsync(anime.Id, anime.AlternativeTitles, DbInsertMode.InsertOrReplace, cancellationToken);
         }
         
-        internal static async Task UpdateAlternativeTitlesAsync(this TanimeBase anime, CancellationToken? cancellationToken = null,
-            SqliteCommand? cmd = null)
+        internal static async Task UpdateAlternativeTitlesAsync(this TanimeBase anime, CancellationToken? cancellationToken = null)
         {
             await TanimeAlternativeTitle.DeleteUnusedAsync(
-                anime.AlternativeTitles.Select(x => (x.Title, x.IdAnime)).ToHashSet(), cancellationToken, cmd);
-            await AddOrUpdateRangeAsync(anime, anime.AlternativeTitles, cancellationToken, cmd);
+                anime.AlternativeTitles.Select(x => (x.Title, x.IdAnime)).ToHashSet(), cancellationToken);
+            await AddOrUpdateRangeAsync(anime, anime.AlternativeTitles, cancellationToken);
         }
 
-        public static async Task AddOrUpdateRangeAsync(this TanimeBase anime, IReadOnlyCollection<TanimeAlternativeTitle> values, CancellationToken? cancellationToken = null,
-            SqliteCommand? cmd = null)
+        public static async Task AddOrUpdateRangeAsync(this TanimeBase anime, IReadOnlyCollection<TanimeAlternativeTitle> values, CancellationToken? cancellationToken = null)
         {
             ArgumentNullException.ThrowIfNull(anime);
 
@@ -49,12 +46,11 @@ namespace IcotakuScrapper.Extensions
             }
 
             foreach (var value in values)
-                await anime.AddOrUpdateAsync(value, cancellationToken, cmd);
+                await anime.AddOrUpdateAsync(value, cancellationToken);
         }
 
         internal static async Task AddOrUpdateAsync(this TanimeBase anime, TanimeAlternativeTitle value,
-            CancellationToken? cancellationToken = null,
-            SqliteCommand? cmd = null)
+            CancellationToken? cancellationToken = null)
         {
             ArgumentNullException.ThrowIfNull(anime);
 
@@ -63,7 +59,7 @@ namespace IcotakuScrapper.Extensions
             if (value.IdAnime != anime.Id)
                 value.IdAnime = anime.Id;
 
-            await value.AddOrUpdateAsync(cancellationToken, cmd);
+            await value.AddOrUpdateAsync(cancellationToken);
         }
 
         #endregion
@@ -71,8 +67,7 @@ namespace IcotakuScrapper.Extensions
         #region Websites
 
         public static async Task AddOrReplaceWebsitesAsync(this TanimeBase anime,
-            CancellationToken? cancellationToken = null,
-            SqliteCommand? cmd = null)
+            CancellationToken? cancellationToken = null)
         {
             ArgumentNullException.ThrowIfNull(anime);
 
@@ -87,20 +82,18 @@ namespace IcotakuScrapper.Extensions
                 item.IdAnime = anime.Id;
             }
 
-            await TanimeWebSite.InsertOrReplaceAsync(anime.Id, anime.Websites, DbInsertMode.InsertOrReplace, cancellationToken, cmd);
+            await TanimeWebSite.InsertOrReplaceAsync(anime.Id, anime.Websites, DbInsertMode.InsertOrReplace, cancellationToken);
         }
         
-        internal static async Task UpdateWebsitesAsync(this TanimeBase anime, CancellationToken? cancellationToken = null,
-            SqliteCommand? cmd = null)
+        internal static async Task UpdateWebsitesAsync(this TanimeBase anime, CancellationToken? cancellationToken = null)
         {
             await TanimeWebSite.DeleteUnusedAsync(
-                anime.Websites.Select(x => (x.Url, x.IdAnime)).ToHashSet(), cancellationToken, cmd);
-            await AddOrUpdateRangeAsync(anime, anime.Websites, cancellationToken, cmd);
+                anime.Websites.Select(x => (x.Url, x.IdAnime)).ToHashSet(), cancellationToken);
+            await AddOrUpdateRangeAsync(anime, anime.Websites, cancellationToken);
         }
         
         public static async Task AddOrUpdateRangeAsync(this TanimeBase anime, IReadOnlyCollection<TanimeWebSite> values,
-            CancellationToken? cancellationToken = null,
-            SqliteCommand? cmd = null)
+            CancellationToken? cancellationToken = null)
         {
             ArgumentNullException.ThrowIfNull(anime);
 
@@ -114,12 +107,11 @@ namespace IcotakuScrapper.Extensions
 
             foreach (var value in values)
             {
-                await anime.AddOrUpdateAsync(value, cancellationToken, cmd);
+                await anime.AddOrUpdateAsync(value, cancellationToken);
             }
         }
         
-        internal static async Task<OperationState> AddOrUpdateAsync(this TanimeBase anime, TanimeWebSite value, CancellationToken? cancellationToken = null,
-            SqliteCommand? cmd = null)
+        internal static async Task<OperationState> AddOrUpdateAsync(this TanimeBase anime, TanimeWebSite value, CancellationToken? cancellationToken = null)
         {
             ArgumentNullException.ThrowIfNull(anime);
 
@@ -128,34 +120,31 @@ namespace IcotakuScrapper.Extensions
             if (value.IdAnime != anime.Id)
                 value.IdAnime = anime.Id;
 
-            return await value.AddOrUpdateAsync(cancellationToken, cmd);
+            return await value.AddOrUpdateAsync(cancellationToken);
         }
 
         #endregion
         
          #region Studios
 
-        public static async Task<OperationState> AddOrReplaceStudiosAsync(this TanimeBase anime, CancellationToken? cancellationToken = null,
-            SqliteCommand? cmd = null)
+        public static async Task<OperationState> AddOrReplaceStudiosAsync(this TanimeBase anime, CancellationToken? cancellationToken = null)
         {
             ArgumentNullException.ThrowIfNull(anime);
 
             if (anime.Studios.Count == 0)
                 return new OperationState(true, "La collection est vide.");
 
-            return await TanimeStudio.InsertOrReplaceAsync(anime.Id, anime.Studios.Select(s => s.Id).ToArray(), DbInsertMode.InsertOrReplace, cancellationToken, cmd);
+            return await TanimeStudio.InsertOrReplaceAsync(anime.Id, anime.Studios.Select(s => s.Id).ToArray(), DbInsertMode.InsertOrReplace, cancellationToken);
         }
         
-        internal static async Task UpdateStudiosAsync(this Tanime anime, CancellationToken? cancellationToken = null,
-            SqliteCommand? cmd = null)
+        internal static async Task UpdateStudiosAsync(this Tanime anime, CancellationToken? cancellationToken = null)
         {
             await TanimeStudio.DeleteUnusedAsync(
-                anime.Studios.Select(x => (x.Id, anime.Id)).ToHashSet(), cancellationToken, cmd);
-            await AddOrUpdateRangeAsync(anime, anime.Studios.Select(s => new TanimeStudio(anime.Id, s)).ToHashSet(), cancellationToken, cmd);
+                anime.Studios.Select(x => (x.Id, anime.Id)).ToHashSet(), cancellationToken);
+            await AddOrUpdateRangeAsync(anime, anime.Studios.Select(s => new TanimeStudio(anime.Id, s)).ToHashSet(), cancellationToken);
         }
 
-        private static async Task AddOrUpdateRangeAsync(this TanimeBase anime, IReadOnlyCollection<TanimeStudio> values, CancellationToken? cancellationToken = null,
-            SqliteCommand? cmd = null)
+        private static async Task AddOrUpdateRangeAsync(this TanimeBase anime, IReadOnlyCollection<TanimeStudio> values, CancellationToken? cancellationToken = null)
         {
             ArgumentNullException.ThrowIfNull(anime);
 
@@ -168,12 +157,11 @@ namespace IcotakuScrapper.Extensions
             }
 
             foreach (var value in values)
-                await anime.AddOrUpdateAsync(value, cancellationToken, cmd);
+                await anime.AddOrUpdateAsync(value, cancellationToken);
         }
         
         private static async Task AddOrUpdateAsync(this TanimeBase anime, TanimeStudio value,
-            CancellationToken? cancellationToken = null,
-            SqliteCommand? cmd = null)
+            CancellationToken? cancellationToken = null)
         {
             ArgumentNullException.ThrowIfNull(anime);
 
@@ -182,34 +170,31 @@ namespace IcotakuScrapper.Extensions
             if (value.IdAnime != anime.Id)
                 value.IdAnime = anime.Id;
 
-            await value.AddOrUpdateAsync(cancellationToken, cmd);
+            await value.AddOrUpdateAsync(cancellationToken);
         }
 
         #endregion
         
         #region Categories
 
-        public static async Task<OperationState> AddOrReplaceCategoriesAsync(this TanimeBase anime, CancellationToken? cancellationToken = null,
-            SqliteCommand? cmd = null)
+        public static async Task<OperationState> AddOrReplaceCategoriesAsync(this TanimeBase anime, CancellationToken? cancellationToken = null)
         {
             ArgumentNullException.ThrowIfNull(anime);
 
             if (anime.Categories.Count == 0)
                 return new OperationState(true, "La collection est vide.");
 
-            return await TanimeCategory.InsertOrReplaceAsync(anime.Id, anime.Categories.Select(s => s.Id).ToArray(), DbInsertMode.InsertOrReplace, cancellationToken, cmd);
+            return await TanimeCategory.InsertOrReplaceAsync(anime.Id, anime.Categories.Select(s => s.Id).ToArray(), DbInsertMode.InsertOrReplace, cancellationToken);
         }
         
-        internal static async Task UpdateCategoriesAsync(this Tanime anime, CancellationToken? cancellationToken = null,
-            SqliteCommand? cmd = null)
+        internal static async Task UpdateCategoriesAsync(this Tanime anime, CancellationToken? cancellationToken = null)
         {
             await TanimeCategory.DeleteUnusedAsync(
-                anime.Categories.Select(x => (x.Id, anime.Id)).ToHashSet(), cancellationToken, cmd);
-            await AddOrUpdateRangeAsync(anime, anime.Categories.Select(s => new TanimeCategory(anime.Id, s)).ToHashSet(), cancellationToken, cmd);
+                anime.Categories.Select(x => (x.Id, anime.Id)).ToHashSet(), cancellationToken);
+            await AddOrUpdateRangeAsync(anime, anime.Categories.Select(s => new TanimeCategory(anime.Id, s)).ToHashSet(), cancellationToken);
         }
 
-        private static async Task AddOrUpdateRangeAsync(this TanimeBase anime, IReadOnlyCollection<TanimeCategory> values, CancellationToken? cancellationToken = null,
-            SqliteCommand? cmd = null)
+        private static async Task AddOrUpdateRangeAsync(this TanimeBase anime, IReadOnlyCollection<TanimeCategory> values, CancellationToken? cancellationToken = null)
         {
             ArgumentNullException.ThrowIfNull(anime);
 
@@ -222,11 +207,10 @@ namespace IcotakuScrapper.Extensions
             }
 
             foreach (var value in values)
-                await anime.AddOrUpdateAsync(value, cancellationToken, cmd);
+                await anime.AddOrUpdateAsync(value, cancellationToken);
         }
         
-        private static Task<OperationState> AddOrUpdateAsync(this TanimeBase anime, TanimeCategory value, CancellationToken? cancellationToken = null,
-            SqliteCommand? cmd = null)
+        private static Task<OperationState> AddOrUpdateAsync(this TanimeBase anime, TanimeCategory value, CancellationToken? cancellationToken = null)
         {
             ArgumentNullException.ThrowIfNull(anime);
 
@@ -235,15 +219,14 @@ namespace IcotakuScrapper.Extensions
             if (value.IdAnime != anime.Id)
                 value.IdAnime = anime.Id;
 
-            return value.AddOrUpdateAsync(cancellationToken, cmd);
+            return value.AddOrUpdateAsync(cancellationToken);
         }
 
         #endregion
         
         #region Episodes
 
-        public static async Task<OperationState> AddOrReplaceEpisodesAsync(this Tanime anime, CancellationToken? cancellationToken = null,
-            SqliteCommand? cmd = null)
+        public static async Task<OperationState> AddOrReplaceEpisodesAsync(this Tanime anime, CancellationToken? cancellationToken = null)
         {
             ArgumentNullException.ThrowIfNull(anime);
 
@@ -255,19 +238,17 @@ namespace IcotakuScrapper.Extensions
                 episode.IdAnime = anime.Id;
             }
 
-            return await TanimeEpisode.InsertOrReplaceAsync(anime.Id, anime.Episodes.ToArray(), DbInsertMode.InsertOrReplace, cancellationToken, cmd);
+            return await TanimeEpisode.InsertOrReplaceAsync(anime.Id, anime.Episodes.ToArray(), DbInsertMode.InsertOrReplace, cancellationToken);
         }
         
-        internal static async Task UpdateEpisodesAsync(this Tanime anime, CancellationToken? cancellationToken = null,
-            SqliteCommand? cmd = null)
+        internal static async Task UpdateEpisodesAsync(this Tanime anime, CancellationToken? cancellationToken = null)
         {
             await TanimeEpisode.DeleteUnusedAsync(
-                anime.Episodes.Select(x => (x.NoEpisode, anime.Id)).ToHashSet(), cancellationToken, cmd);
-            await AddOrUpdateRangeAsync(anime, anime.Episodes.ToHashSet(), cancellationToken, cmd);
+                anime.Episodes.Select(x => (x.NoEpisode, anime.Id)).ToHashSet(), cancellationToken);
+            await AddOrUpdateRangeAsync(anime, anime.Episodes.ToHashSet(), cancellationToken);
         }
 
-        private static async Task AddOrUpdateRangeAsync(this Tanime anime, IReadOnlyCollection<TanimeEpisode> values, CancellationToken? cancellationToken = null,
-            SqliteCommand? cmd = null)
+        private static async Task AddOrUpdateRangeAsync(this Tanime anime, IReadOnlyCollection<TanimeEpisode> values, CancellationToken? cancellationToken = null)
         {
             ArgumentNullException.ThrowIfNull(anime);
 
@@ -280,11 +261,10 @@ namespace IcotakuScrapper.Extensions
             }
 
             foreach (var value in values)
-                await anime.AddOrUpdateAsync(value, cancellationToken, cmd);
+                await anime.AddOrUpdateAsync(value, cancellationToken);
         }
         
-        private static async Task<OperationState> AddOrUpdateAsync(this Tanime anime, TanimeEpisode value, CancellationToken? cancellationToken = null,
-            SqliteCommand? cmd = null)
+        private static async Task<OperationState> AddOrUpdateAsync(this Tanime anime, TanimeEpisode value, CancellationToken? cancellationToken = null)
         {
             ArgumentNullException.ThrowIfNull(anime);
 
@@ -293,15 +273,14 @@ namespace IcotakuScrapper.Extensions
             if (value.IdAnime != anime.Id)
                 value.IdAnime = anime.Id;
 
-            return await value.AddOrUpdateAsync(cancellationToken, cmd);
+            return await value.AddOrUpdateAsync(cancellationToken);
         }
 
         #endregion
 
         #region Licenses
 
-        public static async Task<OperationState> AddOrReplaceLicensesAsync(this TanimeBase anime, CancellationToken? cancellationToken = null,
-            SqliteCommand? cmd = null)
+        public static async Task<OperationState> AddOrReplaceLicensesAsync(this TanimeBase anime, CancellationToken? cancellationToken = null)
         {
             ArgumentNullException.ThrowIfNull(anime);
 
@@ -313,19 +292,17 @@ namespace IcotakuScrapper.Extensions
                 item.IdAnime = anime.Id;
             }
 
-            return await TanimeLicense.InsertOrReplaceAsync(anime.Id, anime.Licenses.ToArray(), DbInsertMode.InsertOrReplace, cancellationToken, cmd);
+            return await TanimeLicense.InsertOrReplaceAsync(anime.Id, anime.Licenses.ToArray(), DbInsertMode.InsertOrReplace, cancellationToken);
         }
         
-        internal static async Task UpdateLicensesAsync(this Tanime anime, CancellationToken? cancellationToken = null,
-            SqliteCommand? cmd = null)
+        internal static async Task UpdateLicensesAsync(this Tanime anime, CancellationToken? cancellationToken = null)
         {
             await TanimeLicense.DeleteUnusedAsync(
-                anime.Licenses.Select(x => (x.Distributor.Id, x.Type.Id, anime.Id)).ToHashSet(), cancellationToken, cmd);
-            await AddOrUpdateRangeAsync(anime, anime.Licenses.ToHashSet(), cancellationToken, cmd);
+                anime.Licenses.Select(x => (x.Distributor.Id, x.Type.Id, anime.Id)).ToHashSet(), cancellationToken);
+            await AddOrUpdateRangeAsync(anime, anime.Licenses.ToHashSet(), cancellationToken);
         }
 
-        private static async Task AddOrUpdateRangeAsync(this Tanime anime, IReadOnlyCollection<TanimeLicense> values, CancellationToken? cancellationToken = null,
-            SqliteCommand? cmd = null)
+        private static async Task AddOrUpdateRangeAsync(this Tanime anime, IReadOnlyCollection<TanimeLicense> values, CancellationToken? cancellationToken = null)
         {
             ArgumentNullException.ThrowIfNull(anime);
 
@@ -338,11 +315,10 @@ namespace IcotakuScrapper.Extensions
             }
 
             foreach (var value in values)
-                await anime.AddOrUpdateAsync(value, cancellationToken, cmd);
+                await anime.AddOrUpdateAsync(value, cancellationToken);
         }
         
-        private static async Task<OperationState> AddOrUpdateAsync(this TanimeBase anime, TanimeLicense value, CancellationToken? cancellationToken = null,
-            SqliteCommand? cmd = null)
+        private static async Task<OperationState> AddOrUpdateAsync(this TanimeBase anime, TanimeLicense value, CancellationToken? cancellationToken = null)
         {
             ArgumentNullException.ThrowIfNull(anime);
 
@@ -351,15 +327,14 @@ namespace IcotakuScrapper.Extensions
             if (value.IdAnime != anime.Id)
                 value.IdAnime = anime.Id;
 
-            return await value.AddOrUpdateAsync(cancellationToken, cmd);
+            return await value.AddOrUpdateAsync(cancellationToken);
         }
 
         #endregion
 
         #region Staffs
 
-        public static async Task<OperationState> AddOrReplaceStaffsAsync(this TanimeBase anime, CancellationToken? cancellationToken = null,
-            SqliteCommand? cmd = null)
+        public static async Task<OperationState> AddOrReplaceStaffsAsync(this TanimeBase anime, CancellationToken? cancellationToken = null)
         {
             ArgumentNullException.ThrowIfNull(anime);
 
@@ -371,19 +346,17 @@ namespace IcotakuScrapper.Extensions
                 item.IdAnime = anime.Id;
             }
 
-            return await TanimeStaff.InsertOrReplaceAsync(anime.Id, anime.Staffs.ToArray(), DbInsertMode.InsertOrReplace, cancellationToken, cmd);
+            return await TanimeStaff.InsertOrReplaceAsync(anime.Id, anime.Staffs.ToArray(), DbInsertMode.InsertOrReplace, cancellationToken);
         }
         
-        internal static async Task UpdateStaffsAsync(this Tanime anime, CancellationToken? cancellationToken = null,
-            SqliteCommand? cmd = null)
+        internal static async Task UpdateStaffsAsync(this Tanime anime, CancellationToken? cancellationToken = null)
         {
             await TanimeStaff.DeleteUnusedAsync(
-                anime.Staffs.Select(x => (x.Person.Id, x.Role.Id, anime.Id)).ToHashSet(), cancellationToken, cmd);
-            await AddOrUpdateRangeAsync(anime, anime.Staffs.ToHashSet(), cancellationToken, cmd);
+                anime.Staffs.Select(x => (x.Person.Id, x.Role.Id, anime.Id)).ToHashSet(), cancellationToken);
+            await AddOrUpdateRangeAsync(anime, anime.Staffs.ToHashSet(), cancellationToken);
         }
 
-        private static async Task AddOrUpdateRangeAsync(this TanimeBase anime, IReadOnlyCollection<TanimeStaff> values, CancellationToken? cancellationToken = null,
-            SqliteCommand? cmd = null)
+        private static async Task AddOrUpdateRangeAsync(this TanimeBase anime, IReadOnlyCollection<TanimeStaff> values, CancellationToken? cancellationToken = null)
         {
             ArgumentNullException.ThrowIfNull(anime);
 
@@ -396,11 +369,10 @@ namespace IcotakuScrapper.Extensions
             }
 
             foreach (var value in values)
-                await anime.AddOrUpdateAsync(value, cancellationToken, cmd);
+                await anime.AddOrUpdateAsync(value, cancellationToken);
         }
         
-        private static async Task<OperationState> AddOrUpdateAsync(this TanimeBase anime, TanimeStaff value, CancellationToken? cancellationToken = null,
-            SqliteCommand? cmd = null)
+        private static async Task<OperationState> AddOrUpdateAsync(this TanimeBase anime, TanimeStaff value, CancellationToken? cancellationToken = null)
         {
             ArgumentNullException.ThrowIfNull(anime);
 
@@ -409,10 +381,11 @@ namespace IcotakuScrapper.Extensions
             if (value.IdAnime != anime.Id)
                 value.IdAnime = anime.Id;
 
-            return await value.AddOrUpdateAsync(cancellationToken, cmd);
+            return await value.AddOrUpdateAsync(cancellationToken);
         }
 
         #endregion
 
     }
+   
 }

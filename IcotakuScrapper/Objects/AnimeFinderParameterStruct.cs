@@ -1,4 +1,6 @@
-namespace IcotakuScrapper.Anime;
+using IcotakuScrapper.Extensions;
+
+namespace IcotakuScrapper.Objects;
 
 /// <summary>
 /// Structure contenant les paramètres de recherche avancée d'anime
@@ -79,4 +81,6 @@ public readonly struct AnimeFinderParameterStruct
     /// Thèmes que l'anime ne doit pas contenir
     /// </summary>
     public int[] ExcludeThemesId { get; init; } = [];
+    
+    public bool HasTitle => Title != null && !Title.IsStringNullOrEmptyOrWhiteSpace();
 }

@@ -156,6 +156,19 @@ namespace IcotakuScrapper
         }
 
         private static SqliteConnection? _connection;
+        internal static SqliteConnection Connection
+        {
+            get
+            {
+                if (_connection != null) 
+                    return _connection;
+                
+                _connection = new SqliteConnection(ConnexionString);
+                _connection.OpenAsync().Wait();
+
+                return _connection;
+            }
+        }
         private static SqliteCommand? _command;
 
         internal static SqliteCommand Command
@@ -255,5 +268,10 @@ namespace IcotakuScrapper
         }
         #endregion
 
+        internal static void DisposeCommand()
+        {
+            _command?.Dispose();
+            _command = null;
+        }
     }
 }

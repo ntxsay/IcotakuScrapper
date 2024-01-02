@@ -40,16 +40,12 @@ public class TanimeCategory
     /// Compte le nombre d'entrées dans la table TanimeCategory
     /// </summary>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<int> CountAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public static async Task<int> CountAsync(CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT COUNT(Id) FROM TanimeCategory";
-
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
-
+        
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
         if (result is long count)
             return (int)count;
@@ -61,15 +57,11 @@ public class TanimeCategory
     /// </summary>
     /// <param name="id"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<int> CountAsync(int id, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<int> CountAsync(int id, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT COUNT(Id) FROM TanimeCategory WHERE Id = $Id";
-
-        command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$Id", id);
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
@@ -83,16 +75,12 @@ public class TanimeCategory
     /// </summary>
     /// <param name="idContact"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <param name="idAnime"></param>
     /// <returns></returns>
-    public static async Task<int> CountAsync(int idAnime, int idContact, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<int> CountAsync(int idAnime, int idContact, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT COUNT(Id) FROM TanimeCategory WHERE IdAnime = $IdAnime AND IdCategory = $IdCategory";
-
-        command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$IdAnime", idAnime);
         command.Parameters.AddWithValue("$IdCategory", idContact);
@@ -102,13 +90,10 @@ public class TanimeCategory
         return 0;
     }
 
-    public static async Task<int?> GetIdOfAsync(int idAnime, int idContact, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<int?> GetIdOfAsync(int idAnime, int idContact, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT Id FROM TanimeCategory WHERE IdAnime = $IdAnime AND IdCategory = $IdCategory";
-
-        command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$IdAnime", idAnime);
         command.Parameters.AddWithValue("$IdCategory", idContact);
@@ -122,24 +107,21 @@ public class TanimeCategory
 
     #region Exists
 
-    public static async Task<bool> ExistsAsync(int id, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(id, cancellationToken, cmd) > 0;
+    public static async Task<bool> ExistsAsync(int id, CancellationToken? cancellationToken = null)
+        => await CountAsync(id, cancellationToken) > 0;
 
-    public static async Task<bool> ExistsAsync(int idAnime, int idContact, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(idAnime, idContact, cancellationToken, cmd) > 0;
+    public static async Task<bool> ExistsAsync(int idAnime, int idContact, CancellationToken? cancellationToken = null)
+        => await CountAsync(idAnime, idContact, cancellationToken) > 0;
 
     #endregion
 
     #region Select
 
     public static async Task<TanimeCategory[]> SelectAsync(int id, AnimeCategoryIdSelector selector,
-        OrderBy orderBy = OrderBy.Asc, uint limit = 0, uint skip = 0, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        OrderBy orderBy = OrderBy.Asc, uint limit = 0, uint skip = 0, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = SqlSelectScript + Environment.NewLine + selector switch
+        await using var command = Main.Connection.CreateCommand();
+        command.CommandText = IcotakuSqlSelectScript + Environment.NewLine + selector switch
         {
             AnimeCategoryIdSelector.Id => "WHERE TanimeCategory.Id = $Id",
             AnimeCategoryIdSelector.IdAnime => "WHERE TanimeCategory.IdAnime = $Id",
@@ -150,8 +132,6 @@ public class TanimeCategory
         command.CommandText += Environment.NewLine + $"ORDER BY Tcontact.DisplayName {orderBy}";
 
         command.AddLimitOffset(limit, skip);
-
-        command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$Id", id);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
@@ -165,14 +145,11 @@ public class TanimeCategory
     #region Single
 
     public static async Task<TanimeCategory?> SingleAsync(int idAnime, int idContact,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = SqlSelectScript + Environment.NewLine +
+        await using var command = Main.Connection.CreateCommand();
+        command.CommandText = IcotakuSqlSelectScript + Environment.NewLine +
                               "WHERE TanimeCategory.IdAnime = $IdAnime AND TanimeCategory.IdCategory = $IdCategory";
-
-        command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$IdAnime", idAnime);
         command.Parameters.AddWithValue("$IdCategory", idContact);
@@ -188,20 +165,19 @@ public class TanimeCategory
 
     #region Insert
 
-    public async Task<OperationState<int>> InsertAsync(bool disableExistenceVerification = false, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public async Task<OperationState<int>> InsertAsync(bool disableVerification = false, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        if (IdAnime <= 0 || !await TanimeBase.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken, command))
+        if (IdAnime <= 0 || !await TanimeBase.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken))
             return new OperationState<int>(false, "L'anime n'existe pas.", 0);
         
         if (Category.Id <= 0 ||
-            (!disableExistenceVerification && !await Tcategory.ExistsAsync(Category.Id, IntColumnSelect.Id, cancellationToken, command)))
+            (!disableVerification && !await Tcategory.ExistsAsync(Category.Id, IntColumnSelect.Id, cancellationToken)))
             return new OperationState<int>(false, "La catégorie n'existe pas.", 0);
 
-        if (!disableExistenceVerification && await ExistsAsync(IdAnime, Category.Id, cancellationToken, command))
+        if (!disableVerification && await ExistsAsync(IdAnime, Category.Id, cancellationToken))
             return new OperationState<int>(false, "Le lien existe déjà.", 0);
 
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = 
             """
             INSERT INTO TanimeCategory 
@@ -209,9 +185,6 @@ public class TanimeCategory
             VALUES 
                 ($IdAnime, $IdCategory);
             """;
-
-        command.Parameters.Clear();
-
         command.Parameters.AddWithValue("$IdAnime", IdAnime);
         command.Parameters.AddWithValue("$IdCategory", Category.Id);
 
@@ -234,25 +207,23 @@ public class TanimeCategory
 
     #region Update
 
-    public async Task<OperationState> UpdateAsync(bool disableExistenceVerification = false, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public async Task<OperationState> UpdateAsync(bool disableVerification = false, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-
-        if (IdAnime <= 0 || !await TanimeBase.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken, command))
+        if (IdAnime <= 0 || !await TanimeBase.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken))
             return new OperationState(false, "L'anime n'existe pas.");
 
         if (Category.Id <= 0 ||
-            (!disableExistenceVerification && !await Tcategory.ExistsAsync(Category.Id, IntColumnSelect.Id, cancellationToken, command)))
+            (!disableVerification && !await Tcategory.ExistsAsync(Category.Id, IntColumnSelect.Id, cancellationToken)))
             return new OperationState(false, "La catégorie n'existe pas.");
 
-        if (!disableExistenceVerification)
+        if (!disableVerification)
         {
-            var existingId = await GetIdOfAsync(IdAnime, Category.Id, cancellationToken, command);
+            var existingId = await GetIdOfAsync(IdAnime, Category.Id, cancellationToken);
             if (existingId is not null && existingId != Id)
                 return new OperationState(false, "Le lien existe déjà.");
         }
 
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = 
             """
             UPDATE TanimeCategory 
@@ -261,8 +232,6 @@ public class TanimeCategory
                 IdCategory = $IdCategory 
             WHERE Id = $Id;
             """;
-
-        command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$Id", Id);
         command.Parameters.AddWithValue("$IdAnime", IdAnime);
@@ -287,19 +256,18 @@ public class TanimeCategory
     #region InsertOrUpdate
     
     public static async Task<OperationState> InsertOrReplaceAsync(int idAnime, IReadOnlyCollection<int> idCategoryArray,
-        DbInsertMode insertMode = DbInsertMode.InsertOrReplace, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        DbInsertMode insertMode = DbInsertMode.InsertOrReplace, CancellationToken? cancellationToken = null)
     {
         if (idCategoryArray.Count == 0)
             return new OperationState(false, "Aucune catégorie n'a été trouvée.");
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        if (idAnime <= 0 || !await TanimeBase.ExistsAsync(idAnime, IntColumnSelect.Id, cancellationToken, command))
+        if (idAnime <= 0 || !await TanimeBase.ExistsAsync(idAnime, IntColumnSelect.Id, cancellationToken))
             return new OperationState(false, "L'anime n'existe pas.");
         
+        await using var command = Main.Connection.CreateCommand();
         command.StartWithInsertMode(insertMode);
         command.CommandText += " INTO TanimeCategory (IdAnime, IdCategory) VALUES";
-        command.Parameters.Clear();
+        
 
         for (var i = 0; i < idCategoryArray.Count; i++)
         {
@@ -336,21 +304,21 @@ public class TanimeCategory
         }
     }
     
-    public async Task<OperationState> AddOrUpdateAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
-        => await AddOrUpdateAsync(this, cancellationToken, cmd);
+    public async Task<OperationState> AddOrUpdateAsync(CancellationToken? cancellationToken = null)
+        => await AddOrUpdateAsync(this, cancellationToken);
     
     public static async Task<OperationState> AddOrUpdateAsync(TanimeCategory value,
-        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
         //Si la validation échoue, on retourne le résultat de la validation
-        if (!await TanimeBase.ExistsAsync(value.IdAnime, IntColumnSelect.Id, cancellationToken, cmd))
+        if (!await TanimeBase.ExistsAsync(value.IdAnime, IntColumnSelect.Id, cancellationToken))
             return new OperationState(false, "L'anime n'existe pas.");
         
-        if (!await Tcategory.ExistsAsync(value.Category.Id, IntColumnSelect.Id, cancellationToken, cmd))
+        if (!await Tcategory.ExistsAsync(value.Category.Id, IntColumnSelect.Id, cancellationToken))
             return new OperationState(false, "La catégorie n'existe pas.");
 
         //Vérifie si l'item existe déjà
-        var existingId = await GetIdOfAsync(value.IdAnime, value.Category.Id, cancellationToken, cmd);
+        var existingId = await GetIdOfAsync(value.IdAnime, value.Category.Id, cancellationToken);
         
         //Si l'item existe déjà
         if (existingId.HasValue)
@@ -362,11 +330,11 @@ public class TanimeCategory
             //Si l'id appartient à l'item alors on met à jour l'enregistrement
             if (existingId.Value != value.Id)
                 value.Id = existingId.Value;
-            return await value.UpdateAsync(true, cancellationToken, cmd);
+            return await value.UpdateAsync(true, cancellationToken);
         }
 
         //Si l'item n'existe pas, on l'ajoute
-        var addResult = await value.InsertAsync(true, cancellationToken, cmd);
+        var addResult = await value.InsertAsync(true, cancellationToken);
         if (addResult.IsSuccess)
             value.Id = addResult.Data;
         
@@ -381,15 +349,12 @@ public class TanimeCategory
     /// </summary>
     /// <param name="actualValues">valeurs actuellement utilisées</param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<OperationState> DeleteUnusedAsync(HashSet<(int idCategory, int idAnime)> actualValues, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<OperationState> DeleteUnusedAsync(HashSet<(int idCategory, int idAnime)> actualValues, CancellationToken? cancellationToken = null)
     {
-        
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "DELETE FROM TanimeCategory WHERE IdCategory NOT IN (";
-        command.Parameters.Clear();
+
         var i = 0;
         foreach (var (idCategory, _) in actualValues)
         {
@@ -419,17 +384,14 @@ public class TanimeCategory
         }
     }
     
-    public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await DeleteAsync(Id, cancellationToken, cmd);
+    public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null)
+        => await DeleteAsync(Id, cancellationToken);
 
-    public static async Task<OperationState> DeleteAsync(int id, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<OperationState> DeleteAsync(int id, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "DELETE FROM TanimeCategory WHERE Id = $Id";
 
-        command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$Id", id);
 
@@ -491,7 +453,7 @@ public class TanimeCategory
         return record;
     }
 
-    private const string SqlSelectScript =
+    private const string IcotakuSqlSelectScript =
         """
         SELECT
             TanimeCategory.Id AS BaseId,

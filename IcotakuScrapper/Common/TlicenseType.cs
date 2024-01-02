@@ -1,5 +1,4 @@
 ﻿using IcotakuScrapper.Extensions;
-using IcotakuScrapper.Services;
 using Microsoft.Data.Sqlite;
 
 namespace IcotakuScrapper.Common;
@@ -53,15 +52,12 @@ public class TlicenseType
     /// Compte le nombre d'entrées dans la table TlicenseType
     /// </summary>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<int> CountAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public static async Task<int> CountAsync(CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT COUNT(Id) FROM TlicenseType";
 
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
 
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
         if (result is long count)
@@ -74,15 +70,13 @@ public class TlicenseType
     /// </summary>
     /// <param name="id"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<int> CountAsync(int id, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<int> CountAsync(int id, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT COUNT(Id) FROM TlicenseType WHERE Id = $Id";
 
-        command.Parameters.Clear();
+
 
         command.Parameters.AddWithValue("$Id", id);
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
@@ -97,18 +91,16 @@ public class TlicenseType
     /// <param name="name"></param>
     /// <param name="section"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<int> CountAsync(string name, IcotakuSection section, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<int> CountAsync(string name, IcotakuSection section, CancellationToken? cancellationToken = null)
     {
         if (name.IsStringNullOrEmptyOrWhiteSpace())
             return 0;
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT COUNT(Id) FROM TlicenseType WHERE Section = $Section AND Name = $Name COLLATE NOCASE";
 
-        command.Parameters.Clear();
+
 
         command.Parameters.AddWithValue("$Name", name.Trim());
         command.Parameters.AddWithValue("$Section", (byte)section);
@@ -119,16 +111,15 @@ public class TlicenseType
     }
 
     public static async Task<int?> GetIdOfAsync(string name, IcotakuSection section,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
         if (name.IsStringNullOrEmptyOrWhiteSpace())
             return null;
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT Id FROM TlicenseType WHERE Section = $Section AND Name = $Name COLLATE NOCASE";
 
-        command.Parameters.Clear();
+
 
         command.Parameters.AddWithValue("$Name", name.Trim());
         command.Parameters.AddWithValue("$Section", (byte)section);
@@ -142,13 +133,11 @@ public class TlicenseType
 
     #region Exists
 
-    public static async Task<bool> ExistsAsync(int id, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(id, cancellationToken, cmd) > 0;
+    public static async Task<bool> ExistsAsync(int id, CancellationToken? cancellationToken = null)
+        => await CountAsync(id, cancellationToken) > 0;
 
-    public static async Task<bool> ExistsAsync(string name, IcotakuSection section, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(name, section, cancellationToken, cmd) > 0;
+    public static async Task<bool> ExistsAsync(string name, IcotakuSection section, CancellationToken? cancellationToken = null)
+        => await CountAsync(name, section, cancellationToken) > 0;
 
     #endregion
 
@@ -157,9 +146,9 @@ public class TlicenseType
     public static async Task<TlicenseType[]> SelectAsync(LicenseSortBy sortBy = LicenseSortBy.Name,
         OrderBy orderBy = OrderBy.Asc,
         uint limit = 0, uint skip = 0,
-        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = SqlSelectScript;
 
         command.CommandText += Environment.NewLine + $"ORDER BY {sortBy} {orderBy}";
@@ -167,8 +156,8 @@ public class TlicenseType
         if (limit > 0)
             command.CommandText += Environment.NewLine + $"LIMIT {limit} OFFSET {skip}";
 
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
+
+
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
@@ -176,13 +165,13 @@ public class TlicenseType
 
         return await GetRecords(reader, cancellationToken).ToArrayAsync(cancellationToken ?? CancellationToken.None);
     }
-    
+
     public static async Task<TlicenseType[]> SelectAsync(IcotakuSection section, LicenseSortBy sortBy = LicenseSortBy.Name,
         OrderBy orderBy = OrderBy.Asc,
         uint limit = 0, uint skip = 0,
-        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Section = $Section";
 
         command.CommandText += Environment.NewLine + $"ORDER BY {sortBy} {orderBy}";
@@ -190,9 +179,9 @@ public class TlicenseType
         if (limit > 0)
             command.CommandText += Environment.NewLine + $"LIMIT {limit} OFFSET {skip}";
 
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
-        
+
+
+
         command.Parameters.AddWithValue("$Section", (byte)section);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
@@ -206,13 +195,12 @@ public class TlicenseType
 
     #region Single
 
-    public static async Task<TlicenseType?> SingleAsync(int id, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<TlicenseType?> SingleAsync(int id, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Id = $Id";
 
-        command.Parameters.Clear();
+
 
         command.Parameters.AddWithValue("$Id", id);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
@@ -223,16 +211,15 @@ public class TlicenseType
             .FirstOrDefaultAsync(cancellationToken ?? CancellationToken.None);
     }
 
-    public static async Task<TlicenseType?> SingleAsync(string name, IcotakuSection section, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<TlicenseType?> SingleAsync(string name, IcotakuSection section, CancellationToken? cancellationToken = null)
     {
         if (name.IsStringNullOrEmptyOrWhiteSpace())
             return null;
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Section = $Section AND Name = $Name COLLATE NOCASE";
 
-        command.Parameters.Clear();
+
 
         command.Parameters.AddWithValue("$Name", name.Trim());
         command.Parameters.AddWithValue("$Section", (byte)section);
@@ -252,17 +239,15 @@ public class TlicenseType
     /// Insert un nouvel enregistrement dans la table TlicenseType
     /// </summary>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public async Task<OperationState<int>> InsertAsync(CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public async Task<OperationState<int>> InsertAsync(bool disableVerification, CancellationToken? cancellationToken = null)
     {
         if (Name.IsStringNullOrEmptyOrWhiteSpace())
             return new OperationState<int>(false, "Le nom de l'item ne peut pas être vide");
-        if (await ExistsAsync(Name, Section, cancellationToken, cmd))
+        if (!disableVerification && await ExistsAsync(Name, Section, cancellationToken))
             return new OperationState<int>(false, "Le nom de l'item existe déjà");
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText =
             """
             INSERT INTO TlicenseType
@@ -271,7 +256,7 @@ public class TlicenseType
                 ($Name, $Section, $Description)
             """;
 
-        command.Parameters.Clear();
+
 
         command.Parameters.AddWithValue("$Section", (byte)Section);
         command.Parameters.AddWithValue("$Name", Name.Trim());
@@ -292,19 +277,18 @@ public class TlicenseType
         }
     }
 
-    public static async Task<OperationState> InsertOrReplaceAsync(IReadOnlyCollection<TlicenseType> values, 
-        DbInsertMode insertMode = DbInsertMode.InsertOrReplace, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<OperationState> InsertOrReplaceAsync(IReadOnlyCollection<TlicenseType> values,
+        DbInsertMode insertMode = DbInsertMode.InsertOrReplace, CancellationToken? cancellationToken = null)
     {
         if (values.Count == 0)
             return new OperationState(false, "La liste des valeurs ne peut pas être vide");
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.StartWithInsertMode(insertMode);
-        
+
         command.CommandText += " INTO TlicenseType (Name, Section, Description) VALUES ";
 
-        command.Parameters.Clear();
+
 
         for (uint i = 0; i < values.Count; i++)
         {
@@ -326,7 +310,7 @@ public class TlicenseType
                 command.CommandText += ";";
             else
                 command.CommandText += ",";
-            
+
             LogServices.LogDebug("Ajout de l'item " + value.Name + " à la commande.");
         }
 
@@ -341,22 +325,19 @@ public class TlicenseType
             return new OperationState(false, "Une erreur est survenue lors de l'insertion");
         }
     }
-    
+
     /// <summary>
     /// Retourne l'enregistrement de la table TlicenseType ayant l'identifiant spécifié ou l'insert si l'enregistrement n'existe pas
     /// </summary>
     /// <param name="value"></param>
     /// <param name="reloadIfExist"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<TlicenseType?> SingleOrCreateAsync(TlicenseType value, bool reloadIfExist= false, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public static async Task<TlicenseType?> SingleOrCreateAsync(TlicenseType value, bool reloadIfExist = false, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.Parameters.Clear();
         if (!reloadIfExist)
         {
-            var id = await GetIdOfAsync(value.Name, value.Section, cancellationToken, command);
+            var id = await GetIdOfAsync(value.Name, value.Section, cancellationToken);
             if (id.HasValue)
             {
                 value.Id = id.Value;
@@ -365,12 +346,12 @@ public class TlicenseType
         }
         else
         {
-            var record = await SingleAsync(value.Name, value.Section, cancellationToken, command);
+            var record = await SingleAsync(value.Name, value.Section, cancellationToken);
             if (record != null)
                 return record;
         }
 
-        var result = await value.InsertAsync(cancellationToken, command);
+        var result = await value.InsertAsync(false, cancellationToken);
         return !result.IsSuccess ? null : value;
     }
     #endregion
@@ -381,19 +362,20 @@ public class TlicenseType
     /// Met à jour cet enregistrement de la table TlicenseType
     /// </summary>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public async Task<OperationState> UpdateAsync(CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public async Task<OperationState> UpdateAsync(bool disableVerification, CancellationToken? cancellationToken = null)
     {
         if (Name.IsStringNullOrEmptyOrWhiteSpace())
             return new OperationState(false, "Le nom de l'item ne peut pas être vide");
 
-        var existingId = await GetIdOfAsync(Name, Section, cancellationToken, cmd);
-        if (existingId.HasValue && existingId.Value != Id)
-            return new OperationState(false, "Le nom de l'item existe déjà");
+        if (!disableVerification)
+        {
+            var existingId = await GetIdOfAsync(Name, Section, cancellationToken);
+            if (existingId.HasValue && existingId.Value != Id)
+                return new OperationState(false, "Le nom de l'item existe déjà");
+        }
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText =
             """
             UPDATE TlicenseType SET
@@ -403,7 +385,7 @@ public class TlicenseType
             WHERE Id = $Id
             """;
 
-        command.Parameters.Clear();
+
 
         command.Parameters.AddWithValue("$Id", Id);
         command.Parameters.AddWithValue("$Section", (byte)Section);
@@ -431,30 +413,26 @@ public class TlicenseType
     /// Supprime cet enregistrement de la table TlicenseType
     /// </summary>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await DeleteAsync(Id, cancellationToken, cmd);
+    public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null)
+        => await DeleteAsync(Id, cancellationToken);
 
     /// <summary>
     /// Supprime un enregistrement de la table TlicenseType ayant l'identifiant spécifié
     /// </summary>
     /// <param name="id"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<OperationState> DeleteAsync(int id, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<OperationState> DeleteAsync(int id, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = 
+        await using var command = Main.Connection.CreateCommand();
+        command.CommandText =
             """
             DELETE FROM TanimeLicense WHERE IdLicenseType = $Id;
             DELETE FROM TlicenseType WHERE Id = $Id;
             """;
 
-        command.Parameters.Clear();
+
 
         command.Parameters.AddWithValue("$Id", id);
 
@@ -469,14 +447,13 @@ public class TlicenseType
             return new OperationState(false, "Une erreur est survenue lors de la suppression");
         }
     }
-    
-    public static async Task<OperationState> DeleteAllAsync(IcotakuSection section, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+
+    public static async Task<OperationState> DeleteAllAsync(IcotakuSection section, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "DELETE FROM TlicenseType WHERE Section = $Section";
 
-        command.Parameters.Clear();
+
 
         command.Parameters.AddWithValue("$Section", section);
 

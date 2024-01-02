@@ -1,9 +1,7 @@
-﻿using System.Diagnostics;
-using System.Globalization;
-using IcotakuScrapper.Common;
+﻿using IcotakuScrapper.Common;
 using IcotakuScrapper.Contact;
 using IcotakuScrapper.Extensions;
-
+using IcotakuScrapper.Objects;
 using Microsoft.Data.Sqlite;
 
 namespace IcotakuScrapper.Anime;
@@ -19,7 +17,8 @@ public enum AnimeSortBy
     Duration,
     Format,
     Target,
-    OrigineAdaptation
+    OrigineAdaptation,
+    Season,
 }
 
 public partial class Tanime : TanimeBase
@@ -77,47 +76,45 @@ public partial class Tanime : TanimeBase
 
     
 
-    private static async Task<OperationState<int>> CreateIndexAsync(string animeName, string animeUrl, int animeSheetId, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
-        => await TsheetIndex.InsertAsync(IcotakuSection.Anime, IcotakuSheetType.Anime, animeName, animeUrl, animeSheetId, 0, cancellationToken, cmd);
-
     #region Scrap
 
     #region Scrap from sheetId
+
     /// <summary>
     /// Récupère les informations de l'anime via l'id Icotaku de la fiche
     /// </summary>
     /// <param name="sheetId">Id Icotaku de la fiche</param>
     /// <param name="options"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
     public static async Task<OperationState<int>> ScrapFromSheetIdAsync(int sheetId, AnimeScrapingOptions options = AnimeScrapingOptions.None,
-        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
         //Récupère l'url de l'animé depuis le dictionnaire
-        var index = await TsheetIndex.SingleAsync(sheetId, IntColumnSelect.SheetId, cancellationToken, cmd);
+        var index = await TsheetIndex.SingleAsync(sheetId, IntColumnSelect.SheetId, cancellationToken);
         if (index == null)
             return new OperationState<int>(false, "L'index permettant de récupérer l'url de la fiche de l'anime n'a pas été trouvé dans la base de données.");
 
         if (!Uri.TryCreate(index.Url, UriKind.Absolute, out var sheetUri) || !sheetUri.IsAbsoluteUri)
             return new OperationState<int>(false, "L'url de la fiche de l'anime est invalide.");
 
-        return await ScrapFromUrlAsync(sheetUri, options, cancellationToken, cmd);
+        return await ScrapFromUrlAsync(sheetUri, options, cancellationToken);
     }
 
     public static async Task<Tanime?> ScrapAndGetFromSheetIdAsync(int sheetId, AnimeScrapingOptions options = AnimeScrapingOptions.None,
-        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
-        var operationResult = await ScrapFromSheetIdAsync(sheetId, options, cancellationToken, cmd);
+        var operationResult = await ScrapFromSheetIdAsync(sheetId, options, cancellationToken);
         if (!operationResult.IsSuccess)
             return null;
 
-        var anime = await SingleByIdAsync(operationResult.Data, cancellationToken, cmd);
+        var anime = await SingleByIdAsync(operationResult.Data, cancellationToken);
         return anime;
     }
     #endregion
 
     #region Scrap from Url
+
     /// <summary>
     /// Récupère les informations de l'anime via l'url de la fiche
     /// </summary>
@@ -126,10 +123,9 @@ public partial class Tanime : TanimeBase
     /// <param name="passWord"></param>
     /// <param name="options"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
     public static async Task<OperationState<int>> ScrapFromUrlAsync(Uri sheetUri, string userName, string passWord, AnimeScrapingOptions options = AnimeScrapingOptions.None,
-        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
         var htmlContent = await IcotakuWebHelpers.GetRestrictedHtmlAsync(IcotakuSection.Anime, sheetUri, userName, passWord);
         if (htmlContent == null || htmlContent.IsStringNullOrEmptyOrWhiteSpace())
@@ -138,20 +134,16 @@ public partial class Tanime : TanimeBase
         if (!IcotakuWebHelpers.IsHostNameValid(IcotakuSection.Anime, sheetUri))
             return new OperationState<int>(false, "L'url de la fiche de l'anime n'est pas une url icotaku.");
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-
         var animeResult = await ScrapAnimeAsync(htmlContent, sheetUri, options, cancellationToken);
 
         return await ScrapAndAnimeFromUrlAsync(animeResult, cancellationToken);
     }
 
     public static async Task<OperationState<int>> ScrapFromUrlAsync(Uri sheetUri, AnimeScrapingOptions options = AnimeScrapingOptions.All,
-        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
         if (!IcotakuWebHelpers.IsHostNameValid(IcotakuSection.Anime, sheetUri))
             return new OperationState<int>(false, "L'url de la fiche de l'anime n'est pas une url icotaku.");
-
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
 
         var animeResult = await ScrapAnimeAsync(sheetUri, options, cancellationToken);
 
@@ -159,13 +151,13 @@ public partial class Tanime : TanimeBase
     }
 
     public static async Task<Tanime?> ScrapAndGetFromUrlAsync(Uri sheetUri, AnimeScrapingOptions options = AnimeScrapingOptions.All,
-        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
-        var operationResult = await ScrapFromUrlAsync(sheetUri, options, cancellationToken, cmd);
+        var operationResult = await ScrapFromUrlAsync(sheetUri, options, cancellationToken);
         if (!operationResult.IsSuccess)
             return null;
 
-        var anime = await SingleByIdAsync(operationResult.Data, cancellationToken, cmd);
+        var anime = await SingleByIdAsync(operationResult.Data, cancellationToken);
         return anime;
     }
     #endregion
@@ -174,16 +166,14 @@ public partial class Tanime : TanimeBase
 
     #region Select
 
-    public static async Task<Tanime[]> SelectAsync(bool? isAdultContent, bool? isExplicitContent, AnimeSortBy sortBy, OrderBy orderBy = OrderBy.Asc, uint limit = 0, uint skip = 0, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<Tanime[]> SelectAsync(bool? isAdultContent, bool? isExplicitContent, AnimeSortBy sortBy, OrderBy orderBy = OrderBy.Asc, uint limit = 0, uint skip = 0, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = SqlSelectScript;
-        command.Parameters.Clear();
+        await using var command = Main.Connection.CreateCommand();
+        command.CommandText = IcotakuSqlSelectScript;
 
         command.AddExplicitContentFilter(DbStartFilterMode.Where, "Tanime.IsAdultContent", "Tanime.IsExplicitContent", isAdultContent, isExplicitContent);
 
-        AddSortOrderBy(command, sortBy, orderBy);
+        command.AddOrderSort(sortBy, orderBy);
         
         command.AddLimitOffset(limit, skip);
 
@@ -203,22 +193,18 @@ public partial class Tanime : TanimeBase
     /// </summary>
     /// <param name="id"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<Tanime?> SingleByIdAsync(int id, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await SingleAsync(id, IntColumnSelect.Id, cancellationToken, cmd);
+    public new static async Task<Tanime?> SingleByIdAsync(int id, CancellationToken? cancellationToken = null)
+        => await SingleAsync(id, IntColumnSelect.Id, cancellationToken);
     
     /// <summary>
     /// Retournes un anime via son id de fiche icotaku.
     /// </summary>
     /// <param name="id"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<Tanime?> SingleBySheetIdAsync(int id, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await SingleAsync(id, IntColumnSelect.SheetId, cancellationToken, cmd);
+    public new static async Task<Tanime?> SingleBySheetIdAsync(int id, CancellationToken? cancellationToken = null)
+        => await SingleAsync(id, IntColumnSelect.SheetId, cancellationToken);
     
     /// <summary>
     /// Retournes un anime
@@ -226,13 +212,11 @@ public partial class Tanime : TanimeBase
     /// <param name="id"></param>
     /// <param name="columnSelect"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
     /// <exception cref="ArgumentOutOfRangeException"></exception>
-    public new static async Task<Tanime?> SingleAsync(int id, IntColumnSelect columnSelect, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public new static async Task<Tanime?> SingleAsync(int id, IntColumnSelect columnSelect, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         var isColumnSelectValid = command.IsIntColumnValidated(columnSelect,
         [
             IntColumnSelect.Id,
@@ -244,14 +228,12 @@ public partial class Tanime : TanimeBase
             return null;
         }
 
-        command.CommandText = SqlSelectScript + Environment.NewLine + columnSelect switch
+        command.CommandText = IcotakuSqlSelectScript + Environment.NewLine + columnSelect switch
         {
             IntColumnSelect.Id => "WHERE Tanime.Id = $Id",
             IntColumnSelect.SheetId => "WHERE Tanime.SheetId = $Id",
             _ => throw new ArgumentOutOfRangeException(nameof(columnSelect), columnSelect, null)
         };
-
-        command.Parameters.Clear();
 
         command.AddExplicitContentFilter(DbStartFilterMode.And, "Tanime.IsAdultContent", "Tanime.IsExplicitContent", null, null);
         
@@ -266,17 +248,14 @@ public partial class Tanime : TanimeBase
     /// </summary>
     /// <param name="name"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public new static async Task<Tanime?> SingleAsync(string name, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static new async Task<Tanime?> SingleAsync(string name, CancellationToken? cancellationToken = null)
     {
         if (name.IsStringNullOrEmptyOrWhiteSpace())
             return null;
-        
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Tanime.Name = $Name COLLATE NOCASE";
-        command.Parameters.Clear();
+
+        await using var command = Main.Connection.CreateCommand();
+        command.CommandText = IcotakuSqlSelectScript + Environment.NewLine + "WHERE Tanime.Name = $Name COLLATE NOCASE";
 
         command.AddExplicitContentFilter(DbStartFilterMode.And, "Tanime.IsAdultContent", "Tanime.IsExplicitContent", null, null);
         command.Parameters.AddWithValue("$Name", name);
@@ -285,12 +264,10 @@ public partial class Tanime : TanimeBase
         return !reader.HasRows ? null : (await GetRecords(reader, cancellationToken)).FirstOrDefault();
     }
     
-    public new static async Task<Tanime?> SingleAsync(Uri sheetUri, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static new async Task<Tanime?> SingleAsync(Uri sheetUri, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Tanime.Url = $Url COLLATE NOCASE";
-        command.Parameters.Clear();
+        await using var command = Main.Connection.CreateCommand();
+        command.CommandText = IcotakuSqlSelectScript + Environment.NewLine + "WHERE Tanime.Url = $Url COLLATE NOCASE";
 
         command.AddExplicitContentFilter(DbStartFilterMode.And, "Tanime.IsAdultContent", "Tanime.IsExplicitContent", null, null);
         command.Parameters.AddWithValue("$Url", sheetUri.ToString());
@@ -303,13 +280,12 @@ public partial class Tanime : TanimeBase
 
     #region Insert
 
-    public async Task<OperationState<int>> InsertAync(bool disableExistenceVerification = false, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public async Task<OperationState<int>> InsertAync(bool disableVerification = false, CancellationToken? cancellationToken = null)
     {
-        var insertBaseResult = await base.InsertAsync(disableExistenceVerification, cancellationToken, cmd);
+        var insertBaseResult = await InsertAsync(disableVerification, cancellationToken);
         if (!insertBaseResult.IsSuccess || insertBaseResult.Data <= 0)
             return insertBaseResult;
         
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
         await this.AddOrReplaceEpisodesAsync(cancellationToken);
         return new OperationState<int>(true, "L'anime a été ajouté avec succès", insertBaseResult.Data);
     }
@@ -318,13 +294,12 @@ public partial class Tanime : TanimeBase
 
     #region Update
 
-    public new async Task<OperationState> UpdateAsync(bool disableExistenceVerification = false, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public new async Task<OperationState> UpdateAsync(bool disableExistenceVerification = false, CancellationToken? cancellationToken = null)
     {
-        var updateBaseResult = await base.UpdateAsync(disableExistenceVerification, cancellationToken, cmd);
+        var updateBaseResult = await base.UpdateAsync(disableExistenceVerification, cancellationToken);
         if (!updateBaseResult.IsSuccess)
             return updateBaseResult;
         
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
         await this.UpdateAlternativeTitlesAsync(cancellationToken);
         await this.UpdateWebsitesAsync(cancellationToken);
         await this.UpdateStudiosAsync(cancellationToken);
@@ -340,10 +315,10 @@ public partial class Tanime : TanimeBase
 
     #region Add or Update or Single
 
-    public async Task<OperationState<int>> AddOrUpdateAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
-        => await AddOrUpdateAsync(this, cancellationToken, cmd);
+    public async Task<OperationState<int>> AddOrUpdateAsync(CancellationToken? cancellationToken = null)
+        => await AddOrUpdateAsync(this, cancellationToken);
     public static async Task<OperationState<int>> AddOrUpdateAsync(Tanime value,
-        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
         //Si la validation échoue, on retourne le résultat de la validation
         if (value.Name.IsStringNullOrEmptyOrWhiteSpace())
@@ -359,7 +334,7 @@ public partial class Tanime : TanimeBase
             return new OperationState<int>(false, "L'url de la fiche de l'anime n'est pas valide");
 
         //Vérifie si l'item existe déjà
-        var existingId = await GetIdOfAsync(value.Name, value.SheetId, uri, cancellationToken, cmd);
+        var existingId = await GetIdOfAsync(value.Name, value.SheetId, uri, cancellationToken);
         
         //Si l'item existe déjà
         if (existingId.HasValue)
@@ -371,11 +346,11 @@ public partial class Tanime : TanimeBase
             //Si l'id appartient à l'item alors on met à jour l'enregistrement
             if (existingId.Value != value.Id)
                 value.Id = existingId.Value;
-            return (await value.UpdateAsync(true, cancellationToken, cmd)).ToGenericState(value.Id);
+            return (await value.UpdateAsync(true, cancellationToken)).ToGenericState(value.Id);
         }
 
         //Si l'item n'existe pas, on l'ajoute
-        var addResult = await value.InsertAync(true, cancellationToken, cmd);
+        var addResult = await value.InsertAync(true, cancellationToken);
         if (addResult.IsSuccess)
             value.Id = addResult.Data;
         
@@ -405,6 +380,7 @@ public partial class Tanime : TanimeBase
                     SheetId = reader.GetInt32(reader.GetOrdinal("AnimeSheetId")),
                     Duration = TimeSpan.FromMinutes(reader.GetInt32(reader.GetOrdinal("EpisodeDuration"))),
                     DiffusionState = (DiffusionStateKind)reader.GetByte( reader.GetOrdinal("DiffusionState")),
+                    ReleaseMonth = new MonthDate((uint)reader.GetInt64(reader.GetOrdinal("ReleaseMonth"))),
                     ReleaseDate = reader.IsDBNull(reader.GetOrdinal("ReleaseDate"))
                         ? null
                         : reader.GetString(reader.GetOrdinal("ReleaseDate")),
@@ -552,29 +528,10 @@ public partial class Tanime : TanimeBase
             
         }
         
-        return animeList.ToArray();
+        return [.. animeList];
     }
 
-    internal static void AddSortOrderBy(SqliteCommand command, AnimeSortBy sortBy, OrderBy orderBy)
-    {
-        command.CommandText += Environment.NewLine;
-        command.CommandText += sortBy switch
-        {
-            AnimeSortBy.Id => $" ORDER BY Tanime.Id {orderBy}",
-            AnimeSortBy.Name => $" ORDER BY Tanime.Name {orderBy}",
-            AnimeSortBy.Duration => $" ORDER BY Tanime.Duration {orderBy}",
-            AnimeSortBy.OrigineAdaptation => $" ORDER BY TorigineAdaptation.Name {orderBy}",
-            AnimeSortBy.SheetId => $" ORDER BY Tanime.SheetId {orderBy}",
-            AnimeSortBy.Target => $" ORDER BY Ttarget.Name {orderBy}",
-            AnimeSortBy.EpisodesCount => $" ORDER BY Tanime.EpisodeCount {orderBy}",
-            AnimeSortBy.EndDate => $" ORDER BY Tanime.EndDate {orderBy}",
-            AnimeSortBy.Format => $" ORDER BY Tformat.Name {orderBy}",
-            AnimeSortBy.ReleaseDate => $" ORDER BY Tanime.ReleaseDate {orderBy}",
-            _ => throw new ArgumentOutOfRangeException(nameof(sortBy), sortBy, null)
-        };
-    }
-
-    private const string SqlSelectScript =
+    private const string IcotakuSqlSelectScript =
         """
         SELECT
             Tanime.Id AS AnimeId,
@@ -592,6 +549,7 @@ public partial class Tanime : TanimeBase
             Tanime.Name AS AnimeName,
             Tanime.EpisodeCount,
             Tanime.EpisodeDuration,
+            Tanime.ReleaseMonth,
             Tanime.ReleaseDate,
             Tanime.EndDate,
             Tanime.DiffusionState,

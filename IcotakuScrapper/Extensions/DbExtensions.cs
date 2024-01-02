@@ -10,7 +10,7 @@ namespace IcotakuScrapper.Extensions
         /// Efface le texte de la commande SQL et vide la liste des paramètres.
         /// </summary>
         /// <param name="command"></param>
-        internal static void ClearCommand(this SqliteCommand command) => DbHelpers.ClearCommand(ref command);
+        internal static void ClearCommand(this SqliteCommand? command) => DbHelpers.ClearCommand(ref command);
         
         /// <summary>
         /// Retourne l'identifiant de la dernière ligne insérée dans la base de données.
@@ -37,6 +37,9 @@ namespace IcotakuScrapper.Extensions
         public static void AddOrderSort(this SqliteCommand command, AnimeDailyPlanningSortBy sortBy, OrderBy orderBy)
             => DbHelpers.AddOrderSort(command, sortBy, orderBy);
 
+        public static void AddOrderSort(this SqliteCommand command, AnimeSortBy sortBy, OrderBy orderBy)
+            => DbHelpers.AddOrderSort(command, sortBy, orderBy);
+
         public static void StartWithInsertMode(this SqliteCommand command, DbInsertMode insertMode)
             => DbHelpers.StartWithInsertMode(command, insertMode);
 
@@ -54,5 +57,11 @@ namespace IcotakuScrapper.Extensions
 
         public static bool IsIntColumnValidated(this SqliteCommand command, IntColumnSelect currentSelectedColumn, HashSet<IntColumnSelect> acceptedColumns)
             => DbHelpers.IsIntColumnValidated(command, currentSelectedColumn, acceptedColumns);
+        
+        public static bool IsContainsWhereClause(this SqliteCommand command)
+            => DbHelpers.IsContainsWhereClause(command);
+        
+        public static bool IsContainsWhereClause(this string? scriptText)
+            => DbHelpers.IsContainsWhereClause(scriptText);
     }
 }

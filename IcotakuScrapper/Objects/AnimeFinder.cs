@@ -1,7 +1,8 @@
 using HtmlAgilityPack;
 using System.ComponentModel;
+using IcotakuScrapper.Anime;
 
-namespace IcotakuScrapper.Anime;
+namespace IcotakuScrapper.Objects;
 
 public class AnimeFinder : IDisposable
 {
@@ -123,9 +124,8 @@ public class AnimeFinder : IDisposable
                 var pageCountItems = animeSheetUris.Length;
                 if (pageCountItems < 15)
                 {
-                    var diff = 15 - count;
-                    totalItems -= 15;
-                    totalItems += diff;
+                   
+                    totalItems -= (15 - pageCountItems);
                 }
             }
 

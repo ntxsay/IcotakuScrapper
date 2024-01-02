@@ -13,7 +13,6 @@ public partial class Tanime
     /// </summary>
     /// <param name="animeResult">Résultat du scraping</param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
     private static async Task<OperationState<int>> ScrapAndAnimeFromUrlAsync(OperationState<Tanime?> animeResult, CancellationToken? cancellationToken = null)
     {
@@ -55,7 +54,6 @@ public partial class Tanime
     /// <param name="sheetUri"></param>
     /// <param name="options"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <param name="documentNode"></param>
     /// <returns></returns>
     private static async Task<OperationState<Tanime?>> ScrapAnimeAsync(HtmlNode documentNode, Uri sheetUri, AnimeScrapingOptions options, CancellationToken? cancellationToken = null)

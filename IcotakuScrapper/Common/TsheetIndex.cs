@@ -1,7 +1,6 @@
-﻿using System.Diagnostics;
-using IcotakuScrapper.Extensions;
-
+﻿using IcotakuScrapper.Extensions;
 using Microsoft.Data.Sqlite;
+using System.Diagnostics;
 
 namespace IcotakuScrapper.Common;
 
@@ -81,15 +80,14 @@ public partial class TsheetIndex
     /// Compte le nombre d'entrées dans la table TsheetIndex
     /// </summary>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<int> CountAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public static async Task<int> CountAsync(CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT COUNT(Id) FROM TsheetIndex";
 
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
+
+
 
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
         if (result is long count)
@@ -103,13 +101,11 @@ public partial class TsheetIndex
     /// <param name="id"></param>
     /// <param name="columnSelect"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
     public static async Task<int> CountAsync(int id, SheetIntColumnSelect columnSelect,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = columnSelect switch
         {
             SheetIntColumnSelect.Id => "SELECT COUNT(Id) FROM TsheetIndex WHERE Id = $Id",
@@ -117,7 +113,7 @@ public partial class TsheetIndex
             _ => throw new ArgumentOutOfRangeException(nameof(columnSelect), columnSelect, null)
         };
 
-        command.Parameters.Clear();
+
 
         command.Parameters.AddWithValue("$Id", id);
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
@@ -131,15 +127,13 @@ public partial class TsheetIndex
     /// </summary>
     /// <param name="contentSection"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<int> CountAsync(IcotakuSection contentSection, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<int> CountAsync(IcotakuSection contentSection, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT COUNT(Id) FROM TsheetIndex WHERE SECTION = $Section";
 
-        command.Parameters.Clear();
+
 
         command.Parameters.AddWithValue("$Section", (byte)contentSection);
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
@@ -153,18 +147,16 @@ public partial class TsheetIndex
     /// </summary>
     /// <param name="url"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<int> CountAsync(string url, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<int> CountAsync(string url, CancellationToken? cancellationToken = null)
     {
         if (url.IsStringNullOrEmptyOrWhiteSpace())
             return 0;
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT COUNT(Id) FROM TsheetIndex WHERE Url = $Url COLLATE NOCASE";
 
-        command.Parameters.Clear();
+
 
         command.Parameters.AddWithValue("$Url", url.Trim());
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
@@ -174,16 +166,15 @@ public partial class TsheetIndex
     }
 
     public static async Task<int> CountAsync(string url, IcotakuSection contentSection,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
         if (url.IsStringNullOrEmptyOrWhiteSpace())
             return 0;
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT COUNT(Id) FROM TsheetIndex WHERE Section == $Section AND Url = $Url COLLATE NOCASE";
 
-        command.Parameters.Clear();
+
 
         command.Parameters.AddWithValue("$Url", url.Trim());
         command.Parameters.AddWithValue("$Section", (byte)contentSection);
@@ -194,16 +185,15 @@ public partial class TsheetIndex
     }
 
     public static async Task<int?> GetIdOfAsync(string url,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
         if (url.IsStringNullOrEmptyOrWhiteSpace())
             return null;
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT Id FROM TsheetIndex WHERE Url = $Url COLLATE NOCASE";
 
-        command.Parameters.Clear();
+
 
         command.Parameters.AddWithValue("$Url", url.Trim());
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
@@ -213,16 +203,15 @@ public partial class TsheetIndex
     }
 
     public static async Task<int?> GetIdOfAsync(string url, IcotakuSection contentSection,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
         if (url.IsStringNullOrEmptyOrWhiteSpace())
             return null;
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT Id FROM TsheetIndex WHERE Section == $Section AND Url = $Url COLLATE NOCASE";
 
-        command.Parameters.Clear();
+
 
         command.Parameters.AddWithValue("$Url", url.Trim());
         command.Parameters.AddWithValue("$Section", (byte)contentSection);
@@ -236,26 +225,23 @@ public partial class TsheetIndex
 
     #region Exists
 
-    public static async Task<bool> ExistsAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
-        => await CountAsync(cancellationToken, cmd) > 0;
+    public static async Task<bool> ExistsAsync(CancellationToken? cancellationToken = null)
+        => await CountAsync(cancellationToken) > 0;
 
     public static async Task<bool> ExistsAsync(int id, SheetIntColumnSelect columnSelect,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(id, columnSelect, cancellationToken, cmd) > 0;
+        CancellationToken? cancellationToken = null)
+        => await CountAsync(id, columnSelect, cancellationToken) > 0;
 
     public static async Task<bool> ExistsAsync(IcotakuSection contentSection,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(contentSection, cancellationToken, cmd) > 0;
+        CancellationToken? cancellationToken = null)
+        => await CountAsync(contentSection, cancellationToken) > 0;
 
-    public static async Task<bool> ExistsAsync(string url, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(url, cancellationToken, cmd) > 0;
+    public static async Task<bool> ExistsAsync(string url, CancellationToken? cancellationToken = null)
+        => await CountAsync(url, cancellationToken) > 0;
 
     public static async Task<bool> ExistsAsync(string url, IcotakuSection contentSection,
-        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
-        => await CountAsync(url, contentSection, cancellationToken, cmd) > 0;
+        CancellationToken? cancellationToken = null)
+        => await CountAsync(url, contentSection, cancellationToken) > 0;
 
     #endregion
 
@@ -269,14 +255,12 @@ public partial class TsheetIndex
     /// <param name="limit"></param>
     /// <param name="skip"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
     /// <exception cref="ArgumentOutOfRangeException"></exception>
     public static async Task<TsheetIndex[]> SelectAsync(SheetSortBy sortBy, OrderBy orderBy, uint limit = 0,
-        uint skip = 0, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        uint skip = 0, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = IcotakuSqlSelectScript + Environment.NewLine;
 
         command.CommandText += sortBy switch
@@ -301,8 +285,8 @@ public partial class TsheetIndex
         if (limit > 0)
             command.CommandText += $" LIMIT {limit} OFFSET {skip}";
 
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
+
+
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         var records = await GetRecordsAsync(reader, cancellationToken).ToArrayAsync();
@@ -319,17 +303,15 @@ public partial class TsheetIndex
     /// <param name="limit"></param>
     /// <param name="skip"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
     /// <exception cref="ArgumentOutOfRangeException"></exception>
     public static async Task<TsheetIndex[]> SelectAsync(HashSet<IcotakuSection> sections, HashSet<IcotakuSheetType> sheetTypes, SheetSortBy sortBy,
-        OrderBy orderBy, uint limit = 0, uint skip = 0, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        OrderBy orderBy, uint limit = 0, uint skip = 0, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = IcotakuSqlSelectScript + Environment.NewLine;
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
+
+
 
         if (sections.Count > 0)
         {
@@ -342,7 +324,7 @@ public partial class TsheetIndex
 
             command.CommandText += ")";
         }
-        
+
         if (sheetTypes.Count > 0)
         {
             if (sections.Count > 0)
@@ -395,19 +377,17 @@ public partial class TsheetIndex
     /// <param name="id"></param>
     /// <param name="columnSelect"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
     public static async Task<TsheetIndex?> SingleAsync(int id, IntColumnSelect columnSelect,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         var isColumnSelectValid = command.IsIntColumnValidated(columnSelect,
         [
             IntColumnSelect.Id,
             IntColumnSelect.SheetId,
         ]);
-        
+
         if (!isColumnSelectValid)
         {
             return null;
@@ -420,7 +400,7 @@ public partial class TsheetIndex
             _ => throw new ArgumentOutOfRangeException(nameof(columnSelect), columnSelect, null)
         };
 
-        command.Parameters.Clear();
+
 
         command.Parameters.AddWithValue("$Id", id);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
@@ -431,16 +411,15 @@ public partial class TsheetIndex
         return records.Length > 0 ? records[0] : null;
     }
 
-    public static async Task<TsheetIndex?> SingleAsync(string url, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<TsheetIndex?> SingleAsync(string url, CancellationToken? cancellationToken = null)
     {
         if (url.IsStringNullOrEmptyOrWhiteSpace())
             return null;
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = IcotakuSqlSelectScript + " WHERE Url = $Url COLLATE NOCASE";
 
-        command.Parameters.Clear();
+
 
         command.Parameters.AddWithValue("$Url", url.Trim());
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
@@ -459,11 +438,9 @@ public partial class TsheetIndex
     /// Insère un enregistrement dans la table TsheetIndex
     /// </summary>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public async Task<OperationState<int>> InsertAsync(CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await InsertAsync(Section, SheetType, SheetName, Url, SheetId, FoundedPage, cancellationToken, cmd);
+    public async Task<OperationState<int>> InsertAsync(bool disableVerification, CancellationToken? cancellationToken = null)
+        => await InsertAsync(disableVerification, Section, SheetType, SheetName, Url, SheetId, FoundedPage, cancellationToken);
 
     /// <summary>
     /// Insère un enregistrement dans la table TsheetIndex
@@ -475,10 +452,9 @@ public partial class TsheetIndex
     /// <param name="sheetId"></param>
     /// <param name="foundedPage"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    internal static async Task<OperationState<int>> InsertAsync(IcotakuSection section, IcotakuSheetType sheetType, string name, string url,
-        int sheetId, uint foundedPage, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    internal static async Task<OperationState<int>> InsertAsync(bool disableVerification, IcotakuSection section, IcotakuSheetType sheetType, string name, string url,
+        int sheetId, uint foundedPage, CancellationToken? cancellationToken = null)
     {
         if (name.IsStringNullOrEmptyOrWhiteSpace())
             return new OperationState<int>(false, "Le nom de l'anime ne peut pas être vide");
@@ -492,10 +468,10 @@ public partial class TsheetIndex
         if (sheetId <= 0)
             return new OperationState<int>(false, "L'id de la fiche de l'anime Icotaku n'est pas valide");
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        if (await ExistsAsync(url, cancellationToken, command))
+        if (!disableVerification && await ExistsAsync(url, cancellationToken))
             return new OperationState<int>(false, "L'url existe déjà dans la base de données.");
 
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText =
             """
             INSERT INTO TsheetIndex 
@@ -504,15 +480,15 @@ public partial class TsheetIndex
                 ($SheetId, $Url, $Section, $SheetType, $SheetName, $FoundedPage)
             """;
 
-        command.Parameters.Clear();
-        
+
+
         command.Parameters.AddWithValue("$SheetId", sheetId);
         command.Parameters.AddWithValue("$Url", uri.ToString());
         command.Parameters.AddWithValue("$Section", (byte)section);
         command.Parameters.AddWithValue("$SheetType", (byte)sheetType);
         command.Parameters.AddWithValue("$SheetName", name);
         command.Parameters.AddWithValue("$FoundedPage", foundedPage);
-        
+
 
         try
         {
@@ -534,20 +510,18 @@ public partial class TsheetIndex
     /// <param name="records"></param>
     /// <param name="insertMode"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
     public static async Task<OperationState> InsertAsync(IReadOnlyCollection<TsheetIndex> records,
-        DbInsertMode insertMode = DbInsertMode.InsertOrReplace, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        DbInsertMode insertMode = DbInsertMode.InsertOrReplace, CancellationToken? cancellationToken = null)
     {
         if (records.Count == 0)
             return new OperationState(false, "La liste ne peut pas être vide.");
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
 
         command.StartWithInsertMode(insertMode);
         command.CommandText += " INTO TsheetIndex (SheetId, Url, Section, SheetType, SheetName, FoundedPage)" + Environment.NewLine;
 
-        command.Parameters.Clear();
+
 
         for (uint i = 0; i < records.Count; i++)
         {
@@ -557,7 +531,7 @@ public partial class TsheetIndex
 
             command.CommandText += i == 0 ? "VALUES" : "," + Environment.NewLine;
             command.CommandText += $"($SheetId{i}, $Url{i}, $Section{i}, $SheetType{i}, $SheetName{i}, $FoundedPage{i})";
-            
+
             command.Parameters.AddWithValue($"$SheetId{i}", record.SheetId);
             command.Parameters.AddWithValue($"$Url{i}", uri.ToString());
             command.Parameters.AddWithValue($"$Section{i}", (byte)record.Section);
@@ -589,18 +563,16 @@ public partial class TsheetIndex
 
     #region Update
 
-    public async Task<OperationState> UpdateAsync(CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await UpdateAsync(Id, Section, SheetType, SheetName, Url, SheetId, FoundedPage, cancellationToken, cmd);
+    public async Task<OperationState> UpdateAsync(bool disableVerification, CancellationToken? cancellationToken = null)
+        => await UpdateAsync(disableVerification, Id, Section, SheetType, SheetName, Url, SheetId, FoundedPage, cancellationToken);
 
-    public static async Task<OperationState> UpdateAsync(int id,IcotakuSection section, IcotakuSheetType sheetType, string name, string url,
+    public static async Task<OperationState> UpdateAsync(bool disableVerification, int id, IcotakuSection section, IcotakuSheetType sheetType, string name, string url,
         int sheetId, uint foundedPage,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
         if (id <= 0)
             return new OperationState(false, "L'id de l'enregistrement n'est pas valide");
-        
+
         if (name.IsStringNullOrEmptyOrWhiteSpace())
             return new OperationState(false, "Le nom de la fiche ne peut pas être vide");
 
@@ -612,12 +584,15 @@ public partial class TsheetIndex
 
         if (sheetId <= 0)
             return new OperationState(false, "L'id de la fiche de l'anime Icotaku n'est pas valide");
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
 
-        var existingId = await GetIdOfAsync(url, cancellationToken, command);
-        if (existingId.HasValue && existingId.Value != id)
-            return new OperationState(false, "L'url existe déjà dans la base de données.");
+        if (!disableVerification)
+        {
+            var existingId = await GetIdOfAsync(url, cancellationToken);
+            if (existingId.HasValue && existingId.Value != id)
+                return new OperationState(false, "L'url existe déjà dans la base de données.");
+        }
 
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText =
             """
             UPDATE TsheetIndex
@@ -632,7 +607,7 @@ public partial class TsheetIndex
                 Id = $Id
             """;
 
-        command.Parameters.Clear();
+
 
         command.Parameters.AddWithValue("$Id", id);
         command.Parameters.AddWithValue("$SheetId", sheetId);
@@ -659,14 +634,12 @@ public partial class TsheetIndex
 
     #region Delete
 
-    public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await DeleteAsync(Id, cancellationToken, cmd);
+    public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null)
+        => await DeleteAsync(Id, cancellationToken);
 
-    public static async Task<OperationState> DeleteAsync(int id, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<OperationState> DeleteAsync(int id, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
 
         command.CommandText =
             """
@@ -675,7 +648,7 @@ public partial class TsheetIndex
                 Id = $Id
             """;
 
-        command.Parameters.Clear();
+
 
         command.Parameters.AddWithValue("$Id", id);
 
@@ -691,14 +664,13 @@ public partial class TsheetIndex
         }
     }
 
-    public static async Task<OperationState> DeleteAllAsync(CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<OperationState> DeleteAllAsync(CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
 
         command.CommandText = "DELETE FROM TsheetIndex";
 
-        command.Parameters.Clear();
+
 
         try
         {
@@ -712,14 +684,13 @@ public partial class TsheetIndex
         }
     }
 
-    public static async Task<OperationState> DeleteAllAsync(IcotakuSection section, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<OperationState> DeleteAllAsync(IcotakuSection section, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
 
         command.CommandText = "DELETE FROM TsheetIndex WHERE Section = $Section";
 
-        command.Parameters.Clear();
+
 
         command.Parameters.AddWithValue("$Section", (byte)section);
 
@@ -735,14 +706,13 @@ public partial class TsheetIndex
         }
     }
 
-    public static async Task<OperationState> DeleteAllAsync(IcotakuSection section, IcotakuSheetType sheetType, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<OperationState> DeleteAllAsync(IcotakuSection section, IcotakuSheetType sheetType, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
 
         command.CommandText = "DELETE FROM TsheetIndex WHERE Section = $Section AND SheetType = $SheetType";
 
-        command.Parameters.Clear();
+
 
         command.Parameters.AddWithValue("$Section", (byte)section);
         command.Parameters.AddWithValue("$SheetType", (byte)sheetType);

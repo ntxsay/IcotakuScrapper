@@ -148,6 +148,12 @@ public enum IcotakuDefaultFolder : byte
     Community,
 }
 
+public enum IcotakuListType
+{
+    MostAwaited,
+    MostPopular,
+}
+
 /// <summary>
 /// Enumère les options de scraping.
 /// </summary>

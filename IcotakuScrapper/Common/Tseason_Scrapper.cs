@@ -22,7 +22,7 @@ public partial class Tseason
         if (values.Length == 0)
             return new OperationState(false, "Aucune saison n'a été trouvée");
         
-        return await InsertOrReplaceAsync(values, DbInsertMode.InsertOrIgnore, cancellationToken, command);
+        return await InsertOrReplaceAsync(values, DbInsertMode.InsertOrIgnore, cancellationToken);
     }
     
     private static IEnumerable<Tseason> ScrapSeasons(IcotakuSection section)

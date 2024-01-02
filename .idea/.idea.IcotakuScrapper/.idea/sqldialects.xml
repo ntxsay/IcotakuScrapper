@@ -4,6 +4,7 @@
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Anime/Tanime.cs" dialect="SQLite" />
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Anime/TanimeAlternativeTitle.cs" dialect="SQLite" />
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Anime/TanimeBase.cs" dialect="SQLite" />
+    <file url="file://$PROJECT_DIR$/IcotakuScrapper/Anime/TanimeBase_Pagination.cs" dialect="SQLite" />
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Anime/TanimeCategory.cs" dialect="SQLite" />
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Anime/TanimeDailyPlanning.cs" dialect="SQLite" />
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Anime/TanimeEpisode.cs" dialect="SQLite" />
@@ -20,6 +21,7 @@
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Common/TorigineAdaptation.cs" dialect="SQLite" />
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Common/Tseason.cs" dialect="SQLite" />
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Common/TsheetIndex.cs" dialect="SQLite" />
+    <file url="file://$PROJECT_DIR$/IcotakuScrapper/Common/TsheetMostAwaitedPopular.cs" dialect="SQLite" />
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Common/Ttarget.cs" dialect="SQLite" />
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Contact/Tcontact.cs" dialect="SQLite" />
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Contact/TcontactBase.cs" dialect="SQLite" />

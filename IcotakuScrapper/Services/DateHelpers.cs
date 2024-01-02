@@ -3,6 +3,7 @@ using System.Globalization;
 using HtmlAgilityPack;
 using IcotakuScrapper.Common;
 using IcotakuScrapper.Extensions;
+using IcotakuScrapper.Objects;
 
 namespace IcotakuScrapper.Services;
 

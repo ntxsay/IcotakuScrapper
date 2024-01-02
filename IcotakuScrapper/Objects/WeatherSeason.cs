@@ -1,6 +1,6 @@
 ﻿
 
-namespace IcotakuScrapper.Common;
+namespace IcotakuScrapper.Objects;
 
 public readonly struct WeatherSeason
 {

@@ -58,19 +58,10 @@ public partial class Tcategory : ITableSheetBase<Tcategory>
 
     #region Count
 
-    /// <summary>
-    /// Compte le nombre d'entrées dans la table Tcategory
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
-    /// <returns></returns>
-    public static async Task<int> CountAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public static async Task<int> CountAsync(CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT COUNT(Id) FROM Tcategory";
-
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
 
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
         if (result is long count)
@@ -78,17 +69,14 @@ public partial class Tcategory : ITableSheetBase<Tcategory>
         return 0;
     }
 
-    /// <summary>
-    /// Compte le nombre d'entrées dans la table Tcategory ayant l'identifiant spécifié
-    /// </summary>
-    /// <param name="id"></param>
-    /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
-    /// <returns></returns>
-    public static async Task<int> CountAsync(int id, IntColumnSelect columnSelect, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    static Task<int> ITableBase<Tcategory>.CountAsync(int id, CancellationToken? cancellationToken)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        throw new NotImplementedException();
+    }
+
+    public static async Task<int> CountAsync(int id, IntColumnSelect columnSelect, CancellationToken? cancellationToken = null)
+    {
+        await using var command = Main.Connection.CreateCommand();
         var isColumnSelectValid = command.IsIntColumnValidated(columnSelect,
         [
             IntColumnSelect.Id,
@@ -106,9 +94,6 @@ public partial class Tcategory : ITableSheetBase<Tcategory>
             IntColumnSelect.SheetId => "SELECT COUNT(Id) FROM Tcategory WHERE SheetId = $Id",
             _ => throw new ArgumentOutOfRangeException(nameof(columnSelect), columnSelect, null)
         };
-
-        command.Parameters.Clear();
-
         command.Parameters.AddWithValue("$Id", id);
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
         if (result is long count)
@@ -116,23 +101,29 @@ public partial class Tcategory : ITableSheetBase<Tcategory>
         return 0;
     }
 
+    public static Task<bool> ExistsByIdAsync(int id, CancellationToken? cancellationToken = null)
+    {
+        throw new NotImplementedException();
+    }
+
+    public static Task<bool> ExistsBySheetIdAsync(int sheetId, CancellationToken? cancellationToken = null)
+    {
+        throw new NotImplementedException();
+    }
+
     /// <summary>
     /// Compte le nombre d'entrées dans la table Tcategory ayant le nom spécifié
     /// </summary>
     /// <param name="name"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<int> CountAsync(string name, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<int> CountAsync(string name, CancellationToken? cancellationToken = null)
     {
         if (name.IsStringNullOrEmptyOrWhiteSpace())
             return 0;
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT COUNT(Id) FROM Tcategory WHERE Name = $Name COLLATE NOCASE";
-
-        command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$Name", name.Trim());
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
@@ -147,18 +138,14 @@ public partial class Tcategory : ITableSheetBase<Tcategory>
     /// <param name="name"></param>
     /// <param name="categoryType"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<int> CountAsync(string name, CategoryType categoryType, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<int> CountAsync(string name, CategoryType categoryType, CancellationToken? cancellationToken = null)
     {
         if (name.IsStringNullOrEmptyOrWhiteSpace())
             return 0;
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT COUNT(Id) FROM Tcategory WHERE Type = $Type AND Name = $Name COLLATE NOCASE";
-
-        command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$Name", name.Trim());
         command.Parameters.AddWithValue("$Type", (byte)categoryType);
@@ -168,16 +155,13 @@ public partial class Tcategory : ITableSheetBase<Tcategory>
         return 0;
     }
 
-    public static async Task<int> CountAsync(string name, IcotakuSection section, CategoryType categoryType, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<int> CountAsync(string name, IcotakuSection section, CategoryType categoryType, CancellationToken? cancellationToken = null)
     {
         if (name.IsStringNullOrEmptyOrWhiteSpace())
             return 0;
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT COUNT(Id) FROM Tcategory WHERE Section = $Section AND Type = $Type AND Name = $Name COLLATE NOCASE";
-
-        command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$Name", name.Trim());
         command.Parameters.AddWithValue("$Section", (byte)section);
@@ -189,16 +173,13 @@ public partial class Tcategory : ITableSheetBase<Tcategory>
     }
 
     public static async Task<int?> GetIdOfAsync(string name, CategoryType categoryType,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
         if (name.IsStringNullOrEmptyOrWhiteSpace())
             return null;
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT Id FROM Tcategory WHERE Type = $Type AND Name = $Name COLLATE NOCASE";
-
-        command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$Name", name.Trim());
         command.Parameters.AddWithValue("$Type", (byte)categoryType);
@@ -209,16 +190,13 @@ public partial class Tcategory : ITableSheetBase<Tcategory>
     }
 
     public static async Task<int?> GetIdOfAsync(string name, IcotakuSection section, CategoryType categoryType,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
         if (name.IsStringNullOrEmptyOrWhiteSpace())
             return null;
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT Id FROM Tcategory WHERE Section = $Section AND Type = $Type AND Name = $Name COLLATE NOCASE";
-
-        command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$Name", name.Trim());
         command.Parameters.AddWithValue("$Section", (byte)section);
@@ -233,21 +211,17 @@ public partial class Tcategory : ITableSheetBase<Tcategory>
 
     #region Exists
 
-    public static async Task<bool> ExistsAsync(int id, IntColumnSelect columnSelect, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(id, columnSelect, cancellationToken, cmd) > 0;
+    public static async Task<bool> ExistsAsync(int id, IntColumnSelect columnSelect, CancellationToken? cancellationToken = null)
+        => await CountAsync(id, columnSelect, cancellationToken) > 0;
 
-    public static async Task<bool> ExistsAsync(string name, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(name, cancellationToken, cmd) > 0;
+    public static async Task<bool> ExistsAsync(string name, CancellationToken? cancellationToken = null)
+        => await CountAsync(name, cancellationToken) > 0;
 
-    public static async Task<bool> ExistsAsync(string name, CategoryType categoryType, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(name, categoryType, cancellationToken, cmd) > 0;
+    public static async Task<bool> ExistsAsync(string name, CategoryType categoryType, CancellationToken? cancellationToken = null)
+        => await CountAsync(name, categoryType, cancellationToken) > 0;
 
-    public static async Task<bool> ExistsAsync(string name, IcotakuSection section, CategoryType categoryType, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(name, section, categoryType, cancellationToken, cmd) > 0;
+    public static async Task<bool> ExistsAsync(string name, IcotakuSection section, CategoryType categoryType, CancellationToken? cancellationToken = null)
+        => await CountAsync(name, section, categoryType, cancellationToken) > 0;
 
     #endregion
 
@@ -263,18 +237,14 @@ public partial class Tcategory : ITableSheetBase<Tcategory>
     /// <param name="limit"></param>
     /// <param name="skip"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
     public static async Task<Tcategory[]> SelectAsync(HashSet<IcotakuSection> sections, HashSet<CategoryType> categoryType, FormatSortBy sortBy = FormatSortBy.Name,
         OrderBy orderBy = OrderBy.Asc,
         uint limit = 0, uint skip = 0,
-        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = SqlSelectScript;
-
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
+        await using var command = Main.Connection.CreateCommand();
+        command.CommandText = IcotakuSqlSelectScript;
 
         if (sections.Count > 0)
         {
@@ -318,18 +288,15 @@ public partial class Tcategory : ITableSheetBase<Tcategory>
 
     #region Single
 
-    public static async Task<Tcategory?> SingleByIdAsync(int id, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null) 
-        => await SingleAsync(id, IntColumnSelect.Id, cancellationToken, cmd);
+    public static async Task<Tcategory?> SingleByIdAsync(int id, CancellationToken? cancellationToken = null) 
+        => await SingleAsync(id, IntColumnSelect.Id, cancellationToken);
     
-    public static async Task<Tcategory?> SingleBySheetIdAsync(int sheetId, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null) 
-        => await SingleAsync(sheetId, IntColumnSelect.SheetId, cancellationToken, cmd);
+    public static async Task<Tcategory?> SingleBySheetIdAsync(int sheetId, CancellationToken? cancellationToken = null) 
+        => await SingleAsync(sheetId, IntColumnSelect.SheetId, cancellationToken);
     
-    public static async Task<Tcategory?> SingleAsync(int id, IntColumnSelect columnSelect, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<Tcategory?> SingleAsync(int id, IntColumnSelect columnSelect, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         var isColumnSelectValid = command.IsIntColumnValidated(columnSelect,
         [
             IntColumnSelect.Id,
@@ -341,24 +308,22 @@ public partial class Tcategory : ITableSheetBase<Tcategory>
             return null;
         }
 
-        command.CommandText = SqlSelectScript + Environment.NewLine + columnSelect switch
+        command.CommandText = IcotakuSqlSelectScript + Environment.NewLine + columnSelect switch
         {
             IntColumnSelect.Id => "WHERE Id = $Id",
             IntColumnSelect.SheetId => "SheetId = $Id",
             _ => throw new ArgumentOutOfRangeException(nameof(columnSelect), columnSelect, null)
         };
-
-        command.Parameters.Clear();
-
+        
         command.Parameters.AddWithValue("$Id", id);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
             return null;
 
         return await GetRecords(reader, cancellationToken)
-            .FirstOrDefaultAsync(cancellationToken ?? CancellationToken.None);
+            .SingleOrDefaultAsync(cancellationToken ?? CancellationToken.None);
     }
-    
+
     /// <summary>
     /// Retourne un enregistrement de la table Tcategory ayant le nom spécifié
     /// </summary>
@@ -366,19 +331,15 @@ public partial class Tcategory : ITableSheetBase<Tcategory>
     /// <param name="section"></param>
     /// <param name="categoryType"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<Tcategory?> SingleAsync(string name, IcotakuSection section, CategoryType categoryType, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<Tcategory?> SingleAsync(string name, IcotakuSection section, CategoryType categoryType, CancellationToken? cancellationToken = null)
     {
         if (name.IsStringNullOrEmptyOrWhiteSpace())
             return null;
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Section = $Section COLLATE NOCASE AND Type = $Type AND Name = $Name COLLATE NOCASE";
-
-        command.Parameters.Clear();
-
+        await using var command = Main.Connection.CreateCommand();
+        command.CommandText = IcotakuSqlSelectScript + Environment.NewLine + "WHERE Section = $Section COLLATE NOCASE AND Type = $Type AND Name = $Name COLLATE NOCASE";
+        
         command.Parameters.AddWithValue("$Name", name.Trim());
         command.Parameters.AddWithValue("$Section", (byte)section);
         command.Parameters.AddWithValue("$Type", (byte)categoryType);
@@ -387,19 +348,16 @@ public partial class Tcategory : ITableSheetBase<Tcategory>
             return null;
 
         return await GetRecords(reader, cancellationToken)
-            .FirstOrDefaultAsync(cancellationToken ?? CancellationToken.None);
+            .SingleOrDefaultAsync(cancellationToken ?? CancellationToken.None);
     }
 
-    public static async Task<Tcategory?> SingleAsync(Uri sheetUri, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<Tcategory?> SingleAsync(Uri sheetUri, CancellationToken? cancellationToken = null)
     {
         if (sheetUri.IsAbsoluteUri == false)
             return null;
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Url = $Url COLLATE NOCASE";
-
-        command.Parameters.Clear();
+        await using var command = Main.Connection.CreateCommand();
+        command.CommandText = IcotakuSqlSelectScript + Environment.NewLine + "WHERE Url = $Url COLLATE NOCASE";
 
         command.Parameters.AddWithValue("$Url", sheetUri.ToString());
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
@@ -410,16 +368,17 @@ public partial class Tcategory : ITableSheetBase<Tcategory>
             .FirstOrDefaultAsync(cancellationToken ?? CancellationToken.None);
     }
 
-    public static async Task<Tcategory?> SingleOrCreateAsync(string name, IcotakuSection section, CategoryType categoryType, Uri sheetUri, string? description, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    
+
+    public static async Task<Tcategory?> SingleOrCreateAsync(string name, IcotakuSection section, CategoryType categoryType, Uri sheetUri, string? description, CancellationToken? cancellationToken = null)
     {
         if (name.IsStringNullOrEmptyOrWhiteSpace())
             return null;
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        var existingId = await GetIdOfAsync(name, section, categoryType, cancellationToken, command);
+        await using var command = Main.Connection.CreateCommand();
+        var existingId = await GetIdOfAsync(name, section, categoryType, cancellationToken);
         if (existingId.HasValue)
-            return await SingleAsync(existingId.Value, IntColumnSelect.Id, cancellationToken, command);
+            return await SingleAsync(existingId.Value, IntColumnSelect.Id, cancellationToken);
 
         Tcategory tcategory = new()
         {
@@ -429,9 +388,9 @@ public partial class Tcategory : ITableSheetBase<Tcategory>
             Url = sheetUri.ToString(),
             Description = description
         };
-        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Section = $Section COLLATE NOCASE AND Type = $Type AND Name = $Name COLLATE NOCASE";
+        command.CommandText = IcotakuSqlSelectScript + Environment.NewLine + "WHERE Section = $Section COLLATE NOCASE AND Type = $Type AND Name = $Name COLLATE NOCASE";
 
-        command.Parameters.Clear();
+        
 
         command.Parameters.AddWithValue("$Name", name.Trim());
         command.Parameters.AddWithValue("$Section", (byte)section);
@@ -449,7 +408,7 @@ public partial class Tcategory : ITableSheetBase<Tcategory>
     #region Insert
 
     public async Task<OperationState<int>> InsertAsync(bool disableVerification = false,
-        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
         if (Name.IsStringNullOrEmptyOrWhiteSpace())
             return new OperationState<int>(false, "Le nom de l'item ne peut pas être vide");
@@ -460,10 +419,10 @@ public partial class Tcategory : ITableSheetBase<Tcategory>
         if (!Uri.TryCreate(Url, UriKind.Absolute, out var uri))
             return new OperationState<int>(false, "L'url n'est pas valide");
 
-        if (!disableVerification && await ExistsAsync(Name, cancellationToken, cmd))
+        if (!disableVerification && await ExistsAsync(Name, cancellationToken))
             return new OperationState<int>(false, "Le nom de l'item existe déjà");
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText =
             """
             INSERT INTO Tcategory
@@ -471,8 +430,6 @@ public partial class Tcategory : ITableSheetBase<Tcategory>
             VALUES
                 ($Name, $Section, $Type, $Description, $SheetId, $Url, $IsFullyScraped)
             """;
-
-        command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$Name", Name);
         command.Parameters.AddWithValue("$Section", (byte)Section);
@@ -498,17 +455,16 @@ public partial class Tcategory : ITableSheetBase<Tcategory>
     }
 
     public static async Task<OperationState> InsertOrReplaceAsync(IReadOnlyCollection<Tcategory> values, DbInsertMode insertMode = DbInsertMode.InsertOrReplace,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
         if (values.Count == 0)
             return new OperationState(false, "La liste des valeurs ne peut pas être vide");
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.StartWithInsertMode(insertMode);
         command.CommandText += " INTO Tcategory (Name, Section, Type, Description, SheetId, Url, IsFullyScraped)";
 
-        command.Parameters.Clear();
+        
 
         for (uint i = 0; i < values.Count; i++)
         {
@@ -552,21 +508,19 @@ public partial class Tcategory : ITableSheetBase<Tcategory>
         }
     }
 
+
     /// <summary>
     /// Retourne l'enregistrement de la table Tcategory ayant l'identifiant spécifié ou l'insert si l'enregistrement n'existe pas
     /// </summary>
     /// <param name="value"></param>
     /// <param name="reloadIfExist"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<Tcategory?> SingleOrCreateAsync(Tcategory value, bool reloadIfExist = false, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public static async Task<Tcategory?> SingleOrCreateAsync(Tcategory value, bool reloadIfExist = false, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.Parameters.Clear();
         if (!reloadIfExist)
         {
-            var id = await GetIdOfAsync(value.Name, value.Section, value.Type, cancellationToken, command);
+            var id = await GetIdOfAsync(value.Name, value.Section, value.Type, cancellationToken);
             if (id.HasValue)
             {
                 value.Id = id.Value;
@@ -575,12 +529,12 @@ public partial class Tcategory : ITableSheetBase<Tcategory>
         }
         else
         {
-            var record = await SingleAsync(value.Name, value.Section, value.Type, cancellationToken, command);
+            var record = await SingleAsync(value.Name, value.Section, value.Type, cancellationToken);
             if (record != null)
                 return record;
         }
 
-        var result = await value.InsertAsync(false, cancellationToken, command);
+        var result = await value.InsertAsync(false, cancellationToken);
         return !result.IsSuccess ? null : value;
     }
 
@@ -593,10 +547,8 @@ public partial class Tcategory : ITableSheetBase<Tcategory>
     /// </summary>
     /// <param name="disableValidation"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public async Task<OperationState> UpdateAsync(bool disableValidation, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public async Task<OperationState> UpdateAsync(bool disableValidation, CancellationToken? cancellationToken = null)
     {
         if (Name.IsStringNullOrEmptyOrWhiteSpace())
             return new OperationState(false, "Le nom de l'item ne peut pas être vide");
@@ -604,11 +556,14 @@ public partial class Tcategory : ITableSheetBase<Tcategory>
         if (Url.IsStringNullOrEmptyOrWhiteSpace())
             return new OperationState(false, "L'url ne peut pas être vide");
 
-        var existingId = await GetIdOfAsync(Name, Type, cancellationToken, cmd);
-        if (existingId.HasValue && existingId.Value != Id)
-            return new OperationState(false, "Le nom de l'item existe déjà");
+        if (!disableValidation)
+        {
+            var id = await GetIdOfAsync(Name, Section, Type, cancellationToken);
+            if (id.HasValue && id.Value != Id)
+                return new OperationState(false, "Le nom de l'item existe déjà");
+        }
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText =
             """
             UPDATE Tcategory SET
@@ -622,7 +577,7 @@ public partial class Tcategory : ITableSheetBase<Tcategory>
             WHERE Id = $Id
             """;
 
-        command.Parameters.Clear();
+        
 
         command.Parameters.AddWithValue("$Id", Id);
         command.Parameters.AddWithValue("$Name", Name.Trim());
@@ -654,31 +609,24 @@ public partial class Tcategory : ITableSheetBase<Tcategory>
     /// Supprime cet enregistrement de la table Tcategory
     /// </summary>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await DeleteAsync(Id, cancellationToken, cmd);
+    public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null)
+        => await DeleteAsync(Id, cancellationToken);
 
     /// <summary>
     /// Supprime un enregistrement de la table Tcategory ayant l'identifiant spécifié
     /// </summary>
     /// <param name="id"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<OperationState> DeleteAsync(int id, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<OperationState> DeleteAsync(int id, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText =
             """
             DELETE FROM TanimeCategory WHERE IdCategory = $Id;
             DELETE FROM Tcategory WHERE Id = $Id
             """;
-
-        command.Parameters.Clear();
-
         command.Parameters.AddWithValue("$Id", id);
 
         try
@@ -694,13 +642,10 @@ public partial class Tcategory : ITableSheetBase<Tcategory>
         }
     }
 
-    public static async Task<OperationState> DeleteAllAsync(IcotakuSection section, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<OperationState> DeleteAsync(IcotakuSection section, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "DELETE FROM Tcategory WHERE Section = $Section";
-
-        command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$Section", (byte)section);
 
@@ -720,15 +665,11 @@ public partial class Tcategory : ITableSheetBase<Tcategory>
     /// Supprime tous les enregistrements de la table Tcategory
     /// </summary>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<OperationState> DeleteAllAsync(CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<OperationState> DeleteAllAsync(CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "DELETE FROM Tcategory";
-
-        command.Parameters.Clear();
 
         try
         {
@@ -742,8 +683,19 @@ public partial class Tcategory : ITableSheetBase<Tcategory>
         }
     }
 
+    public static Task<OperationState> DeleteAsync(int id, IntColumnSelect columnSelect, CancellationToken? cancellationToken = null)
+    {
+        throw new NotImplementedException();
+    }
+
+    public static Task<OperationState> DeleteAsync(Uri uri, CancellationToken? cancellationToken = null)
+    {
+        throw new NotImplementedException();
+    }
     #endregion
 
+    
+    
     internal static Tcategory GetRecord(SqliteDataReader reader, int idIndex, int sectionIndex, int typeIndex, int nameIndex, int descriptionIndex,
         int sheetIdIndex, int urlIndex, int isFullyScrapedIndex)
     {
@@ -778,7 +730,7 @@ public partial class Tcategory : ITableSheetBase<Tcategory>
         }
     }
 
-    private const string SqlSelectScript =
+    private const string IcotakuSqlSelectScript =
         """
         SELECT
             Id,

@@ -36,15 +36,13 @@ public partial class Ttarget
         if (sections.Count == 0)
             return new OperationState(false, "Aucune section n'a été spécifiée");
 
-        await using var command = (await Main.GetSqliteConnectionAsync()).CreateCommand();
-
         List<Ttarget> values =  [];
 
         foreach (var section in sections)
         {
             if (isDeleteSectionRecords)
             {
-                var deleteAllResult = await DeleteAsync(section, cancellationToken, command);
+                var deleteAllResult = await DeleteAsync(section, cancellationToken);
                 if (!deleteAllResult.IsSuccess)
                     continue;
             }
@@ -58,7 +56,7 @@ public partial class Ttarget
             return new OperationState(false, "Aucune origine n'a été trouvé");
 
 
-        return await InsertOrReplaceAsync(values, insertMode, cancellationToken, command);
+        return await InsertOrReplaceAsync(values, insertMode, cancellationToken);
     }
 
     private static Ttarget[] ScrapFromTargetArrayPage(IcotakuSection section)

@@ -1,6 +1,7 @@
 ﻿using IcotakuScrapper;
 using IcotakuScrapper.Anime;
 using IcotakuScrapper.Common;
+using IcotakuScrapper.Objects;
 using IcotakuScrapper.Services;
 using Microsoft.AspNetCore.Mvc;
 

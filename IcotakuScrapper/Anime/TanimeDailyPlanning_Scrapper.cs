@@ -11,52 +11,52 @@ namespace IcotakuScrapper.Anime;
 public partial class TanimeDailyPlanning
 {
     public static async Task<OperationState> ScrapAsync(DateOnly date, DbInsertMode insertMode = DbInsertMode.InsertOrReplace,
-        bool isDeleteSectionRecords = true, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        bool isDeleteSectionRecords = true, CancellationToken? cancellationToken = null)
     {
-        var plannings = GetAnimePlanning(date, cancellationToken, cmd);
+        var plannings = GetAnimePlanning(date, cancellationToken);
         if (plannings is null || plannings.Length == 0)
             return new OperationState(false, "Aucun anime n'a été trouvé");
 
         if (isDeleteSectionRecords)
         {
-            var deleteState = await DeleteAllAsync(date, cancellationToken, cmd);
+            var deleteState = await DeleteAllAsync(date, cancellationToken);
             if (!deleteState.IsSuccess)
                 return deleteState;
         }
 
-        return await InsertAsync(plannings, insertMode, cancellationToken, cmd);
+        return await InsertAsync(plannings, insertMode, cancellationToken);
     }
 
     public static async Task<OperationState> ScrapAsync(DateOnly minDate, DateOnly maxDate, DbInsertMode insertMode = DbInsertMode.InsertOrReplace,
-               bool isDeleteSectionRecords = true, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+               bool isDeleteSectionRecords = true, CancellationToken? cancellationToken = null)
     {
-        var plannings = GetAnimePlanning(minDate, maxDate, cancellationToken, cmd);
+        var plannings = GetAnimePlanning(minDate, maxDate, cancellationToken);
         if (plannings is null || plannings.Length == 0)
             return new OperationState(false, "Aucun anime n'a été trouvé");
 
         if (isDeleteSectionRecords)
         {
-            var deleteState = await DeleteAllAsync(minDate, maxDate, cancellationToken, cmd);
+            var deleteState = await DeleteAllAsync(minDate, maxDate, cancellationToken);
             if (!deleteState.IsSuccess)
                 return deleteState;
         }
 
-        return await InsertAsync(plannings, insertMode, cancellationToken, cmd);
+        return await InsertAsync(plannings, insertMode, cancellationToken);
     }
 
     private static string GetAnimeMonthPlanningUrl(DateOnly date)
         => $"https://anime.icotaku.com/planning/calendrierDiffusion/date_debut/{date:yyyy-MM-dd}";
 
-    internal static TanimeDailyPlanning[] GetAnimePlanningAsync(HashSet<DateOnly> dates, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    internal static TanimeDailyPlanning[] GetAnimePlanningAsync(HashSet<DateOnly> dates, CancellationToken? cancellationToken = null)
     {
         if (dates is null || dates.Count == 0)
             return [];
 
-        var plannings = GetAnimeDaysPlanning(dates, cancellationToken, cmd).Where(w => dates.Contains(w.ReleaseDate)).ToArray();
+        var plannings = GetAnimeDaysPlanning(dates, cancellationToken).Where(w => dates.Contains(w.ReleaseDate)).ToArray();
         return plannings;
     }
 
-    private static IEnumerable<TanimeDailyPlanning> GetAnimeDaysPlanning(HashSet<DateOnly> dates, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    private static IEnumerable<TanimeDailyPlanning> GetAnimeDaysPlanning(HashSet<DateOnly> dates, CancellationToken? cancellationToken = null)
     {
         if (dates is null || dates.Count == 0)
             yield break;
@@ -64,31 +64,31 @@ public partial class TanimeDailyPlanning
         HashSet<(int sheetId, bool isAdultContent, bool isExplicitContent, string? thumbnailUrl)> additionalContentList = [];
         foreach (var date in dates)
         {
-            foreach (var animePlanning in ScrapPlanningFromIcotaku(date, date, additionalContentList, cancellationToken, cmd))
+            foreach (var animePlanning in ScrapPlanningFromIcotaku(date, date, additionalContentList, cancellationToken))
                 yield return animePlanning;
         }
     }
 
-    internal static TanimeDailyPlanning[] GetAnimePlanning(DateOnly minDate, DateOnly maxDate, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    internal static TanimeDailyPlanning[] GetAnimePlanning(DateOnly minDate, DateOnly maxDate, CancellationToken? cancellationToken = null)
     {
-        var plannings = GetAnimeMonthRangePlanning(minDate, maxDate, cancellationToken, cmd).ToArray();
+        var plannings = GetAnimeMonthRangePlanning(minDate, maxDate, cancellationToken).ToArray();
         return plannings;
     }
 
-    internal static TanimeDailyPlanning[] GetAnimePlanning(DateOnly date, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    internal static TanimeDailyPlanning[] GetAnimePlanning(DateOnly date, CancellationToken? cancellationToken = null)
     {
-        var plannings = GetAnimeMonthRangePlanning(date, date, cancellationToken, cmd).ToArray();
+        var plannings = GetAnimeMonthRangePlanning(date, date, cancellationToken).ToArray();
         return plannings;
     }
 
-    internal static IEnumerable<TanimeDailyPlanning> GetAnimeMonthRangePlanning(DateOnly minDate, DateOnly maxDate, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    internal static IEnumerable<TanimeDailyPlanning> GetAnimeMonthRangePlanning(DateOnly minDate, DateOnly maxDate, CancellationToken? cancellationToken = null)
     {
         HashSet<(int sheetId, bool isAdultContent, bool isExplicitContent, string? thumbnailUrl)> additionalContentList = [];
 
         int value = DateTime.Compare(minDate.ToDateTime(default), maxDate.ToDateTime(default));
         if (value == 0) //minDate == maxDate
         {
-            foreach (var animePlanning in ScrapPlanningFromIcotaku(minDate, maxDate, additionalContentList, cancellationToken, cmd))
+            foreach (var animePlanning in ScrapPlanningFromIcotaku(minDate, maxDate, additionalContentList, cancellationToken))
                 yield return animePlanning;
         }
         else if (value < 0)
@@ -96,7 +96,7 @@ public partial class TanimeDailyPlanning
             var dateCourante = minDate;
             while (dateCourante <= maxDate)
             {
-                foreach (var animePlanning in ScrapPlanningFromIcotaku(dateCourante, maxDate, additionalContentList, cancellationToken, cmd))
+                foreach (var animePlanning in ScrapPlanningFromIcotaku(dateCourante, maxDate, additionalContentList, cancellationToken))
                     yield return animePlanning;
 
                 dateCourante = new DateOnly(dateCourante.Year, dateCourante.Month, 1).AddMonths(1);
@@ -104,7 +104,7 @@ public partial class TanimeDailyPlanning
         }
     }
 
-    private static IEnumerable<TanimeDailyPlanning> ScrapPlanningFromIcotaku(DateOnly minDate, DateOnly maxDate, HashSet<(int sheetId, bool isAdultContent, bool isExplicitContent, string? thumbnailUrl)> additionalContentList, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    private static IEnumerable<TanimeDailyPlanning> ScrapPlanningFromIcotaku(DateOnly minDate, DateOnly maxDate, HashSet<(int sheetId, bool isAdultContent, bool isExplicitContent, string? thumbnailUrl)> additionalContentList, CancellationToken? cancellationToken = null)
     {
         int value = DateTime.Compare(minDate.ToDateTime(default), maxDate.ToDateTime(default));
         if (value > 0)

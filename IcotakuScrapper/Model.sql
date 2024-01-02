@@ -10,9 +10,30 @@ CREATE TABLE IF NOT EXISTS TsheetIndex
     "SheetId"     INTEGER NOT NULL DEFAULT 0, -- Id de la fiche (anime, manga, etc)
     "Url"         TEXT    NOT NULL UNIQUE,    -- Url de la fiche (anime, manga, etc)
     "Section"     INTEGER NOT NULL,           -- Section de la fiche (ANime, Manga, etc)
-    "SheetName"    TEXT    NOT NULL,           -- Nom de la fiche (anime, manga, etc)
-    "SheetType"    INTEGER NOT NULL,           -- Type de la fiche (anime, manga, character, studios, individual, etc)
+    "SheetName"   TEXT    NOT NULL,           -- Nom de la fiche (anime, manga, etc)
+    "SheetType"   INTEGER NOT NULL,           -- Type de la fiche (anime, manga, character, studios, individual, etc)
     "FoundedPage" INTEGER NOT NULL DEFAULT 0  -- Page de recherche sur laquelle la fiche a été trouvée
+);
+-- endregion
+
+-- region Table TsheetIndex
+/*
+ Création de la table TsheetIndex qui permet 
+ d'indexer les adresses url des fiches des animés ou autres
+ */
+DROP TABLE IF EXISTS TsheetMostAwaitedPopular;
+CREATE TABLE IF NOT EXISTS TsheetMostAwaitedPopular
+(
+    "Id"          INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
+    "SheetId"     INTEGER NOT NULL DEFAULT 0, -- Id de la fiche (anime, manga, etc)
+    "Url"         TEXT    NOT NULL,    -- Url de la fiche (anime, manga, etc)
+    "Section"     INTEGER NOT NULL,           -- Section de la fiche (ANime, Manga, etc)
+    "SheetName"   TEXT    NOT NULL,           -- Nom de la fiche (anime, manga, etc)
+    "SheetType"   INTEGER NOT NULL,           -- Type de la fiche (anime, manga, character, studios, individual, etc)
+    "ListType"    INTEGER NOT NULL,           -- Type de liste (most awaited, most popular)
+    "Rank"        INTEGER NOT NULL DEFAULT 0,   -- Classement
+    "VoteCount"   INTEGER NOT NULL DEFAULT 0,   -- Nombre de vote
+    "Note"        REAL    NOT NULL DEFAULT 0    -- Note
 );
 -- endregion
 
@@ -134,7 +155,7 @@ CREATE TABLE IF NOT EXISTS Tseason
 (
     Id           INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
     SeasonNumber INTEGER NOT NULL UNIQUE, -- 202301 (année + numéro de saison)
-    DisplayName  TEXT    NOT NULL  -- Nom de la saison (printemps 2008, etc)
+    DisplayName  TEXT    NOT NULL         -- Nom de la saison (printemps 2008, etc)
 );
 -- endregion
 
@@ -161,7 +182,11 @@ DROP TABLE IF EXISTS Tcontact;
 CREATE TABLE IF NOT EXISTS Tcontact
 (
     "Id"           INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
-    "Guid"         TEXT    NOT NULL UNIQUE DEFAULT (lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || substr(lower(hex(randomblob(2))), 2) || '-' || substr('89ab', 1 + (abs(random()) % 4) , 1) || substr(lower(hex(randomblob(2))), 2) || '-' || lower(hex(randomblob(6)))),
+    "Guid"         TEXT    NOT NULL UNIQUE DEFAULT (lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) ||
+                                                    '-4' || substr(lower(hex(randomblob(2))), 2) || '-' ||
+                                                    substr('89ab', 1 + (abs(random()) % 4), 1) ||
+                                                    substr(lower(hex(randomblob(2))), 2) || '-' ||
+                                                    lower(hex(randomblob(6)))),
     "IdGenre"      INTEGER NULL REFERENCES TcontactGenre (Id) ON DELETE CASCADE,
     "SheetId"      INTEGER NOT NULL        DEFAULT 0, -- Id de la fiche (anime, manga, etc)
     "Url"          TEXT    NOT NULL UNIQUE,           -- Url de la fiche (anime, manga, etc)
@@ -186,12 +211,12 @@ DROP TABLE IF EXISTS TcontactWebSite;
 CREATE TABLE IF NOT EXISTS TcontactWebSite
 (
     Id          INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
-    IdContact     INTEGER NOT NULL REFERENCES Tcontact (Id) ON DELETE CASCADE,
+    IdContact   INTEGER NOT NULL REFERENCES Tcontact (Id) ON DELETE CASCADE,
     Url         TEXT    NOT NULL,
     Description TEXT    NULL
 );
 -- endregion
-    
+
 -- region Table Tanime
 /*
  Création de la table Tanime qui permet 
@@ -201,27 +226,33 @@ DROP TABLE IF EXISTS Tanime;
 CREATE TABLE IF NOT EXISTS Tanime
 (
     "Id"                INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
-    "Guid"         TEXT    NOT NULL UNIQUE DEFAULT (lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-4' || substr(lower(hex(randomblob(2))), 2) || '-' || substr('89ab', 1 + (abs(random()) % 4) , 1) || substr(lower(hex(randomblob(2))), 2) || '-' || lower(hex(randomblob(6)))),
+    "Guid"              TEXT    NOT NULL UNIQUE DEFAULT (lower(hex(randomblob(4))) || '-' ||
+                                                         lower(hex(randomblob(2))) || '-4' ||
+                                                         substr(lower(hex(randomblob(2))), 2) || '-' ||
+                                                         substr('89ab', 1 + (abs(random()) % 4), 1) ||
+                                                         substr(lower(hex(randomblob(2))), 2) || '-' ||
+                                                         lower(hex(randomblob(6)))),
     "IdTarget"          INTEGER NULL REFERENCES Ttarget (Id) ON DELETE CASCADE,
     "IdFormat"          INTEGER NULL REFERENCES Tformat (Id) ON DELETE CASCADE,
     "IdOrigine"         INTEGER NULL REFERENCES TorigineAdaptation (Id) ON DELETE CASCADE,
     "IdSeason"          INTEGER NULL REFERENCES Tseason (Id) ON DELETE CASCADE,
-    "SheetId"           INTEGER NOT NULL DEFAULT 0, -- Id de la fiche (anime, manga, etc)
-    "Url"               TEXT    NOT NULL UNIQUE,    -- Url de la fiche (anime, manga, etc)
-    "Name"              TEXT    NOT NULL,           -- Nom de la fiche (anime, manga, etc)
-    "Note"              REAL    NULL,               -- Note de l'animé
-    "VoteCount"         INTEGER NOT NULL DEFAULT 0, -- Nombre de vote
-    "IsAdultContent"    INTEGER NOT NULL DEFAULT 0, -- Est-ce un anime pour adulte ?
-    "IsExplicitContent" INTEGER NOT NULL DEFAULT 0, -- Est-ce un anime qui contient des scènes particulièrement violentes ou sexuellement explicites sans pour autant être pornographique ?
-    "EpisodeCount"      INTEGER NOT NULL DEFAULT 0, -- Nombre d'épisode
-    "EpisodeDuration"   REAL    NOT NULL DEFAULT 0, -- Durée d'un épisode (en minute)
-    "Season"            INTEGER NOT NULL DEFAULT 0, -- Saison de l'animé
-    "ReleaseDate"       TEXT    NULL,               -- Date de sortie de l'animé (yyyy-mm-dd)
-    "EndDate"           TEXT    NULL,               -- Date de fin de l'animé (yyyy-mm-dd)
-    "DiffusionState"    INTEGER NOT NULL DEFAULT 0, -- Etat de diffusion de l'animé
-    "Description"       TEXT    NULL,               -- Description de l'animé
-    "ThumbnailUrl"      TEXT    NULL,               -- Url de l'image de l'animé
-    "Remark"            TEXT    NULL                -- Remarque sur l'animé
+    "SheetId"           INTEGER NOT NULL        DEFAULT 0, -- Id de la fiche (anime, manga, etc)
+    "Url"               TEXT    NOT NULL UNIQUE,           -- Url de la fiche (anime, manga, etc)
+    "Name"              TEXT    NOT NULL,                  -- Nom de la fiche (anime, manga, etc)
+    "Note"              REAL    NULL,                      -- Note de l'animé
+    "VoteCount"         INTEGER NOT NULL        DEFAULT 0, -- Nombre de vote
+    "IsAdultContent"    INTEGER NOT NULL        DEFAULT 0, -- Est-ce un anime pour adulte ?
+    "IsExplicitContent" INTEGER NOT NULL        DEFAULT 0, -- Est-ce un anime qui contient des scènes particulièrement violentes ou sexuellement explicites sans pour autant être pornographique ?
+    "EpisodeCount"      INTEGER NOT NULL        DEFAULT 0, -- Nombre d'épisode
+    "EpisodeDuration"   REAL    NOT NULL        DEFAULT 0, -- Durée d'un épisode (en minute)
+    "Season"            INTEGER NOT NULL        DEFAULT 0, -- Saison de l'animé
+    "ReleaseMonth"      INTEGER NOT NULL        DEFAULT 0, -- annnée et mois de sortie (yyyymm)
+    "ReleaseDate"       TEXT    NULL,                      -- Date de sortie de l'animé (yyyy-mm-dd)
+    "EndDate"           TEXT    NULL,                      -- Date de fin de l'animé (yyyy-mm-dd)
+    "DiffusionState"    INTEGER NOT NULL        DEFAULT 0, -- Etat de diffusion de l'animé
+    "Description"       TEXT    NULL,                      -- Description de l'animé
+    "ThumbnailUrl"      TEXT    NULL,                      -- Url de l'image de l'animé
+    "Remark"            TEXT    NULL                       -- Remarque sur l'animé
 );
 -- endregion
 
@@ -235,7 +266,7 @@ CREATE TABLE IF NOT EXISTS TanimeAlternativeTitle
 (
     Id          INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
     IdAnime     INTEGER NOT NULL REFERENCES Tanime (Id) ON DELETE CASCADE,
-    Title        TEXT    NOT NULL,
+    Title       TEXT    NOT NULL,
     Description TEXT    NULL -- exemple : titre anglais, titre original, etc
 );
 -- endregion

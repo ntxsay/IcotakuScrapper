@@ -22,7 +22,7 @@ public partial class TsheetIndex
             return new OperationState(false, "Impossible de récupérer le nombre de pages de la liste des animes.");
 
         await using var command = (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        await DeleteAllAsync(contentSection, sheetType, cancellationToken, command);
+        await DeleteAllAsync(contentSection, sheetType, cancellationToken);
 
         List<OperationState> results = [];
         for (var i = (uint)minPage; i <= maxPage; i++)
@@ -30,7 +30,7 @@ public partial class TsheetIndex
             var pageResults = GetSheetIndexes(contentSection, sheetType, i).ToArray();
             if (pageResults.Length == 0)
                 continue;
-            var result = await InsertAsync(pageResults, DbInsertMode.InsertOrReplace, cancellationToken, command);
+            var result = await InsertAsync(pageResults, DbInsertMode.InsertOrReplace, cancellationToken);
             Debug.WriteLine(
                 $"Page {i} :: Nombre: {pageResults.Length}, Succès: {result.IsSuccess}, Message: {result.Message}");
             results.Add(result);

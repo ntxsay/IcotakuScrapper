@@ -8,7 +8,7 @@ namespace IcotakuScrapper.Contact
     public partial class TcontactBase
     {
         internal static async Task<TcontactBase?> ScrapContactBase(HtmlNode contactlinkNode, bool scrapFull = false,
-            CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+            CancellationToken? cancellationToken = null)
         {
             if (contactlinkNode is null)
                 return null;
@@ -26,7 +26,7 @@ namespace IcotakuScrapper.Contact
                 return null;
 
             //Récupère l'id de la fiche du thème ou du genre s'il existe en base de données
-            Tcontact? contact = await Tcontact.SingleAsync(contactUri, cancellationToken, cmd);
+            Tcontact? contact = await Tcontact.SingleAsync(contactUri, cancellationToken);
             if (contact != null)
                 return contact;
 
@@ -52,7 +52,7 @@ namespace IcotakuScrapper.Contact
                 };
 
                 //Et insère la fiche dans la base de données
-                var insertionState2 = await contact.InsertAync(cancellationToken, cmd);
+                var insertionState2 = await contact.InsertAync(false, cancellationToken);
                 if (insertionState2.IsSuccess)
                 {
                     return contact;
@@ -63,7 +63,7 @@ namespace IcotakuScrapper.Contact
             if (contact == null)
                 return null;
 
-            contact = await Tcontact.SingleOrCreateAsync(contact, false, cancellationToken, cmd);
+            contact = await Tcontact.SingleOrCreateAsync(contact, false, cancellationToken);
             if (contact == null)
                 return null;
 

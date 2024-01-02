@@ -1,4 +1,4 @@
-﻿namespace IcotakuScrapper.Anime
+﻿namespace IcotakuScrapper.Objects
 {
     /// <summary>
     /// Structure contenante les informations additionnelles d'un anime.

@@ -71,15 +71,14 @@ public partial class TanimeDailyPlanning
     /// Compte le nombre d'entrées dans la table TanimeDailyPlanning
     /// </summary>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<int> CountAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public static async Task<int> CountAsync(CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT COUNT(Id) FROM TanimeDailyPlanning";
 
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
+        
+    
 
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
         if (result is long count)
@@ -93,13 +92,11 @@ public partial class TanimeDailyPlanning
     /// <param name="id"></param>
     /// <param name="columnSelect"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
     public static async Task<int> CountAsync(int id, IntColumnSelect columnSelect,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = columnSelect switch
         {
             IntColumnSelect.Id => "SELECT COUNT(Id) FROM TanimeDailyPlanning WHERE Id = $Id",
@@ -113,7 +110,7 @@ public partial class TanimeDailyPlanning
             return 0;
         }
 
-        command.Parameters.Clear();
+
 
         command.Parameters.AddWithValue("$Id", id);
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
@@ -127,16 +124,11 @@ public partial class TanimeDailyPlanning
     /// </summary>
     /// <param name="releaseDate">Date de sortie de l'épisode</param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<int> CountAsync(DateOnly releaseDate, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<int> CountAsync(DateOnly releaseDate, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT COUNT(Id) FROM TanimeDailyPlanning WHERE ReleaseDate = $ReleaseDate";
-
-        command.Parameters.Clear();
-
         command.Parameters.AddWithValue("$ReleaseDate", releaseDate.ToString(ReleaseDateFormat));
 
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
@@ -151,17 +143,12 @@ public partial class TanimeDailyPlanning
     /// <param name="releaseDate">Date de sortie de l'épisode</param>
     /// <param name="sheetId"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
     public static async Task<int> CountAsync(DateOnly releaseDate, int sheetId,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT COUNT(Id) FROM TanimeDailyPlanning WHERE ReleaseDate = $ReleaseDate AND SheetId = $SheetId";
-
-        command.Parameters.Clear();
-
         command.Parameters.AddWithValue("$ReleaseDate", releaseDate.ToString(ReleaseDateFormat));
         command.Parameters.AddWithValue("$SheetId", sheetId);
 
@@ -178,17 +165,12 @@ public partial class TanimeDailyPlanning
     /// <param name="sheetId"></param>
     /// <param name="noEpisode"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
     public static async Task<int> CountAsync(DateOnly releaseDate, int sheetId, ushort noEpisode,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT COUNT(Id) FROM TanimeDailyPlanning WHERE ReleaseDate = $ReleaseDate AND SheetId = $SheetId AND NoEpisode = $NoEpisode";
-
-        command.Parameters.Clear();
-
         command.Parameters.AddWithValue("$ReleaseDate", releaseDate.ToString(ReleaseDateFormat));
         command.Parameters.AddWithValue("$SheetId", sheetId);
         command.Parameters.AddWithValue("$NoEpisode", noEpisode);
@@ -205,18 +187,13 @@ public partial class TanimeDailyPlanning
     /// </summary>
     /// <param name="noEpisode"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <param name="sheetId"></param>
     /// <returns></returns>
-    public static async Task<int> CountAsync(int sheetId, ushort noEpisode, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<int> CountAsync(int sheetId, ushort noEpisode, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText =
             "SELECT COUNT(Id) FROM TanimeDailyPlanning WHERE SheetId = $SheetId AND NoEpisode = $NoEpisode";
-
-        command.Parameters.Clear();
-
         command.Parameters.AddWithValue("$SheetId", sheetId);
         command.Parameters.AddWithValue("$NoEpisode", noEpisode);
 
@@ -226,14 +203,11 @@ public partial class TanimeDailyPlanning
         return 0;
     }
 
-    public static async Task<int?> GetIdOfAsync(int sheetId, ushort noEpisode, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<int?> GetIdOfAsync(int sheetId, ushort noEpisode, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText =
             "SELECT Id FROM TanimeDailyPlanning WHERE SheetId = $SheetId AND NoEpisode = $NoEpisode";
-
-        command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$SheetId", sheetId);
         command.Parameters.AddWithValue("$NoEpisode", noEpisode);
@@ -245,15 +219,11 @@ public partial class TanimeDailyPlanning
     }
 
     public static async Task<int?> GetIdOfAsync(DateOnly releaseDate, int sheetId, ushort noEpisode,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText =
             "SELECT COUNT(Id) FROM TanimeDailyPlanning WHERE ReleaseDate = $ReleaseDate AND SheetId = $SheetId AND NoEpisode = $NoEpisode";
-
-        command.Parameters.Clear();
-
         command.Parameters.AddWithValue("$ReleaseDate", releaseDate.ToString(ReleaseDateFormat));
         command.Parameters.AddWithValue("$SheetId", sheetId);
         command.Parameters.AddWithValue("$NoEpisode", noEpisode);
@@ -269,37 +239,32 @@ public partial class TanimeDailyPlanning
     #region Exists
 
     public static async Task<bool> ExistsAsync(int id, IntColumnSelect columnSelect,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(id, columnSelect, cancellationToken, cmd) > 0;
+        CancellationToken? cancellationToken = null)
+        => await CountAsync(id, columnSelect, cancellationToken) > 0;
 
-    public static async Task<bool> ExistsAsync(DateOnly releaseDate, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(releaseDate, cancellationToken, cmd) > 0;
+    public static async Task<bool> ExistsAsync(DateOnly releaseDate, CancellationToken? cancellationToken = null)
+        => await CountAsync(releaseDate, cancellationToken) > 0;
 
     public static async Task<bool> ExistsAsync(int sheetId, ushort noEpisode,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(sheetId, noEpisode, cancellationToken, cmd) > 0;
+        CancellationToken? cancellationToken = null)
+        => await CountAsync(sheetId, noEpisode, cancellationToken) > 0;
 
     public static async Task<bool> ExistsAsync(DateOnly releaseDate, int sheetId, ushort noEpisode,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(releaseDate, sheetId, noEpisode, cancellationToken, cmd) > 0;
+        CancellationToken? cancellationToken = null)
+        => await CountAsync(releaseDate, sheetId, noEpisode, cancellationToken) > 0;
 
     public static async Task<bool> ExistsAsync(DateOnly releaseDate, int sheetId,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(releaseDate, sheetId, cancellationToken, cmd) > 0;
+        CancellationToken? cancellationToken = null)
+        => await CountAsync(releaseDate, sheetId, cancellationToken) > 0;
 
     #endregion
 
     #region Select
 
     public static async Task<TanimeDailyPlanning[]> SelectAsync(bool? isAdultContent, bool? isExplicitContent, AnimeDailyPlanningSortBy sortBy, OrderBy orderBy, uint limit = 0,
-        uint offset = 0, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        uint offset = 0, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = SqlSelectScript;
 
         if (isAdultContent.HasValue)
@@ -316,8 +281,8 @@ public partial class TanimeDailyPlanning
         command.AddOrderSort(sortBy, orderBy);
         command.AddLimitOffset(limit, offset);
 
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
+        
+    
 
         if (isAdultContent.HasValue)
             command.Parameters.AddWithValue("$IsAdultContent", isAdultContent.Value ? 1 : 0);
@@ -333,9 +298,9 @@ public partial class TanimeDailyPlanning
     }
 
     public static async Task<TanimeDailyPlanning[]> SelectAsync(int sheetId, bool? isAdultContent, bool? isExplicitContent, AnimeDailyPlanningSortBy sortBy, OrderBy orderBy,
-        uint limit = 0, uint offset = 0, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        uint limit = 0, uint offset = 0, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE TanimeDailyPlanning.SheetId = $SheetId";
 
         if (isAdultContent.HasValue)
@@ -347,8 +312,8 @@ public partial class TanimeDailyPlanning
         command.AddOrderSort(sortBy, orderBy);
         command.AddLimitOffset(limit, offset);
 
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
+        
+    
 
         command.Parameters.AddWithValue("$SheetId", sheetId);
 
@@ -367,9 +332,9 @@ public partial class TanimeDailyPlanning
 
     public static async Task<TanimeDailyPlanning[]> SelectAsync(DateOnly date,
         bool? isAdultContent, bool? isExplicitContent, AnimeDailyPlanningSortBy sortBy, OrderBy orderBy,
-        uint limit = 0, uint offset = 0, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        uint limit = 0, uint offset = 0, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = SqlSelectScript + Environment.NewLine +
                               "WHERE ReleaseDate = $ReleaseDate";
 
@@ -382,8 +347,8 @@ public partial class TanimeDailyPlanning
         command.AddOrderSort(sortBy, orderBy);
         command.AddLimitOffset(limit, offset);
 
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
+        
+    
 
         command.Parameters.AddWithValue("$ReleaseDate", date.ToString(ReleaseDateFormat));
 
@@ -403,9 +368,9 @@ public partial class TanimeDailyPlanning
     public static async Task<TanimeDailyPlanning[]> SelectAsync(DateOnly minDate, DateOnly maxDate,
         bool? isAdultContent, bool? isExplicitContent,
         AnimeDailyPlanningSortBy sortBy, OrderBy orderBy,
-        uint limit = 0, uint offset = 0, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        uint limit = 0, uint offset = 0, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = SqlSelectScript + Environment.NewLine +
                               "WHERE ReleaseDate BETWEEN $MinDate AND $MaxDate";
 
@@ -418,8 +383,8 @@ public partial class TanimeDailyPlanning
         command.AddOrderSort(sortBy, orderBy);
         command.AddLimitOffset(limit, offset);
 
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
+        
+    
 
         command.Parameters.AddWithValue("$MinDate", minDate.ToString(ReleaseDateFormat));
         command.Parameters.AddWithValue("$MaxDate", maxDate.ToString(ReleaseDateFormat));
@@ -441,15 +406,10 @@ public partial class TanimeDailyPlanning
     #region Single
 
     public static async Task<TanimeDailyPlanning?> SingleAsync(int id,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Id = $Id";
-
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
-
         command.Parameters.AddWithValue("$Id", id);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
@@ -460,16 +420,11 @@ public partial class TanimeDailyPlanning
     }
 
     public static async Task<TanimeDailyPlanning?> SingleAsync(int sheetId, ushort noEpisode,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = SqlSelectScript + Environment.NewLine +
                               "WHERE SheetId = $SheetId AND NoEpisode = $NoEpisode";
-
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
-
         command.Parameters.AddWithValue("$SheetId", sheetId);
         command.Parameters.AddWithValue("$NoEpisode", noEpisode);
 
@@ -484,14 +439,12 @@ public partial class TanimeDailyPlanning
 
     #region Insert
 
-    public async Task<OperationState<int>> InsertAsync(CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public async Task<OperationState<int>> InsertAsync(bool disableVerification, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-
-        if (await ExistsAsync(new DateOnly(ReleaseDate.Year, ReleaseDate.Month, ReleaseDate.Day), SheetId, EpisodeNumber, cancellationToken, command))
+        if (!disableVerification && await ExistsAsync(new DateOnly(ReleaseDate.Year, ReleaseDate.Month, ReleaseDate.Day), SheetId, EpisodeNumber, cancellationToken))
             return new OperationState<int>(false, "L'épisode existe déjà");
 
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText =
             """
             INSERT INTO TanimeDailyPlanning
@@ -499,9 +452,6 @@ public partial class TanimeDailyPlanning
             VALUES
                 ($SheetId, $Url, $IsAdultContent, $IsExplicitContent, $AnimeName, $ReleaseDate, $NoEpisode, $EpisodeName, $NoDay, $Description, $ThumbnailUrl)
             """;
-
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$SheetId", SheetId);
         command.Parameters.AddWithValue("$Url", Url);
@@ -532,17 +482,16 @@ public partial class TanimeDailyPlanning
     }
 
     public static async Task<OperationState> InsertAsync(IReadOnlyCollection<TanimeDailyPlanning> values, DbInsertMode insertMode = DbInsertMode.InsertOrReplace,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
         if (values.Count == 0)
             return new OperationState(false, "Aucun studio n'a été sélectionné.");
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
 
         command.StartWithInsertMode(insertMode);
         command.CommandText += " INTO TanimeDailyPlanning (SheetId, Url, IsAdultContent, IsExplicitContent, AnimeName, ReleaseDate, NoEpisode, EpisodeName, NoDay, Description, ThumbnailUrl) VALUES";
-        command.Parameters.Clear();
+
 
         for (var i = 0; i < values.Count; i++)
         {
@@ -588,15 +537,16 @@ public partial class TanimeDailyPlanning
 
     #region Update
 
-    public async Task<OperationState> UpdateAsync(CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public async Task<OperationState> UpdateAsync(bool disableVerification, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        if (!disableVerification)
+        {
+            var existingId = await GetIdOfAsync(new DateOnly(ReleaseDate.Year, ReleaseDate.Month, ReleaseDate.Day), SheetId, EpisodeNumber, cancellationToken);
+            if (existingId.HasValue && existingId.Value != Id)
+                return new OperationState(false, "L'épisode existe déjà");
+        }
 
-        var existingId = await GetIdOfAsync(new DateOnly(ReleaseDate.Year, ReleaseDate.Month, ReleaseDate.Day), SheetId, EpisodeNumber, cancellationToken, command);
-        if (existingId.HasValue && existingId.Value != Id)
-            return new OperationState(false, "L'épisode existe déjà");
-
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText =
             """
             UPDATE TanimeDailyPlanning SET
@@ -613,9 +563,6 @@ public partial class TanimeDailyPlanning
                 ThumbnailUrl = $ThumbnailUrl
             WHERE Id = $Id
             """;
-
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$SheetId", SheetId);
         command.Parameters.AddWithValue("$Url", Url);
@@ -648,22 +595,16 @@ public partial class TanimeDailyPlanning
 
     #region Delete
 
-    public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await DeleteAsync(Id, cancellationToken, cmd);
+    public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null)
+        => await DeleteAsync(Id, cancellationToken);
 
-    public static async Task<OperationState> DeleteAsync(int id, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<OperationState> DeleteAsync(int id, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        if (id <= 0 || !await ExistsAsync(id, IntColumnSelect.Id, cancellationToken, command))
+        if (id <= 0 || !await ExistsAsync(id, IntColumnSelect.Id, cancellationToken))
             return new OperationState(false, "L'identifiant de l'épisode est invalide");
 
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "DELETE FROM TanimeDailyPlanning WHERE Id = $Id";
-
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
-
         command.Parameters.AddWithValue("$Id", id);
 
         try
@@ -678,16 +619,11 @@ public partial class TanimeDailyPlanning
         }
     }
 
-    public static async Task<OperationState> DeleteAllAsync(DateOnly date, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<OperationState> DeleteAllAsync(DateOnly date, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
 
         command.CommandText = "DELETE FROM TanimeDailyPlanning WHERE ReleaseDate = $ReleaseDate";
-
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
-
         command.Parameters.AddWithValue("$ReleaseDate", date.ToString(ReleaseDateFormat));
 
         try
@@ -703,16 +639,11 @@ public partial class TanimeDailyPlanning
     }
 
     public static async Task<OperationState> DeleteAllAsync(DateOnly minDate, DateOnly maxDate,
-               CancellationToken? cancellationToken = null,
-                      SqliteCommand? cmd = null)
+               CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
 
         command.CommandText = "DELETE FROM TanimeDailyPlanning WHERE ReleaseDate BETWEEN $MinDate AND $MaxDate";
-
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
-
         command.Parameters.AddWithValue("$MinDate", minDate.ToString(ReleaseDateFormat));
         command.Parameters.AddWithValue("$MaxDate", maxDate.ToString(ReleaseDateFormat));
 

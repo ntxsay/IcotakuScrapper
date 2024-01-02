@@ -2,15 +2,9 @@ using HtmlAgilityPack;
 using IcotakuScrapper.Common;
 using IcotakuScrapper.Contact;
 using IcotakuScrapper.Extensions;
-using Microsoft.Data.Sqlite;
-using System;
 using System.Text.RegularExpressions;
-using System.Threading;
 using System.Web;
-using System.Xml.Linq;
-using static System.Collections.Specialized.BitVector32;
-using static System.Net.Mime.MediaTypeNames;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+using IcotakuScrapper.Objects;
 
 namespace IcotakuScrapper.Anime;
 
@@ -22,36 +16,26 @@ public partial class TanimeBase
     [GeneratedRegex(@"(\d+)")]
     protected static partial Regex GetVoteCountRegex();
 
-    /*public static async Task<OperationState<int>> ScrapFromUrlAsync(AnimeFinderParameterStruct finderParameter, CancellationToken? cancellationToken = null)
+    public static async IAsyncEnumerable<OperationState<int>> FindAndSaveAsync(AnimeFinderParameterStruct finderParameter, AnimeScrapingOptions options = AnimeScrapingOptions.All, CancellationToken? cancellationToken = null)
     {
-        var htmlContent = await IcotakuWebHelpers.GetRestrictedHtmlAsync(IcotakuSection.Anime, sheetUri, userName, passWord);
-        if (htmlContent == null || htmlContent.IsStringNullOrEmptyOrWhiteSpace())
-            return new OperationState<int>(false, "Le contenu de la fiche est introuvable.");
-
-        if (!IcotakuWebHelpers.IsHostNameValid(IcotakuSection.Anime, sheetUri))
-            return new OperationState<int>(false, "L'url de la fiche de l'anime n'est pas une url icotaku.");
-
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-
-        var animeResult = await ScrapAnimeAsync(htmlContent, sheetUri, options, cancellationToken);
-
-        return await ScrapAndAnimeFromUrlAsync(animeResult, cancellationToken);
+        var animes = await FindAsync(finderParameter, options, cancellationToken);
+        if (animes.Length == 0)
+            yield break;
+        
+        foreach (var anime in animes)
+        {
+            yield return await SaveFindedAnimeAsync(anime, cancellationToken);
+        }
     }
-    
+
     /// <summary>
     /// Récupère l'anime depuis l'url de la fiche icotaku.
     /// </summary>
-    /// <param name="animeResult">Résultat du scraping</param>
+    /// <param name="anime"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    private static async Task<OperationState<int>> ScrapAndAnimeFromUrlAsync(OperationState<Tanime?> animeResult, CancellationToken? cancellationToken = null)
+    private static async Task<OperationState<int>> SaveFindedAnimeAsync(TanimeBase? anime, CancellationToken? cancellationToken = null)
     {
-        //Si le scraping a échoué alors on sort de la méthode en retournant le message d'erreur
-        if (!animeResult.IsSuccess)
-            return new OperationState<int>(false, animeResult.Message);
-
-        var anime = animeResult.Data;
         if (anime == null)
             return new OperationState<int>(false, "Une erreur est survenue lors de la récupération de l'anime");
 
@@ -60,27 +44,13 @@ public partial class TanimeBase
 
         _ = await CreateIndexAsync(anime.Name, anime.Url, anime.SheetId, cancellationToken);
 
-        return await anime.AddOrUpdateAsync(cancellationToken);
+        var fullAnime = new Tanime(anime);
+        return await fullAnime.AddOrUpdateAsync(cancellationToken);
     }
 
-    private static async Task<OperationState<Tanime?>> ScrapAnimeAsync(string htmlContent, Uri sheetUri, AnimeScrapingOptions options, CancellationToken? cancellationToken = null)
-    {
-        HtmlDocument htmlDocument = new();
-        htmlDocument.LoadHtml(htmlContent);
 
-        return await ScrapAnimeAsync(htmlDocument.DocumentNode, sheetUri, options, cancellationToken);
-    }
-
-    private static async Task<OperationState<Tanime?>> ScrapAnimeAsync(Uri sheetUri, AnimeScrapingOptions options, CancellationToken? cancellationToken = null)
-    {
-        HtmlWeb web = new();
-        var htmlDocument = web.Load(sheetUri.OriginalString);
-
-        return await ScrapAnimeAsync(htmlDocument.DocumentNode, sheetUri, options, cancellationToken);
-    }*/
-    
-    public static async Task<TanimeBase[]> FindAsync(AnimeFinderParameterStruct finderParameter, CancellationToken? cancellationToken = null)
-        => await ScrapAnimeSearchAsync(finderParameter, cancellationToken).ToArrayAsync();
+    public static async Task<TanimeBase[]> FindAsync(AnimeFinderParameterStruct finderParameter, AnimeScrapingOptions options = AnimeScrapingOptions.All, CancellationToken? cancellationToken = null)
+        => await ScrapAnimeSearchAsync(finderParameter, options, cancellationToken).ToArrayAsync();
 
     protected static async Task<OperationState<TanimeBase?>> ScrapAnimeBaseAsync(string htmlContent, Uri sheetUri, AnimeScrapingOptions options, CancellationToken? cancellationToken = null)
     {
@@ -106,7 +76,6 @@ public partial class TanimeBase
     /// <param name="sheetUri"></param>
     /// <param name="options"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
     protected static async Task<OperationState<TanimeBase?>> ScrapAnimeBaseAsync(HtmlNode documentNode, Uri sheetUri, AnimeScrapingOptions options, CancellationToken? cancellationToken = null)
     {
@@ -444,7 +413,6 @@ public partial class TanimeBase
     /// </summary>
     /// <param name="htmlNode"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
     protected static async Task<TorigineAdaptation?> ScrapOrigineAdaptationAsync(HtmlNode htmlNode, CancellationToken? cancellationToken = null)
     {
@@ -468,7 +436,6 @@ public partial class TanimeBase
     /// </summary>
     /// <param name="htmlNode"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
     protected static async Task<Tformat?> ScrapFormatAsync(HtmlNode htmlNode, CancellationToken? cancellationToken = null)
     {
@@ -517,7 +484,6 @@ public partial class TanimeBase
     /// </summary>
     /// <param name="htmlNode"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
     protected static async Task<Tseason?> ScrapSeason(HtmlNode htmlNode, CancellationToken? cancellationToken = null)
     {
@@ -618,7 +584,6 @@ public partial class TanimeBase
     /// </summary>
     /// <param name="htmlNode"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
     protected static async Task<Ttarget?> ScrapTargetAsync(HtmlNode htmlNode, CancellationToken? cancellationToken = null)
     {
@@ -674,7 +639,6 @@ public partial class TanimeBase
     /// <param name="categoryType"></param>
     /// <param name="scrapFullCategory"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
     private static async IAsyncEnumerable<Tcategory> GetCategoriesAsync(HtmlNode htmlNode, CategoryType categoryType, bool scrapFullCategory, CancellationToken? cancellationToken = null)
     {
@@ -788,12 +752,13 @@ public partial class TanimeBase
     #endregion
 
     #region Studios
+
     /// <summary>
     /// Retourne les studios d'aimation de l'animé
     /// </summary>
     /// <param name="documentNode"></param>
+    /// <param name="scrapFull"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
     private static async IAsyncEnumerable<TcontactBase> ScrapStudioAsync(HtmlNode documentNode, bool scrapFull, CancellationToken? cancellationToken = null)
     {
@@ -924,7 +889,7 @@ public partial class TanimeBase
     #endregion
 
     #region finder
-    protected static async IAsyncEnumerable<TanimeBase> ScrapAnimeSearchAsync(AnimeFinderParameterStruct finderParameter, CancellationToken? cancellationToken = null)
+    protected static async IAsyncEnumerable<TanimeBase> ScrapAnimeSearchAsync(AnimeFinderParameterStruct finderParameter, AnimeScrapingOptions options = AnimeScrapingOptions.All, CancellationToken? cancellationToken = null)
     {
         var uri = IcotakuWebHelpers.GetAdvancedSearchUri(IcotakuSection.Anime, finderParameter);
         if (uri == null)
@@ -937,7 +902,7 @@ public partial class TanimeBase
         if (tableNode == null)
             yield break;
 
-        await foreach (var anime in ScrapSearchResult(tableNode, cancellationToken))
+        await foreach (var anime in ScrapSearchResult(tableNode, options, cancellationToken))
         {
             yield return anime;
         }
@@ -957,7 +922,7 @@ public partial class TanimeBase
             if (tableNode == null)
                 continue;
 
-            await foreach (var anime in ScrapSearchResult(tableNode, cancellationToken))
+            await foreach (var anime in ScrapSearchResult(tableNode, options, cancellationToken))
             {
                 yield return anime;
             }
@@ -1030,7 +995,7 @@ public partial class TanimeBase
 
 
 
-    protected static async IAsyncEnumerable<TanimeBase> ScrapSearchResult(HtmlNode documentNode, CancellationToken? cancellationToken = null)
+    protected static async IAsyncEnumerable<TanimeBase> ScrapSearchResult(HtmlNode documentNode, AnimeScrapingOptions options = AnimeScrapingOptions.All, CancellationToken? cancellationToken = null)
     {
         var tableNode = documentNode.SelectSingleNode("//table[contains(@class, 'table_apercufiche')]");
 
@@ -1048,7 +1013,7 @@ public partial class TanimeBase
             if (uri == null)
                 continue;
 
-            var animeBaseResult = await ScrapAnimeBaseAsync(uri, AnimeScrapingOptions.All, cancellationToken);
+            var animeBaseResult = await ScrapAnimeBaseAsync(uri, options, cancellationToken);
             if (!animeBaseResult.IsSuccess || animeBaseResult.Data == null)
                 continue;
 

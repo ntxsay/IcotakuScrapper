@@ -94,6 +94,25 @@ namespace IcotakuScrapper.Services
             };
         }
 
+        internal static void AddOrderSort(SqliteCommand command, AnimeSortBy sortBy, OrderBy orderBy)
+        {
+            command.CommandText += Environment.NewLine;
+            command.CommandText += sortBy switch
+            {
+                AnimeSortBy.Id => $" ORDER BY Tanime.Id {orderBy}",
+                AnimeSortBy.Name => $" ORDER BY Tanime.Name {orderBy}",
+                AnimeSortBy.Duration => $" ORDER BY Tanime.Duration {orderBy}",
+                AnimeSortBy.OrigineAdaptation => $" ORDER BY TorigineAdaptation.Name {orderBy}",
+                AnimeSortBy.SheetId => $" ORDER BY Tanime.SheetId {orderBy}",
+                AnimeSortBy.Target => $" ORDER BY Ttarget.Name {orderBy}",
+                AnimeSortBy.EpisodesCount => $" ORDER BY Tanime.EpisodeCount {orderBy}",
+                AnimeSortBy.EndDate => $" ORDER BY Tanime.EndDate {orderBy}",
+                AnimeSortBy.Format => $" ORDER BY Tformat.Name {orderBy}",
+                AnimeSortBy.ReleaseDate => $" ORDER BY Tanime.ReleaseDate {orderBy}",
+                _ => throw new ArgumentOutOfRangeException(nameof(sortBy), sortBy, null)
+            };
+        }
+
         /// <summary>
         /// Ajoute le filtrage du contenu adulte et explicite à la commande SQL.
         /// </summary>
@@ -214,10 +233,23 @@ namespace IcotakuScrapper.Services
         /// <param name="command"></param>
         internal static void ClearCommand(ref SqliteCommand? command)
         {
+            Main.DisposeCommand();
             if (command == null)
                 return;
             command.CommandText = string.Empty;
             command.Parameters.Clear();
+        }
+        
+        internal static bool IsContainsWhereClause(SqliteCommand command)
+        {
+            return command.CommandText.Contains("WHERE", StringComparison.OrdinalIgnoreCase);
+        }
+        
+        internal static bool IsContainsWhereClause(string? scriptText)
+        {
+            if (scriptText == null || scriptText.IsStringNullOrEmptyOrWhiteSpace())
+                return false;
+            return scriptText.Contains("WHERE", StringComparison.OrdinalIgnoreCase);
         }
     }
 }

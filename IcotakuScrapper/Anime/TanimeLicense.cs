@@ -31,19 +31,16 @@ public class TanimeLicense
     
      #region Count
 
-    /// <summary>
-    /// Compte le nombre d'entrées dans la table TanimeLicense
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
-    /// <returns></returns>
-    public static async Task<int> CountAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+     /// <summary>
+     /// Compte le nombre d'entrées dans la table TanimeLicense
+     /// </summary>
+     /// <param name="cancellationToken"></param>
+     /// <returns></returns>
+     public static async Task<int> CountAsync(CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = "SELECT COUNT(Id) FROM TanimeLicense";
+        await using var command = Main.Connection.CreateCommand();
 
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
+        command.CommandText = "SELECT COUNT(Id) FROM TanimeLicense";
 
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
         if (result is long count)
@@ -56,15 +53,11 @@ public class TanimeLicense
     /// </summary>
     /// <param name="id"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<int> CountAsync(int id, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<int> CountAsync(int id, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT COUNT(Id) FROM TanimeLicense WHERE Id = $Id";
-
-        command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$Id", id);
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
@@ -79,16 +72,15 @@ public class TanimeLicense
     /// <param name="idContact"></param>
     /// <param name="idLicenseType"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <param name="idAnime"></param>
     /// <returns></returns>
-    public static async Task<int> CountAsync(int idAnime, int idContact, int idLicenseType, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<int> CountAsync(int idAnime, int idContact, int idLicenseType, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
+
         command.CommandText = "SELECT COUNT(Id) FROM TanimeLicense WHERE IdAnime = $IdAnime AND IdDistributor = $IdDistributor AND IdLicenseType = $IdLicenseType";
 
-        command.Parameters.Clear();
+        
         
         command.Parameters.AddWithValue("$IdAnime", idAnime);
         command.Parameters.AddWithValue("$IdDistributor", idContact);
@@ -99,14 +91,12 @@ public class TanimeLicense
         return 0;
     }
 
-    public static async Task<int?> GetIdOfAsync(int idAnime, int idContact, int idLicenseType, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<int?> GetIdOfAsync(int idAnime, int idContact, int idLicenseType, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
+
         command.CommandText = "SELECT Id FROM TanimeLicense WHERE IdAnime = $IdAnime AND IdDistributor = $IdDistributor AND IdLicenseType = $IdLicenseType";
 
-        command.Parameters.Clear();
-        
         command.Parameters.AddWithValue("$IdAnime", idAnime);
         command.Parameters.AddWithValue("$IdDistributor", idContact);
         command.Parameters.AddWithValue("$IdLicenseType", idLicenseType);
@@ -120,22 +110,19 @@ public class TanimeLicense
 
     #region Exists
 
-    public static async Task<bool> ExistsAsync(int id, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(id, cancellationToken, cmd) > 0;
+    public static async Task<bool> ExistsAsync(int id, CancellationToken? cancellationToken = null)
+        => await CountAsync(id, cancellationToken) > 0;
 
-    public static async Task<bool> ExistsAsync(int idAnime, int idContact, int idLicenseType, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(idAnime, idContact, idLicenseType, cancellationToken, cmd) > 0;
+    public static async Task<bool> ExistsAsync(int idAnime, int idContact, int idLicenseType, CancellationToken? cancellationToken = null)
+        => await CountAsync(idAnime, idContact, idLicenseType, cancellationToken) > 0;
 
     #endregion
 
     #region Select
 
-    public static async Task<TanimeLicense[]> SelectAsync(int id, IntColumnSelect columnSelect, OrderBy orderBy = OrderBy.Asc, uint limit = 0, uint skip = 0 , CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<TanimeLicense[]> SelectAsync(int id, IntColumnSelect columnSelect, OrderBy orderBy = OrderBy.Asc, uint limit = 0, uint skip = 0 , CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         var isColumnSelectValid = command.IsIntColumnValidated(columnSelect,
         [
             IntColumnSelect.Id,
@@ -162,8 +149,6 @@ public class TanimeLicense
         
         command.AddLimitOffset(limit, skip);
 
-        command.Parameters.Clear();
-        
         command.Parameters.AddWithValue("$Id", id);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
@@ -175,13 +160,11 @@ public class TanimeLicense
 
     #region Single
 
-    public static async Task<TanimeLicense?> SingleAsync(int id, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<TanimeLicense?> SingleAsync(int id, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
+
         command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE TanimeLicense.Id = $Id";
-        
-        command.Parameters.Clear();
         
         command.Parameters.AddWithValue("$Id", id);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
@@ -190,13 +173,11 @@ public class TanimeLicense
         return await GetRecords(reader, cancellationToken).FirstOrDefaultAsync(cancellationToken ?? CancellationToken.None);
     }
     
-    public static async Task<TanimeLicense?> SingleAsync(int idAnime, int idContact, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<TanimeLicense?> SingleAsync(int idAnime, int idContact, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
+
         command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE TanimeLicense.IdAnime = $IdAnime AND TanimeLicense.IdDistributor = $IdDistributor";
-        
-        command.Parameters.Clear();
         
         command.Parameters.AddWithValue("$IdAnime", idAnime);
         command.Parameters.AddWithValue("$IdDistributor", idContact);
@@ -210,25 +191,22 @@ public class TanimeLicense
     
     #region Insert
 
-    public async Task<OperationState<int>> InsertAsync(bool disableExistenceVerification = false, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public async Task<OperationState<int>> InsertAsync(bool disableVerification = false, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        if (IdAnime <= 0 || (!disableExistenceVerification && !await TanimeBase.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken, command)))
+        if (IdAnime <= 0 || (!disableVerification && !await TanimeBase.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken)))
             return new OperationState<int>(false, "L'anime n'existe pas.");
         
-        if (Distributor.Id <= 0 || (!disableExistenceVerification && !await TcontactBase.ExistsAsync(Distributor.Id, IntColumnSelect.Id, cancellationToken, command)))
+        if (Distributor.Id <= 0 || (!disableVerification && !await TcontactBase.ExistsAsync(Distributor.Id, IntColumnSelect.Id, cancellationToken)))
             return new OperationState<int>(false, "Le distributor n'existe pas.");
         
-        if (Type.Id <= 0 || (!disableExistenceVerification && !await TlicenseType.ExistsAsync(Type.Id, cancellationToken, command)))
+        if (Type.Id <= 0 || (!disableVerification && !await TlicenseType.ExistsAsync(Type.Id, cancellationToken)))
             return new OperationState<int>(false, "Le type de licence n'existe pas.");
         
-        if (!disableExistenceVerification && await ExistsAsync(IdAnime, Distributor.Id, Type.Id, cancellationToken, command))
+        if (!disableVerification && await ExistsAsync(IdAnime, Distributor.Id, Type.Id, cancellationToken))
             return new OperationState<int>(false, "Le lien existe déjà.");
         
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "INSERT INTO TanimeLicense (IdAnime, IdDistributor, IdLicenseType) VALUES ($IdAnime, $IdDistributor, $IdLicenseType);";
-        
-        command.Parameters.Clear();
         
         command.Parameters.AddWithValue("$IdAnime", IdAnime);
         command.Parameters.AddWithValue("$IdDistributor", Distributor.Id);
@@ -253,27 +231,25 @@ public class TanimeLicense
     
     #region Update
     
-    public async Task<OperationState> UpdateAsync(bool disableExistenceVerification = false, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public async Task<OperationState> UpdateAsync(bool disableExistenceVerification = false, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-
-        if (IdAnime <= 0 || (!disableExistenceVerification && !await TanimeBase.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken, command)))
+        if (IdAnime <= 0 || (!disableExistenceVerification && !await TanimeBase.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken)))
             return new OperationState(false, "L'anime n'existe pas.");
         
-        if (Distributor.Id <= 0 || (!disableExistenceVerification && !await TcontactBase.ExistsAsync(Distributor.Id, IntColumnSelect.Id, cancellationToken, command)))
+        if (Distributor.Id <= 0 || (!disableExistenceVerification && !await TcontactBase.ExistsAsync(Distributor.Id, IntColumnSelect.Id, cancellationToken)))
             return new OperationState(false, "Le distributor n'existe pas.");
         
-        if (Type.Id <= 0 || (!disableExistenceVerification && !await TlicenseType.ExistsAsync(Type.Id, cancellationToken, command)))
+        if (Type.Id <= 0 || (!disableExistenceVerification && !await TlicenseType.ExistsAsync(Type.Id, cancellationToken)))
             return new OperationState(false, "Le type de licence n'existe pas.");
 
         if (!disableExistenceVerification)
         {
-            var existingId = await GetIdOfAsync(IdAnime, Distributor.Id, Type.Id, cancellationToken, command);
+            var existingId = await GetIdOfAsync(IdAnime, Distributor.Id, Type.Id, cancellationToken);
             if (existingId is not null && existingId != Id)
                 return new OperationState(false, "Le lien existe déjà.");
         }
         
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = 
             """
             UPDATE TanimeLicense SET 
@@ -282,8 +258,6 @@ public class TanimeLicense
                 IdLicenseType = $IdLicenseType
             WHERE Id = $Id;
             """;
-        
-        command.Parameters.Clear();
         
         command.Parameters.AddWithValue("$Id", Id);
         command.Parameters.AddWithValue("$IdAnime", IdAnime);
@@ -309,19 +283,17 @@ public class TanimeLicense
     #region Add or update
 
         public static async Task<OperationState> InsertOrReplaceAsync(int idAnime, IReadOnlyCollection<TanimeLicense> values,
-        DbInsertMode insertMode = DbInsertMode.InsertOrReplace, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        DbInsertMode insertMode = DbInsertMode.InsertOrReplace, CancellationToken? cancellationToken = null)
     {
         if (values.Count == 0)
             return new OperationState(false, "Aucun distributor n'a été trouvé.");
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        if (idAnime <= 0 || !await TanimeBase.ExistsAsync(idAnime, IntColumnSelect.Id, cancellationToken, command))
+        if (idAnime <= 0 || !await TanimeBase.ExistsAsync(idAnime, IntColumnSelect.Id, cancellationToken))
             return new OperationState(false, "L'anime n'existe pas.");
         
+        await using var command = Main.Connection.CreateCommand();
         command.StartWithInsertMode(insertMode);
         command.CommandText += " INTO TanimeLicense (IdAnime, IdDistributor, IdLicenseType) VALUES";
-        command.Parameters.Clear();
         
         for (var i = 0; i < values.Count; i++)
         {
@@ -365,24 +337,24 @@ public class TanimeLicense
         }
     }
 
-    public async Task<OperationState> AddOrUpdateAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
-        => await AddOrUpdateAsync(this, cancellationToken, cmd);
+    public async Task<OperationState> AddOrUpdateAsync(CancellationToken? cancellationToken = null)
+        => await AddOrUpdateAsync(this, cancellationToken);
     
     public static async Task<OperationState> AddOrUpdateAsync(TanimeLicense value,
-        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
         //Si la validation échoue, on retourne le résultat de la validation
-        if (!await TanimeBase.ExistsAsync(value.IdAnime, IntColumnSelect.Id, cancellationToken, cmd))
+        if (!await TanimeBase.ExistsAsync(value.IdAnime, IntColumnSelect.Id, cancellationToken))
             return new OperationState(false, "L'anime n'existe pas.");
         
-        if (!await TcontactBase.ExistsAsync(value.Distributor.Id, IntColumnSelect.Id, cancellationToken, cmd))
+        if (!await TcontactBase.ExistsAsync(value.Distributor.Id, IntColumnSelect.Id, cancellationToken))
             return new OperationState(false, "Le distributor n'existe pas.");
         
-        if (!await TlicenseType.ExistsAsync(value.Type.Id, cancellationToken, cmd))
+        if (!await TlicenseType.ExistsAsync(value.Type.Id, cancellationToken))
             return new OperationState(false, "Le type de licence n'existe pas.");
         
         //Vérifie si l'item existe déjà
-        var existingId = await GetIdOfAsync(value.IdAnime, value.Distributor.Id, value.Type.Id, cancellationToken, cmd);
+        var existingId = await GetIdOfAsync(value.IdAnime, value.Distributor.Id, value.Type.Id, cancellationToken);
         
         //Si l'item existe déjà
         if (existingId.HasValue)
@@ -394,11 +366,11 @@ public class TanimeLicense
             //Si l'id appartient à l'item alors on met à jour l'enregistrement
             if (existingId.Value != value.Id)
                 value.Id = existingId.Value;
-            return await value.UpdateAsync(true, cancellationToken, cmd);
+            return await value.UpdateAsync(true, cancellationToken);
         }
 
         //Si l'item n'existe pas, on l'ajoute
-        var addResult = await value.InsertAsync(true, cancellationToken, cmd);
+        var addResult = await value.InsertAsync(true, cancellationToken);
         if (addResult.IsSuccess)
             value.Id = addResult.Data;
         
@@ -414,14 +386,13 @@ public class TanimeLicense
     /// </summary>
     /// <param name="actualValues">valeurs actuellement utilisées</param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<OperationState> DeleteUnusedAsync(HashSet<(int idDistributor, int idLicenseType, int idAnime)> actualValues, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<OperationState> DeleteUnusedAsync(HashSet<(int idDistributor, int idLicenseType, int idAnime)> actualValues, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
+
         command.CommandText = "DELETE FROM TanimeLicense WHERE IdDistributor NOT IN (";
-        command.Parameters.Clear();
+
         var i = 0;
         foreach (var (idDistributor, _, _) in actualValues)
         {
@@ -461,16 +432,14 @@ public class TanimeLicense
         }
     }
     
-    public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
-        => await DeleteAsync(Id, cancellationToken, cmd);
+    public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null)
+        => await DeleteAsync(Id, cancellationToken);
 
-    public static async Task<OperationState> DeleteAsync(int id, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<OperationState> DeleteAsync(int id, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
+
         command.CommandText = "DELETE FROM TanimeLicense WHERE Id = $Id";
-        
-        command.Parameters.Clear();
         
         command.Parameters.AddWithValue("$Id", id);
         

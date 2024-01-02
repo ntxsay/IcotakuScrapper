@@ -3,8 +3,8 @@ using IcotakuScrapper.Common;
 using IcotakuScrapper.Extensions;
 using IcotakuScrapper.Services.IOS;
 using Microsoft.Data.Sqlite;
-using System.Threading;
 using IcotakuScrapper.Contact;
+using IcotakuScrapper.Objects;
 
 namespace IcotakuScrapper.Anime;
 
@@ -29,6 +29,8 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
     /// Obtient ou définit la date de sortie de l'anime au format yyyy-MM-dd.
     /// </summary>
     public string? ReleaseDate { get; set; }
+    
+    public MonthDate ReleaseMonth { get; set; }
 
     public DateOnly? ReleaseDateAsDateOnly => GetReleaseDate();
     public string? ReleaseDateAsLiteral => ReleaseDateAsDateOnly?.ToString("dddd dd MMMM yyyy");
@@ -158,6 +160,7 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
         Id = value.Id;
         Guid = value.Guid;
         SheetId = value.SheetId;
+        ReleaseMonth = value.ReleaseMonth;
         ReleaseDate = value.ReleaseDate;
         EndDate = value.EndDate;
         Note = value.Note;
@@ -313,7 +316,7 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
     }
 
     public static async Task<string?> GetOrDownloadThumbnailAsync(Uri sheetUri,
-        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
         var itemGuid = await GetGuidAsync(sheetUri, cancellationToken ?? CancellationToken.None);
         if (itemGuid == Guid.Empty)
@@ -323,7 +326,7 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
         if (thumbnailPath != null)
             return thumbnailPath;
 
-        thumbnailPath = await DownloadThumbnailAsync(sheetUri, cancellationToken, cmd);
+        thumbnailPath = await DownloadThumbnailAsync(sheetUri, cancellationToken);
         return thumbnailPath ?? null;
     }
 
@@ -332,12 +335,10 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
     /// </summary>
     /// <param name="sheetUri"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<string?> DownloadThumbnailAsync(Uri sheetUri, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<string?> DownloadThumbnailAsync(Uri sheetUri, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText =
             """
             SELECT
@@ -346,8 +347,6 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
             FROM Tanime
             WHERE Url = $Url COLLATE NOCASE
             """;
-
-        command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$Url", sheetUri.ToString());
 
@@ -414,15 +413,17 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
 
     #endregion
 
+    protected static async Task<OperationState<int>> CreateIndexAsync(string animeName, string animeUrl, int animeSheetId, CancellationToken? cancellationToken = null)
+        => await TsheetIndex.InsertAsync(false, IcotakuSection.Anime, IcotakuSheetType.Anime, animeName, animeUrl, animeSheetId, 0, cancellationToken);
+
+
+    
     #region Count
 
-    public static async Task<int> CountAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public static async Task<int> CountAsync(CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT COUNT(Id) FROM Tanime";
-
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
 
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
         if (result is long count)
@@ -430,11 +431,16 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
         return 0;
     }
 
-    private static async Task<int> CountAsync(int id, IntColumnSelect columnSelect,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    static Task<int> ITableBase<TanimeBase>.CountAsync(int id, CancellationToken? cancellationToken)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        throw new NotImplementedException();
+    }
+
+
+    public static async Task<int> CountAsync(int id, IntColumnSelect columnSelect,
+        CancellationToken? cancellationToken = null)
+    {
+        await using var command = Main.Connection.CreateCommand();
         var isColumnSelectValid = command.IsIntColumnValidated(columnSelect,
         [
             IntColumnSelect.Id,
@@ -452,9 +458,7 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
             IntColumnSelect.SheetId => "SELECT COUNT(Id) FROM Tanime WHERE SheetId = $Id",
             _ => throw new ArgumentOutOfRangeException(nameof(columnSelect), columnSelect, null)
         };
-
-        command.Parameters.Clear();
-
+        
         command.Parameters.AddWithValue("$Id", id);
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
         if (result is long count)
@@ -462,16 +466,13 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
         return 0;
     }
 
-    private static async Task<int> CountAsync(string name, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    private static async Task<int> CountAsync(string name, CancellationToken? cancellationToken = null)
     {
         if (name.IsStringNullOrEmptyOrWhiteSpace())
             return 0;
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT COUNT(Id) FROM Tanime WHERE Name = $Name COLLATE NOCASE";
-
-        command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$Name", name);
 
@@ -481,13 +482,10 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
         return 0;
     }
 
-    private static async Task<int> CountAsync(Uri sheetUri, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    private static async Task<int> CountAsync(Uri sheetUri, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT COUNT(Id) FROM Tanime WHERE Url = $Url COLLATE NOCASE";
-
-        command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$Url", sheetUri.ToString());
 
@@ -498,17 +496,16 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
     }
 
     public static async Task<int> CountAsync(string name, int sheetId, Uri sheetUri,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
         if (name.IsStringNullOrEmptyOrWhiteSpace())
             return 0;
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText =
             "SELECT COUNT(Id) FROM Tanime WHERE Name = $Name COLLATE NOCASE OR Url = $Url COLLATE NOCASE OR SheetId = $SheetId";
 
-        command.Parameters.Clear();
+        
 
         command.Parameters.AddWithValue("$Url", sheetUri.ToString());
         command.Parameters.AddWithValue("$Name", name);
@@ -520,13 +517,10 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
         return 0;
     }
 
-    public static async Task<int?> GetIdOfAsync(Uri sheetUri, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<int?> GetIdOfAsync(Uri sheetUri, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT Id FROM Tanime WHERE Url = $Url COLLATE NOCASE";
-
-        command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$Url", sheetUri.ToString());
 
@@ -536,13 +530,10 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
         return null;
     }
 
-    public static async Task<int?> GetIdOfAsync(int sheetId, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<int?> GetIdOfAsync(int sheetId, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT Id FROM Tanime WHERE SheetId = $SheetId";
-
-        command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$SheetId", sheetId);
 
@@ -553,17 +544,14 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
     }
 
     public static async Task<int?> GetIdOfAsync(string name, int sheetId, Uri sheetUri,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
         if (name.IsStringNullOrEmptyOrWhiteSpace())
             return null;
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText =
             "SELECT Id FROM Tanime WHERE Name = $Name COLLATE NOCASE OR Url = $Url COLLATE NOCASE OR SheetId = $SheetId";
-
-        command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$Url", sheetUri.ToString());
         command.Parameters.AddWithValue("$Name", name);
@@ -577,67 +565,73 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
 
     #endregion
 
+    #region Select
+
+    /// <summary>
+    /// Retourne la liste des animés de la base de données.
+    /// </summary>
+    /// <param name="arrayId">Identifiants des animés à retourner</param>
+    /// <param name="isAdultContent"></param>
+    /// <param name="isExplicitContent"></param>
+    /// <param name="sortBy"></param>
+    /// <param name="orderBy"></param>
+    /// <param name="limit"></param>
+    /// <param name="skip"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static async Task<TanimeBase[]> SelectAsync(HashSet<int> arrayId, bool? isAdultContent = false, bool? isExplicitContent = false, AnimeSortBy sortBy = AnimeSortBy.Name, OrderBy orderBy = OrderBy.Asc, uint limit = 0, uint skip = 0, CancellationToken? cancellationToken = null)
+    {
+        await using var command = Main.Connection.CreateCommand();
+        command.CommandText = IcotakuSqlSelectScript;
+
+        command.CommandText += Environment.NewLine + $"WHERE Tanime.Id IN ({string.Join(',', arrayId)})";
+        command.AddExplicitContentFilter(DbStartFilterMode.And, "Tanime.IsAdultContent", "Tanime.IsExplicitContent", isAdultContent, isExplicitContent);
+
+        command.AddOrderSort(sortBy, orderBy);
+
+        command.AddLimitOffset(limit, skip);
+
+        var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
+        if (!reader.HasRows)
+            return [];
+
+        return await GetRecords(reader, cancellationToken);
+    }
+
+    #endregion
+
     #region Exists
 
-    /// <summary>
-    /// Vérifie si un animé existe dans la base de données.
-    /// </summary>
-    /// <param name="id">Identifiant de base données de la fiche</param>
-    /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
-    /// <returns></returns>
     public static async Task<bool> ExistsByIdAsync(int id,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(id, IntColumnSelect.Id, cancellationToken, cmd) > 0;
+        CancellationToken? cancellationToken = null)
+        => await CountAsync(id, IntColumnSelect.Id, cancellationToken) > 0;
 
-    /// <summary>
-    /// Vérifie si un animé existe dans la base de données.
-    /// </summary>
-    /// <param name="sheetId">Identifiant Icotaku de la fiche</param>
-    /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
-    /// <returns></returns>
     public static async Task<bool> ExistsBySheetIdAsync(int sheetId,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(sheetId, IntColumnSelect.SheetId, cancellationToken, cmd) > 0;
+        CancellationToken? cancellationToken = null)
+        => await CountAsync(sheetId, IntColumnSelect.SheetId, cancellationToken) > 0;
 
 
-    /// <summary>
-    /// Vérifie si un animé existe dans la base de données.
-    /// </summary>
-    /// <param name="id"></param>
-    /// <param name="columnSelect"></param>
-    /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
-    /// <returns></returns>
-    internal static async Task<bool> ExistsAsync(int id, IntColumnSelect columnSelect,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(id, columnSelect, cancellationToken, cmd) > 0;
+    public static async Task<bool> ExistsAsync(int id, IntColumnSelect columnSelect,
+        CancellationToken? cancellationToken = null)
+        => await CountAsync(id, columnSelect, cancellationToken) > 0;
 
     /// <summary>
     /// Vérifie si un animé existe dans la base de données.
     /// </summary>
     /// <param name="name">Nom de l'animé</param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<bool> ExistsAsync(string name, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(name, cancellationToken, cmd) > 0;
+    public static async Task<bool> ExistsAsync(string name, CancellationToken? cancellationToken = null)
+        => await CountAsync(name, cancellationToken) > 0;
 
     /// <summary>
     /// Vérifie si un animé existe dans la base de données.
     /// </summary>
     /// <param name="sheetUri">Url complète de la fiche Icotaku de l'animé</param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<bool> ExistsAsync(Uri sheetUri, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(sheetUri, cancellationToken, cmd) > 0;
+    public static async Task<bool> ExistsAsync(Uri sheetUri, CancellationToken? cancellationToken = null)
+        => await CountAsync(sheetUri, cancellationToken) > 0;
 
     /// <summary>
     /// Vériie si un animé existe dans la base de données.
@@ -646,22 +640,25 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
     /// <param name="sheetId"></param>
     /// <param name="sheetUri"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
     public static async Task<bool> ExistsAsync(string name, int sheetId, Uri sheetUri,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(name, sheetId, sheetUri, cancellationToken, cmd) > 0;
+        CancellationToken? cancellationToken = null)
+        => await CountAsync(name, sheetId, sheetUri, cancellationToken) > 0;
 
     #endregion
 
     #region Single
 
+    public static async Task<TanimeBase?> SingleByIdAsync(int id, CancellationToken? cancellationToken = null)
+        => await SingleAsync(id, IntColumnSelect.Id, cancellationToken);
+
+    public static async Task<TanimeBase?> SingleBySheetIdAsync(int sheetId, CancellationToken? cancellationToken = null)
+        => await SingleAsync(sheetId, IntColumnSelect.SheetId, cancellationToken);
+    
     public static async Task<TanimeBase?> SingleAsync(int id, IntColumnSelect columnSelect,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         var isColumnSelectValid = command.IsIntColumnValidated(columnSelect,
         [
             IntColumnSelect.Id,
@@ -673,61 +670,78 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
             return null;
         }
 
-        command.CommandText = SqlSelectScript + Environment.NewLine + columnSelect switch
+        command.CommandText = IcotakuSqlSelectScript + Environment.NewLine + columnSelect switch
         {
             IntColumnSelect.Id => "WHERE Tanime.Id = $Id",
             IntColumnSelect.SheetId => "WHERE Tanime.SheetId = $Id",
             _ => throw new ArgumentOutOfRangeException(nameof(columnSelect), columnSelect, null)
         };
-
-        command.Parameters.Clear();
-
         command.AddExplicitContentFilter(DbStartFilterMode.And, "Tanime.IsAdultContent", "Tanime.IsExplicitContent",
             null, null);
 
         command.Parameters.AddWithValue("$Id", id);
 
-        var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
-        return !reader.HasRows ? null : (await GetRecords(reader, cancellationToken)).FirstOrDefault();
+        try
+        {
+            var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
+            return !reader.HasRows ? null : (await GetRecords(reader, cancellationToken)).FirstOrDefault();
+        }
+        catch (Exception e)
+        {
+            LogServices.LogDebug(e);
+            return null;
+        }
     }
 
-    public static async Task<TanimeBase?> SingleAsync(string name, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<TanimeBase?> SingleAsync(string name, CancellationToken? cancellationToken = null)
     {
         if (name.IsStringNullOrEmptyOrWhiteSpace())
             return null;
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Tanime.Name = $Name COLLATE NOCASE";
-        command.Parameters.Clear();
-
+        await using var command = Main.Connection.CreateCommand();
+        command.CommandText = IcotakuSqlSelectScript + Environment.NewLine + "WHERE Tanime.Name = $Name COLLATE NOCASE";
+        
         command.AddExplicitContentFilter(DbStartFilterMode.And, "Tanime.IsAdultContent", "Tanime.IsExplicitContent",
             null, null);
         command.Parameters.AddWithValue("$Name", name);
 
-        var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
-        return !reader.HasRows ? null : (await GetRecords(reader, cancellationToken)).FirstOrDefault();
+        try
+        {
+            var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
+            return !reader.HasRows ? null : (await GetRecords(reader, cancellationToken)).SingleOrDefault();
+        }
+        catch (Exception e)
+        {
+            LogServices.LogDebug(e);
+            return null;
+        }
     }
 
-    public static async Task<TanimeBase?> SingleAsync(Uri sheetUri, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<TanimeBase?> SingleAsync(Uri sheetUri, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Tanime.Url = $Url COLLATE NOCASE";
-        command.Parameters.Clear();
-
+        await using var command = Main.Connection.CreateCommand();
+        command.CommandText = IcotakuSqlSelectScript + Environment.NewLine + "WHERE Tanime.Url = $Url COLLATE NOCASE";
+        
         command.AddExplicitContentFilter(DbStartFilterMode.And, "Tanime.IsAdultContent", "Tanime.IsExplicitContent",
             null, null);
         command.Parameters.AddWithValue("$Url", sheetUri.ToString());
 
-        var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
-        return !reader.HasRows ? null : (await GetRecords(reader, cancellationToken)).FirstOrDefault();
+        try
+        {
+            var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
+            return !reader.HasRows ? null : (await GetRecords(reader, cancellationToken)).SingleOrDefault();
+        }
+        catch (Exception e)
+        {
+            LogServices.LogDebug(e);
+            return null;
+        }
     }
 
     public static async Task<Guid> GetGuidAsync(int id, IntColumnSelect columnSelect,
-        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         var isColumnSelectValid = command.IsIntColumnValidated(columnSelect,
         [
             IntColumnSelect.Id,
@@ -745,50 +759,54 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
             IntColumnSelect.SheetId => "SELECT Guid FROM Tanime WHERE SheetId = $Id",
             _ => throw new ArgumentOutOfRangeException(nameof(columnSelect), columnSelect, null)
         };
-
-        command.Parameters.Clear();
-
         command.AddExplicitContentFilter(DbStartFilterMode.And, "Tanime.IsAdultContent", "Tanime.IsExplicitContent",
             null, null);
 
         command.Parameters.AddWithValue("$Id", id);
 
-        var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
-        if (result is string stringGuid)
-            return Guid.Parse(stringGuid);
-        return Guid.Empty;
+        try
+        {
+            var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
+            if (result is string stringGuid)
+                return Guid.Parse(stringGuid);
+            return Guid.Empty;
+        }
+        catch (Exception e)
+        {
+            LogServices.LogDebug(e);
+            return Guid.Empty;
+        }
     }
 
-    public static async Task<Guid> GetGuidAsync(Uri sheetUri, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<Guid> GetGuidAsync(Uri sheetUri, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT Guid FROM Tanime WHERE Url = $Url COLLATE NOCASE";
-        command.Parameters.Clear();
-
+        
         command.AddExplicitContentFilter(DbStartFilterMode.And, "Tanime.IsAdultContent", "Tanime.IsExplicitContent",
             null, null);
         command.Parameters.AddWithValue("$Url", sheetUri.ToString());
 
-        var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
-        if (result is string stringGuid)
-            return Guid.Parse(stringGuid);
-        return Guid.Empty;
+        try
+        {
+            var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
+            if (result is string stringGuid)
+                return Guid.Parse(stringGuid);
+            return Guid.Empty;
+        }
+        catch (Exception e)
+        {
+            LogServices.LogDebug(e);
+            return Guid.Empty;
+        }
     }
 
     #endregion
 
     #region Insert
 
-    /// <summary>
-    /// Insert la base d'un animé dans la base de données.
-    /// </summary>
-    /// <param name="disableVerification"></param>
-    /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
-    /// <returns></returns>
     public async Task<OperationState<int>> InsertAsync(bool disableVerification = false,
-        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
         if (Name.IsStringNullOrEmptyOrWhiteSpace())
             return new OperationState<int>(false, "Le nom de l'anime ne peut pas être vide");
@@ -802,12 +820,11 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
         if (SheetId <= 0)
             return new OperationState<int>(false, "L'id de la fiche icotaku n'est pas valide");
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-
-        if (!disableVerification && await ExistsAsync(Name, SheetId, uri, cancellationToken, command))
+        if (!disableVerification && await ExistsAsync(Name, SheetId, uri, cancellationToken))
             return new OperationState<int>(false, "L'anime existe déjà");
 
 
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText =
             """
             INSERT OR REPLACE INTO Tanime
@@ -815,8 +832,6 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
             VALUES
                 ($SheetId, $Url, $IsAdultContent, $IsExplicitContent, $Note, $VoteCount, $Name, $DiffusionState , $EpisodeCount, $EpisodeDuration, $ReleaseDate, $EndDate, $Description, $ThumbnailUrl, $IdFormat, $IdTarget, $IdOrigine, $IdSeason, $Remark)
             """;
-
-        command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$SheetId", SheetId);
         command.Parameters.AddWithValue("$Url", Url);
@@ -846,12 +861,12 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
                 return new OperationState<int>(false, "L'anime n'a pas été ajouté");
             Id = await command.GetLastInsertRowIdAsync();
             
-            await this.AddOrReplaceAlternativeTitlesAsync(cancellationToken, command);
-            await this.AddOrReplaceWebsitesAsync(cancellationToken, command);
-            await this.AddOrReplaceStudiosAsync(cancellationToken, command);
-            await this.AddOrReplaceCategoriesAsync(cancellationToken, command);
-            await this.AddOrReplaceLicensesAsync(cancellationToken, command);
-            await this.AddOrReplaceStaffsAsync(cancellationToken, command);
+            await this.AddOrReplaceAlternativeTitlesAsync(cancellationToken);
+            await this.AddOrReplaceWebsitesAsync(cancellationToken);
+            await this.AddOrReplaceStudiosAsync(cancellationToken);
+            await this.AddOrReplaceCategoriesAsync(cancellationToken);
+            await this.AddOrReplaceLicensesAsync(cancellationToken);
+            await this.AddOrReplaceStaffsAsync(cancellationToken);
 
 
             return new OperationState<int>(true, "L'anime a été ajouté avec succès", Id);
@@ -867,15 +882,8 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
 
     #region Update
 
-    /// <summary>
-    /// Met à jour la base d'un animé dans la base de données.
-    /// </summary>
-    /// <param name="disableExistenceVerification"></param>
-    /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
-    /// <returns></returns>
-    public async Task<OperationState> UpdateAsync(bool disableExistenceVerification = false,
-        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public async Task<OperationState> UpdateAsync(bool disableVerification = false,
+        CancellationToken? cancellationToken = null)
     {
         if (Name.IsStringNullOrEmptyOrWhiteSpace())
             return new OperationState(false, "Le nom de l'anime ne peut pas être vide");
@@ -889,18 +897,18 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
         if (!Uri.TryCreate(Url, UriKind.Absolute, out var uri) || !uri.IsAbsoluteUri)
             return new OperationState(false, "L'url de la fiche de l'anime n'est pas valide");
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        if (Id <= 0 || (!disableExistenceVerification &&
-                        !await ExistsAsync(Id, IntColumnSelect.Id, cancellationToken, command)))
+        if (Id <= 0 || (!disableVerification &&
+                        !await ExistsAsync(Id, IntColumnSelect.Id, cancellationToken)))
             return new OperationState(false, "L'id de l'anime ne peut pas être inférieur ou égal à 0");
 
-        if (!disableExistenceVerification)
+        if (!disableVerification)
         {
-            var existingId = await GetIdOfAsync(Name, SheetId, uri, cancellationToken, command);
+            var existingId = await GetIdOfAsync(Name, SheetId, uri, cancellationToken);
             if (existingId.HasValue && existingId.Value != Id)
                 return new OperationState(false, "L'url de la fiche de l'anime existe déjà");
         }
 
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText =
             """
             UPDATE Tanime SET
@@ -925,9 +933,6 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
                 Remark = $Remark
             WHERE Id = $Id
             """;
-
-        command.Parameters.Clear();
-
         command.Parameters.AddWithValue("$SheetId", SheetId);
         command.Parameters.AddWithValue("$Url", Url);
         command.Parameters.AddWithValue("$IsAdultContent", IsAdultContent);
@@ -965,17 +970,54 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
 
     #endregion
 
+    #region SingleOrCreate
+
+     static Task<TanimeBase?> ITableBase<TanimeBase>.SingleOrCreateAsync(TanimeBase value, bool reloadIfExist,
+        CancellationToken? cancellationToken)
+    {
+        throw new NotImplementedException();
+    }
+
+    #endregion
+    
     #region Delete
 
-    public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await DeleteAsync(Id, SheetIntColumnSelect.Id, cancellationToken, cmd);
+    public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null)
+        => await DeleteAsync(Id, IntColumnSelect.Id, cancellationToken);
 
-    public static async Task<OperationState> DeleteAsync(int id, SheetIntColumnSelect columnSelect,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    
+
+    public static async Task<OperationState> DeleteAsync(int id, IntColumnSelect columnSelect,
+        CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
+        var isColumnSelectValid = command.IsIntColumnValidated(columnSelect,
+        [
+            IntColumnSelect.Id,
+            IntColumnSelect.SheetId,
+        ]);
+
+        if (!isColumnSelectValid)
+        {
+            return new OperationState(false, "La colonne sélectionnée n'est pas valide");
+        }
+
+        int idAnime;
+        if (columnSelect == IntColumnSelect.Id)
+            idAnime = id;
+        else if (columnSelect == IntColumnSelect.SheetId)
+        {
+            command.CommandText = "SELECT Id FROM Tanime WHERE SheetId = $Id";
+            command.Parameters.AddWithValue("$Id", id);
+            var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
+            if (result is long count)
+                idAnime = (int)count;
+
+            return new OperationState(false, "L'id de l'anime n'a pas été trouvé");
+        }
+        else
+            return new OperationState(false, "La colonne sélectionnée n'est pas valide");
+        
         command.CommandText =
             """
             DELETE FROM TanimeAlternativeTitle WHERE IdAnime = $Id;
@@ -986,10 +1028,7 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
             DELETE FROM TanimeCharacter WHERE IdAnime = $Id;
             DELETE FROM Tanime WHERE Id = $Id;
             """;
-
-        command.Parameters.Clear();
-
-        command.Parameters.AddWithValue("$Id", id);
+        command.Parameters.AddWithValue("$Id", idAnime);
 
         try
         {
@@ -1003,16 +1042,13 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
         }
     }
 
-    public static async Task<OperationState> DeleteAsync(Uri uri, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<OperationState> DeleteAsync(Uri uri, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-
-        var id = await GetIdOfAsync(uri, cancellationToken, command);
+        var id = await GetIdOfAsync(uri, cancellationToken);
         if (!id.HasValue)
             return new OperationState(false, "L'anime n'a pas été trouvé");
 
-        return await DeleteAsync(id.Value, SheetIntColumnSelect.Id, cancellationToken, command);
+        return await DeleteAsync(id.Value, IntColumnSelect.Id, cancellationToken);
     }
 
     #endregion
@@ -1040,6 +1076,7 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
                     DiffusionState = (DiffusionStateKind)reader.GetByte(reader.GetOrdinal("DiffusionState")),
                     EpisodesCount = (ushort)reader.GetInt16(reader.GetOrdinal("EpisodeCount")),
                     Duration = TimeSpan.FromMinutes(reader.GetInt32(reader.GetOrdinal("EpisodeDuration"))),
+                    ReleaseMonth = new MonthDate((uint)reader.GetInt64(reader.GetOrdinal("ReleaseMonth"))),
                     ReleaseDate = reader.IsDBNull(reader.GetOrdinal("ReleaseDate"))
                         ? null
                         : reader.GetString(reader.GetOrdinal("ReleaseDate")),
@@ -1184,7 +1221,7 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
         return [.. records];
     }
 
-    private const string SqlSelectScript =
+    private const string IcotakuSqlSelectScript =
         """
         SELECT
             Tanime.Id AS AnimeId,
@@ -1194,6 +1231,7 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
             Tanime.IdTarget,
             Tanime.IdOrigine,
             Tanime.IdSeason,
+            Tanime.ReleaseMonth,
             Tanime.ReleaseDate,
             Tanime.EndDate,
             Tanime.IsAdultContent AS AnimeIsAdultContent,
@@ -1242,9 +1280,35 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
             Tcategory.IsFullyScraped AS CategoryIsFullyScraped,
             
             TanimeStudio.IdStudio AS StudioId,
+            contactStudio.Id AS ContactStudioId,
             TanimeLicense.Id AS LicenseId,
-            TanimeStaff.Id AS StaffId
+            contactDistributor.Id AS ContactDistributorId,
+            TanimeStaff.Id AS StaffId,
+            contactStaff.Id AS ContactStaffId
+        
+        FROM
+            Tanime
+                LEFT JOIN main.Tformat  on Tformat.Id = Tanime.IdFormat
+                LEFT JOIN main.Ttarget  on Ttarget.Id = Tanime.IdTarget
+                LEFT JOIN main.TorigineAdaptation on TorigineAdaptation.Id = Tanime.IdOrigine
+                LEFT JOIN main.Tseason  on Tseason.Id = Tanime.IdSeason
+                LEFT JOIN main.TanimeCategory on Tanime.Id = TanimeCategory.IdAnime
+                LEFT JOIN main.Tcategory on Tcategory.Id = TanimeCategory.IdCategory
+                LEFT JOIN main.TanimeAlternativeTitle on Tanime.Id = TanimeAlternativeTitle.IdAnime
+                LEFT JOIN main.TanimeWebSite on Tanime.Id = TanimeWebSite.IdAnime
+                LEFT JOIN main.TanimeStudio on Tanime.Id = TanimeStudio.IdAnime
+                LEFT JOIN main.Tcontact contactStudio on contactStudio.Id = TanimeStudio.IdStudio
+                LEFT JOIN main.TanimeLicense on Tanime.Id = TanimeLicense.IdAnime
+                LEFT JOIN main.Tcontact contactDistributor on contactDistributor.Id = TanimeLicense.IdDistributor
+                LEFT JOIN main.TanimeStaff on Tanime.Id = TanimeStaff.IdAnime
+                LEFT JOIN main.Tcontact contactStaff on contactStaff.Id = TanimeStaff.IdIndividu
 
+        """;
+    
+    private const string IcotakuSqlCountScript =
+        """
+        SELECT
+            COUNT(DISTINCT Tanime.Id)
         FROM
             Tanime
         LEFT JOIN main.Tformat  on Tformat.Id = Tanime.IdFormat
@@ -1253,11 +1317,14 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
         LEFT JOIN main.Tseason  on Tseason.Id = Tanime.IdSeason
         LEFT JOIN main.TanimeCategory on Tanime.Id = TanimeCategory.IdAnime
         LEFT JOIN main.Tcategory on Tcategory.Id = TanimeCategory.IdCategory
-        LEFT JOIN main.TanimeAlternativeTitle TanimeAlternativeTitle on Tanime.Id = TanimeAlternativeTitle.IdAnime
+        LEFT JOIN main.TanimeAlternativeTitle on Tanime.Id = TanimeAlternativeTitle.IdAnime
         LEFT JOIN main.TanimeWebSite on Tanime.Id = TanimeWebSite.IdAnime
         LEFT JOIN main.TanimeStudio on Tanime.Id = TanimeStudio.IdAnime
+        LEFT JOIN main.Tcontact contactStudio on contactStudio.Id = TanimeStudio.IdStudio
         LEFT JOIN main.TanimeLicense on Tanime.Id = TanimeLicense.IdAnime
+        LEFT JOIN main.Tcontact contactDistributor on contactDistributor.Id = TanimeLicense.IdDistributor
         LEFT JOIN main.TanimeStaff on Tanime.Id = TanimeStaff.IdAnime
+        LEFT JOIN main.Tcontact contactStaff on contactStaff.Id = TanimeStaff.IdIndividu
 
         """;
 }

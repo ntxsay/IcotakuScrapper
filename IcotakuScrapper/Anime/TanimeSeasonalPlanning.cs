@@ -2,6 +2,7 @@
 using IcotakuScrapper.Extensions;
 using Microsoft.Data.Sqlite;
 using System.Diagnostics;
+using IcotakuScrapper.Objects;
 
 namespace IcotakuScrapper.Anime;
 
@@ -128,15 +129,11 @@ public partial class TanimeSeasonalPlanning
     /// Compte le nombre d'entrées dans la table TanimeSeasonalPlanning
     /// </summary>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<int> CountAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public static async Task<int> CountAsync(CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT COUNT(Id) FROM TanimeSeasonalPlanning";
-
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
 
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
         if (result is long count)
@@ -150,13 +147,11 @@ public partial class TanimeSeasonalPlanning
     /// <param name="id"></param>
     /// <param name="columnSelect"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
     public static async Task<int> CountAsync(int id, IntColumnSelect columnSelect,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         var iscolumnValidated = command.IsIntColumnValidated(columnSelect, [
             IntColumnSelect.Id,
             IntColumnSelect.SheetId,
@@ -184,7 +179,7 @@ public partial class TanimeSeasonalPlanning
             return 0;
         }
 
-        command.Parameters.Clear();
+        
 
         command.Parameters.AddWithValue("$Id", id);
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
@@ -194,15 +189,11 @@ public partial class TanimeSeasonalPlanning
     }
 
     public static async Task<int> CountAsync(Uri sheetUri,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText =
             "SELECT COUNT(Id) FROM TanimeSeasonalPlanning WHERE Url = $Url COLLATE NOCASE";
-
-        command.Parameters.Clear();
-
         command.Parameters.AddWithValue("$Url", sheetUri.ToString());
 
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
@@ -212,15 +203,11 @@ public partial class TanimeSeasonalPlanning
     }
 
     public static async Task<int> CountAsync(int idSeason, Uri sheetUri,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText =
             "SELECT COUNT(Id) FROM TanimeSeasonalPlanning WHERE IdSeason = $IdSeason AND Url = $Url COLLATE NOCASE";
-
-        command.Parameters.Clear();
-
         command.Parameters.AddWithValue("$IdSeason", idSeason);
         command.Parameters.AddWithValue("$Url", sheetUri.ToString());
 
@@ -231,14 +218,11 @@ public partial class TanimeSeasonalPlanning
     }
 
     public static async Task<int> CountAsync(int idSeason, int sheetId,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText =
             "SELECT COUNT(Id) FROM TanimeSeasonalPlanning WHERE IdSeason = $IdSeason AND SheetId = $SheetId";
-
-        command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$IdSeason", idSeason);
         command.Parameters.AddWithValue("$SheetId", sheetId);
@@ -250,26 +234,21 @@ public partial class TanimeSeasonalPlanning
     }
 
     public static async Task<int> CountAsync(WeatherSeason season,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
         var intSeason = season.ToIntSeason();
         if (intSeason == 0)
             return 0;
 
-        return await CountAsync((int)intSeason, IntColumnSelect.SeasonNumber, cancellationToken, cmd);
+        return await CountAsync((int)intSeason, IntColumnSelect.SeasonNumber, cancellationToken);
     }
 
     public static async Task<int?> GetIdOfAsync(Uri sheetUri,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText =
             "SELECT Id FROM TanimeSeasonalPlanning WHERE Url = $Url COLLATE NOCASE";
-
-        command.Parameters.Clear();
-
         command.Parameters.AddWithValue("$Url", sheetUri.ToString());
 
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
@@ -279,14 +258,11 @@ public partial class TanimeSeasonalPlanning
     }
 
     public static async Task<int?> GetIdOfAsync(int idSeason, Uri sheetUri,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText =
             "SELECT Id FROM TanimeSeasonalPlanning WHERE IdSeason = $IdSeason AND Url = $Url COLLATE NOCASE";
-
-        command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$IdSeason", idSeason);
         command.Parameters.AddWithValue("$Url", sheetUri.ToString());
@@ -298,14 +274,11 @@ public partial class TanimeSeasonalPlanning
     }
 
     public static async Task<int?> GetIdOfAsync(int idSeason, int sheetId,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText =
             "SELECT Id FROM TanimeSeasonalPlanning WHERE IdSeason = $IdSeason AND SheetId = $SheetId";
-
-        command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$IdSeason", idSeason);
         command.Parameters.AddWithValue("$SheetId", sheetId);
@@ -317,15 +290,11 @@ public partial class TanimeSeasonalPlanning
     }
 
     public static async Task<int?> GetIdOfAsync(int sheetId,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText =
             "SELECT Id FROM TanimeSeasonalPlanning WHERE SheetId = $SheetId";
-
-        command.Parameters.Clear();
-
         command.Parameters.AddWithValue("$SheetId", sheetId);
 
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
@@ -339,38 +308,33 @@ public partial class TanimeSeasonalPlanning
     #region Exists
 
     public static async Task<bool> ExistsAsync(int id, IntColumnSelect columnSelect,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(id, columnSelect, cancellationToken, cmd) > 0;
+        CancellationToken? cancellationToken = null)
+        => await CountAsync(id, columnSelect, cancellationToken) > 0;
 
     public static async Task<bool> ExistsAsync(Uri sheetUri,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(sheetUri, cancellationToken, cmd) > 0;
+        CancellationToken? cancellationToken = null)
+        => await CountAsync(sheetUri, cancellationToken) > 0;
 
     public static async Task<bool> ExistsAsync(int idSeason, Uri sheetUri,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(idSeason, sheetUri, cancellationToken, cmd) > 0;
+        CancellationToken? cancellationToken = null)
+        => await CountAsync(idSeason, sheetUri, cancellationToken) > 0;
 
     public static async Task<bool> ExistsAsync(int idSeason, int sheetId,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(idSeason, sheetId, cancellationToken, cmd) > 0;
+        CancellationToken? cancellationToken = null)
+        => await CountAsync(idSeason, sheetId, cancellationToken) > 0;
 
     public static async Task<bool> ExistsAsync(WeatherSeason season,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(season, cancellationToken, cmd) > 0;
+        CancellationToken? cancellationToken = null)
+        => await CountAsync(season, cancellationToken) > 0;
 
     #endregion
 
     #region Select
 
     public static async Task<TanimeSeasonalPlanning[]> SelectAsync(bool? isAdultContent, bool? isExplicitContent, SeasonalAnimePlanningSortBy sortBy, OrderBy orderBy, uint limit = 0,
-        uint offset = 0, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        uint offset = 0, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = SqlSelectScript;
 
         if (isAdultContent.HasValue)
@@ -387,8 +351,8 @@ public partial class TanimeSeasonalPlanning
         command.AddOrderSort(sortBy, orderBy);
         command.AddLimitOffset(limit, offset);
 
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
+        
+            
 
         if (isAdultContent.HasValue)
             command.Parameters.AddWithValue("$IsAdultContent", isAdultContent.Value ? 1 : 0);
@@ -404,19 +368,19 @@ public partial class TanimeSeasonalPlanning
     }
 
     public static async Task<TanimeSeasonalPlanning[]> SelectAsync(WeatherSeason season, bool? isAdultContent, bool? isExplicitContent, SeasonalAnimePlanningSortBy sortBy, OrderBy orderBy,
-        uint limit = 0, uint offset = 0, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        uint limit = 0, uint offset = 0, CancellationToken? cancellationToken = null)
     {
         var intSeason = season.ToIntSeason();
         if (intSeason == 0)
             return [];
 
-        return await SelectAsync(intSeason, isAdultContent, isExplicitContent, sortBy, orderBy, limit, offset, cancellationToken, cmd);
+        return await SelectAsync(intSeason, isAdultContent, isExplicitContent, sortBy, orderBy, limit, offset, cancellationToken);
     }
 
     public static async Task<TanimeSeasonalPlanning[]> SelectAsync(uint seasonNumber, bool? isAdultContent, bool? isExplicitContent, SeasonalAnimePlanningSortBy sortBy, OrderBy orderBy,
-        uint limit = 0, uint offset = 0, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        uint limit = 0, uint offset = 0, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Tseason.SeasonNumber = $SeasonNumber";
 
         if (isAdultContent.HasValue)
@@ -428,8 +392,8 @@ public partial class TanimeSeasonalPlanning
         command.AddOrderSort(sortBy, orderBy);
         command.AddLimitOffset(limit, offset);
 
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
+        
+            
 
         command.Parameters.AddWithValue("$SeasonNumber", seasonNumber);
 
@@ -447,15 +411,15 @@ public partial class TanimeSeasonalPlanning
     }
 
     public static async Task<TanimeSeasonalPlanning[]> SelectAsync(int idSeason, SeasonalAnimePlanningSortBy sortBy, OrderBy orderBy,
-        uint limit = 0, uint offset = 0, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        uint limit = 0, uint offset = 0, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE IdSeason = $IdSeason";
         command.AddOrderSort(sortBy, orderBy);
         command.AddLimitOffset(limit, offset);
 
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
+        
+            
 
         command.Parameters.AddWithValue("$IdSeason", idSeason);
 
@@ -467,17 +431,17 @@ public partial class TanimeSeasonalPlanning
     }
 
     public static async Task<TanimeSeasonalPlanning[]> SelectAsync(DateOnly date, SeasonalAnimePlanningSortBy sortBy, OrderBy orderBy,
-        uint limit = 0, uint offset = 0, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        uint limit = 0, uint offset = 0, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE ReleaseMonth = $Date";
 
         command.AddOrderSort(sortBy, orderBy);
 
         command.AddLimitOffset(limit, offset);
 
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
+        
+            
 
         command.Parameters.AddWithValue("$Date", DateHelpers.GetYearMonthInt(date));
 
@@ -500,10 +464,9 @@ public partial class TanimeSeasonalPlanning
     #region Single
 
     public static async Task<TanimeSeasonalPlanning?> SingleAsync(int id, IntColumnSelect columnSelect,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = SqlSelectScript + Environment.NewLine + columnSelect switch
         {
             IntColumnSelect.Id => "WHERE Id = $Id",
@@ -517,8 +480,8 @@ public partial class TanimeSeasonalPlanning
             return null;
         }
 
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
+        
+            
 
         command.Parameters.AddWithValue("$Id", id);
 
@@ -532,8 +495,7 @@ public partial class TanimeSeasonalPlanning
 
     #region Insert
 
-    public async Task<OperationState<int>> InsertAsync(CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public async Task<OperationState<int>> InsertAsync(bool disableVerification, CancellationToken? cancellationToken = null)
     {
         if (Url.IsStringNullOrEmptyOrWhiteSpace() || !Uri.TryCreate(Url, UriKind.Absolute, out var uri) || !uri.IsAbsoluteUri)
             return new OperationState<int>(false, "L'URL de la fiche est invalide");
@@ -544,13 +506,13 @@ public partial class TanimeSeasonalPlanning
         if (GroupName.IsStringNullOrEmptyOrWhiteSpace())
             return new OperationState<int>(false, "Le nom du groupe est invalide");
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        if (Season.Id <= 0 || !await Tseason.ExistsAsync(Season.Id, cancellationToken, command))
+        if (Season.Id <= 0 || (!disableVerification && !await Tseason.ExistsAsync(Season.Id, cancellationToken)))
             return new OperationState<int>(false, "La saison est invalide");
 
-        if (await ExistsAsync(uri, cancellationToken, command))
+        if (!disableVerification && await ExistsAsync(uri, cancellationToken))
             return new OperationState<int>(false, "Cet animé existe déjà");
 
+        await using var command = Main.Connection.CreateCommand(); 
         command.CommandText =
             """
             INSERT INTO TanimeSeasonalPlanning
@@ -558,9 +520,6 @@ public partial class TanimeSeasonalPlanning
             VALUES
                 ($SheetId, $Url, $IdSeason, $IdOrigine, $IsAdultContent, $IsExplicitContent, $AnimeName, $GroupName, $Studios, $Distributors, $ReleaseMonth, $Description, $ThumbnailUrl)
             """;
-
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$SheetId", SheetId);
         command.Parameters.AddWithValue("$Url", uri.ToString());
@@ -591,17 +550,16 @@ public partial class TanimeSeasonalPlanning
     }
 
     public static async Task<OperationState> InsertAsync(IReadOnlyCollection<TanimeSeasonalPlanning> values, DbInsertMode insertMode = DbInsertMode.InsertOrReplace,
-        CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
         if (values.Count == 0)
             return new OperationState(false, "Aucun studio n'a été sélectionné.");
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
 
         command.StartWithInsertMode(insertMode);
         command.CommandText += " INTO TanimeSeasonalPlanning (SheetId, Url, IdSeason, IdOrigine, IsAdultContent, IsExplicitContent, AnimeName, GroupName, Studios, Distributors, ReleaseMonth, Description, ThumbnailUrl) VALUES";
-        command.Parameters.Clear();
+        
 
         for (var i = 0; i < values.Count; i++)
         {
@@ -660,8 +618,7 @@ public partial class TanimeSeasonalPlanning
 
     #region Update
 
-    public async Task<OperationState> UpdateAsync(CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public async Task<OperationState> UpdateAsync(bool disableVerification, CancellationToken? cancellationToken = null)
     {
         if (Url.IsStringNullOrEmptyOrWhiteSpace() || !Uri.TryCreate(Url, UriKind.Absolute, out var uri) || !uri.IsAbsoluteUri)
             return new OperationState(false, "L'URL de la fiche est invalide");
@@ -672,14 +629,17 @@ public partial class TanimeSeasonalPlanning
         if (GroupName.IsStringNullOrEmptyOrWhiteSpace())
             return new OperationState(false, "Le nom du groupe est invalide");
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        if (Season.Id <= 0 || !await Tseason.ExistsAsync(Season.Id, cancellationToken, command))
+        if (Season.Id <= 0 || (!disableVerification && !await Tseason.ExistsAsync(Season.Id, cancellationToken)))
             return new OperationState(false, "La saison est invalide");
 
-        var existingId = await GetIdOfAsync(uri, cancellationToken, command);
-        if (existingId.HasValue && existingId.Value != Id)
-            return new OperationState(false, "Cet animé existe déjà");
+        if (!disableVerification)
+        {
+            var existingId = await GetIdOfAsync(uri, cancellationToken);
+            if (existingId.HasValue && existingId.Value != Id)
+                return new OperationState(false, "Cet animé existe déjà");
+        }
 
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText =
             """
             UPDATE TanimeSeasonalPlanning SET
@@ -698,9 +658,6 @@ public partial class TanimeSeasonalPlanning
                 ThumbnailUrl = $ThumbnailUrl
             WHERE Id = $Id
             """;
-
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$SheetId", SheetId);
         command.Parameters.AddWithValue("$Url", uri.ToString());
@@ -735,22 +692,16 @@ public partial class TanimeSeasonalPlanning
 
     #region Delete
 
-    public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await DeleteAsync(Id, cancellationToken, cmd);
+    public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null)
+        => await DeleteAsync(Id, cancellationToken);
 
-    public static async Task<OperationState> DeleteAsync(int id, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<OperationState> DeleteAsync(int id, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        if (id <= 0 || !await ExistsAsync(id, IntColumnSelect.Id, cancellationToken, command))
+        if (id <= 0 || !await ExistsAsync(id, IntColumnSelect.Id, cancellationToken))
             return new OperationState(false, "L'identifiant de l'épisode est invalide");
 
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "DELETE FROM TanimeSeasonalPlanning WHERE Id = $Id";
-
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
-
         command.Parameters.AddWithValue("$Id", id);
 
         try
@@ -765,28 +716,26 @@ public partial class TanimeSeasonalPlanning
         }
     }
 
-    public static async Task<OperationState> DeleteAllAsync(WeatherSeason season, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<OperationState> DeleteAllAsync(WeatherSeason season, CancellationToken? cancellationToken = null)
     {
         var intSeason = season.ToIntSeason();
         if (intSeason == 0)
             return new OperationState(false, "La saison est invalide");
 
-        return await DeleteAllAsync(intSeason, cancellationToken, cmd);
+        return await DeleteAllAsync(intSeason, cancellationToken);
     }
 
-    public static async Task<OperationState> DeleteAllAsync(uint intSeason, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<OperationState> DeleteAllAsync(uint intSeason, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        var idSeason = await Tseason.GetIdOfAsync(intSeason, cancellationToken, command);
+        await using var command = Main.Connection.CreateCommand();
+        var idSeason = await Tseason.GetIdOfAsync(intSeason, cancellationToken);
         if (!idSeason.HasValue || idSeason <= 0)
             return new OperationState(false, "La saison est invalide");
 
         command.CommandText = "DELETE FROM TanimeSeasonalPlanning WHERE IdSeason = $IdSeason";
 
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
+        
+            
 
         command.Parameters.AddWithValue("$IdSeason", idSeason);
 

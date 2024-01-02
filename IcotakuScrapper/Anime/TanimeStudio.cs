@@ -40,15 +40,11 @@ public class TanimeStudio
     /// Compte le nombre d'entrées dans la table TanimeStudio
     /// </summary>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<int> CountAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public static async Task<int> CountAsync(CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT COUNT(Id) FROM TanimeStudio";
-
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
 
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
         if (result is long count)
@@ -61,15 +57,11 @@ public class TanimeStudio
     /// </summary>
     /// <param name="id"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<int> CountAsync(int id, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<int> CountAsync(int id, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT COUNT(Id) FROM TanimeStudio WHERE Id = $Id";
-
-        command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$Id", id);
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
@@ -83,16 +75,12 @@ public class TanimeStudio
     /// </summary>
     /// <param name="idContact"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <param name="idAnime"></param>
     /// <returns></returns>
-    public static async Task<int> CountAsync(int idAnime, int idContact, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<int> CountAsync(int idAnime, int idContact, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT COUNT(Id) FROM TanimeStudio WHERE IdAnime = $IdAnime AND IdStudio = $IdStudio";
-
-        command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$IdAnime", idAnime);
         command.Parameters.AddWithValue("$IdStudio", idContact);
@@ -102,13 +90,10 @@ public class TanimeStudio
         return 0;
     }
 
-    public static async Task<int?> GetIdOfAsync(int idAnime, int idContact, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<int?> GetIdOfAsync(int idAnime, int idContact, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT Id FROM TanimeStudio WHERE IdAnime = $IdAnime AND IdStudio = $IdStudio";
-
-        command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$IdAnime", idAnime);
         command.Parameters.AddWithValue("$IdStudio", idContact);
@@ -122,22 +107,19 @@ public class TanimeStudio
 
     #region Exists
 
-    public static async Task<bool> ExistsAsync(int id, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(id, cancellationToken, cmd) > 0;
+    public static async Task<bool> ExistsAsync(int id, CancellationToken? cancellationToken = null)
+        => await CountAsync(id, cancellationToken) > 0;
 
-    public static async Task<bool> ExistsAsync(int idAnime, int idContact, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(idAnime, idContact, cancellationToken, cmd) > 0;
+    public static async Task<bool> ExistsAsync(int idAnime, int idContact, CancellationToken? cancellationToken = null)
+        => await CountAsync(idAnime, idContact, cancellationToken) > 0;
 
     #endregion
 
     #region Select
 
-    public static async Task<TanimeStudio[]> SelectAsync(int id, AnimeStudioIdSelector selector, OrderBy orderBy = OrderBy.Asc, uint limit = 0, uint skip = 0, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<TanimeStudio[]> SelectAsync(int id, AnimeStudioIdSelector selector, OrderBy orderBy = OrderBy.Asc, uint limit = 0, uint skip = 0, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = SqlSelectScript + Environment.NewLine + selector switch
         {
             AnimeStudioIdSelector.Id => "WHERE TanimeStudio.Id = $Id",
@@ -150,8 +132,6 @@ public class TanimeStudio
 
         command.AddLimitOffset(limit, skip);
 
-        command.Parameters.Clear();
-
         command.Parameters.AddWithValue("$Id", id);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
@@ -163,13 +143,10 @@ public class TanimeStudio
 
     #region Single
 
-    public static async Task<TanimeStudio?> SingleAsync(int idAnime, int idContact, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<TanimeStudio?> SingleAsync(int idAnime, int idContact, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE TanimeStudio.IdAnime = $IdAnime AND TanimeStudio.IdStudio = $IdStudio";
-
-        command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$IdAnime", idAnime);
         command.Parameters.AddWithValue("$IdStudio", idContact);
@@ -184,27 +161,26 @@ public class TanimeStudio
 
     #region Insert
 
-    public async Task<OperationState<int>> InsertAsync(bool disableExistenceVerification = false, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public async Task<OperationState<int>> InsertAsync(bool disableVerification = false, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        if (IdAnime <= 0 || (!disableExistenceVerification && !await TanimeBase.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken, command)))
+        if (IdAnime <= 0 || (!disableVerification && !await TanimeBase.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken)))
             return new OperationState<int>(false, "L'anime n'existe pas.", 0);
-        
-        if (Studio.Id <= 0 || (!disableExistenceVerification && !await TcontactBase.ExistsAsync(Studio.Id, IntColumnSelect.Id, cancellationToken, command)))
+
+        if (Studio.Id <= 0 || (!disableVerification && !await TcontactBase.ExistsAsync(Studio.Id, IntColumnSelect.Id, cancellationToken)))
             return new OperationState<int>(false, "Le studio n'existe pas.", 0);
 
-        if (!disableExistenceVerification && await ExistsAsync(IdAnime, Studio.Id, cancellationToken, command))
+        if (!disableVerification && await ExistsAsync(IdAnime, Studio.Id, cancellationToken))
             return new OperationState<int>(false, "Le lien existe déjà.", 0);
 
-        command.CommandText = 
+        await using var command = Main.Connection.CreateCommand();
+        command.CommandText =
             """
             INSERT INTO TanimeStudio 
                 (IdAnime, IdStudio) 
             VALUES ($IdAnime, $IdStudio);
             """;
 
-        command.Parameters.Clear();
+        
 
         command.Parameters.AddWithValue("$IdAnime", IdAnime);
         command.Parameters.AddWithValue("$IdStudio", Studio.Id);
@@ -228,25 +204,24 @@ public class TanimeStudio
 
     #region Update
 
-    public async Task<OperationState> UpdateAsync(bool disableExistenceVerification = false, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public async Task<OperationState> UpdateAsync(bool disableVerification = false, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
 
-        if (IdAnime <= 0 || !await TanimeBase.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken, command))
+        if (IdAnime <= 0 || !await TanimeBase.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken))
             return new OperationState(false, "L'anime n'existe pas.");
 
-        if (Studio.Id <= 0 || (!disableExistenceVerification && !await TcontactBase.ExistsAsync(Studio.Id, IntColumnSelect.Id, cancellationToken, command)))
+        if (Studio.Id <= 0 || (!disableVerification && !await TcontactBase.ExistsAsync(Studio.Id, IntColumnSelect.Id, cancellationToken)))
             return new OperationState(false, "Le studio n'existe pas.");
 
-        if (!disableExistenceVerification)
+        if (!disableVerification)
         {
-            var existingId = await GetIdOfAsync(IdAnime, Studio.Id, cancellationToken, command);
+            var existingId = await GetIdOfAsync(IdAnime, Studio.Id, cancellationToken);
             if (existingId is not null && existingId != Id)
                 return new OperationState(false, "Le lien existe déjà.");
         }
-        
-        command.CommandText = 
+
+        await using var command = Main.Connection.CreateCommand();
+        command.CommandText =
             """
             UPDATE TanimeStudio 
             SET 
@@ -255,7 +230,7 @@ public class TanimeStudio
             WHERE Id = $Id;
             """;
 
-        command.Parameters.Clear();
+        
 
         command.Parameters.AddWithValue("$Id", Id);
         command.Parameters.AddWithValue("$IdAnime", IdAnime);
@@ -276,23 +251,22 @@ public class TanimeStudio
     }
 
     #endregion
-    
+
     #region InsertOrUpdate
-    
+
     public static async Task<OperationState> InsertOrReplaceAsync(int idAnime, IReadOnlyCollection<int> idStudioArray,
-        DbInsertMode insertMode = DbInsertMode.InsertOrReplace, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+        DbInsertMode insertMode = DbInsertMode.InsertOrReplace, CancellationToken? cancellationToken = null)
     {
         if (idStudioArray.Count == 0)
             return new OperationState(false, "Aucun studio n'a été sélectionné.");
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
-        if (idAnime <= 0 || !await TanimeBase.ExistsAsync(idAnime, IntColumnSelect.Id, cancellationToken, command))
+        if (idAnime <= 0 || !await TanimeBase.ExistsAsync(idAnime, IntColumnSelect.Id, cancellationToken))
             return new OperationState(false, "L'anime n'existe pas.");
 
+        await using var command = Main.Connection.CreateCommand();
         command.StartWithInsertMode(insertMode);
         command.CommandText += " INTO TanimeStudio (IdAnime, IdStudio) VALUES";
-        command.Parameters.Clear();
+        
 
         for (var i = 0; i < idStudioArray.Count; i++)
         {
@@ -329,60 +303,57 @@ public class TanimeStudio
         }
     }
 
-    public async Task<OperationState> AddOrUpdateAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
-        => await AddOrUpdateAsync(this, cancellationToken, cmd);
-    
+    public async Task<OperationState> AddOrUpdateAsync(CancellationToken? cancellationToken = null)
+        => await AddOrUpdateAsync(this, cancellationToken);
+
     public static async Task<OperationState> AddOrUpdateAsync(TanimeStudio value,
-        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
         //Si la validation échoue, on retourne le résultat de la validation
-        if (!await TanimeBase.ExistsAsync(value.IdAnime, IntColumnSelect.Id, cancellationToken, cmd))
+        if (!await TanimeBase.ExistsAsync(value.IdAnime, IntColumnSelect.Id, cancellationToken))
             return new OperationState(false, "L'anime n'existe pas.");
-        
-        if (!await TcontactBase.ExistsAsync(value.Studio.Id, IntColumnSelect.Id, cancellationToken, cmd))
+
+        if (!await TcontactBase.ExistsAsync(value.Studio.Id, IntColumnSelect.Id, cancellationToken))
             return new OperationState(false, "Le studio n'existe pas.");
 
         //Vérifie si l'item existe déjà
-        var existingId = await GetIdOfAsync(value.IdAnime, value.Studio.Id, cancellationToken, cmd);
-        
+        var existingId = await GetIdOfAsync(value.IdAnime, value.Studio.Id, cancellationToken);
+
         //Si l'item existe déjà
         if (existingId.HasValue)
         {
             //Si l'id n'appartient pas à l'item alors l'enregistrement existe déjà on annule l'opération
             if (value.Id > 0 && existingId.Value != value.Id)
                 return new OperationState(false, "Le nom de l'item existe déjà");
-            
+
             //Si l'id appartient à l'item alors on met à jour l'enregistrement
             if (existingId.Value != value.Id)
                 value.Id = existingId.Value;
-            return await value.UpdateAsync(true, cancellationToken, cmd);
+            return await value.UpdateAsync(true, cancellationToken);
         }
 
         //Si l'item n'existe pas, on l'ajoute
-        var addResult = await value.InsertAsync(true, cancellationToken, cmd);
+        var addResult = await value.InsertAsync(true, cancellationToken);
         if (addResult.IsSuccess)
             value.Id = addResult.Data;
-        
+
         return addResult.ToBaseState();
     }
     #endregion
 
     #region Delete
-    
+
     /// <summary>
     /// Supprime les enregistrements de la table TanimeStudio qui ne sont pas dans la liste spécifiée
     /// </summary>
     /// <param name="actualValues">valeurs actuellement utilisées</param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    public static async Task<OperationState> DeleteUnusedAsync(HashSet<(int idStudio, int idAnime)> actualValues, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<OperationState> DeleteUnusedAsync(HashSet<(int idStudio, int idAnime)> actualValues, CancellationToken? cancellationToken = null)
     {
-        
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "DELETE FROM TanimeStudio WHERE IdStudio NOT IN (";
-        command.Parameters.Clear();
+        
         var i = 0;
         foreach (var (idStudio, _) in actualValues)
         {
@@ -411,17 +382,14 @@ public class TanimeStudio
             return new OperationState(false, "Une erreur est survenue lors de la suppression");
         }
     }
-    
-    public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
-        => await DeleteAsync(Id, cancellationToken, cmd);
 
-    public static async Task<OperationState> DeleteAsync(int id, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null)
+        => await DeleteAsync(Id, cancellationToken);
+
+    public static async Task<OperationState> DeleteAsync(int id, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "DELETE FROM TanimeStudio WHERE Id = $Id";
-
-        command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$Id", id);
 

@@ -45,7 +45,7 @@ public partial class Tformat
         {
             if (isDeleteSectionRecords)
             {
-                var deleteResult = await DeleteAllAsync(section, cancellationToken, command);
+                var deleteResult = await DeleteAllAsync(section, cancellationToken);
                 if (!deleteResult.IsSuccess)
                     return deleteResult;
             }
@@ -59,7 +59,7 @@ public partial class Tformat
             return new OperationState(false, "Aucun format n'a été trouvé");
 
 
-        return await InsertOrReplaceAsync(values, insertMode, cancellationToken, command);
+        return await InsertOrReplaceAsync(values, insertMode, cancellationToken);
     }
 
     private static Tformat[] ScrapFromFormatArrayPage(IcotakuSection section)

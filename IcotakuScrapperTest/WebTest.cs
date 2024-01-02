@@ -1,5 +1,6 @@
 ﻿using IcotakuScrapper;
 using IcotakuScrapper.Anime;
+using IcotakuScrapper.Objects;
 using IcotakuScrapper.Services;
 
 namespace IcotakuScrapperTest

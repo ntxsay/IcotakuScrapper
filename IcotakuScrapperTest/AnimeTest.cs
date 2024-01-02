@@ -1,5 +1,7 @@
 ﻿using IcotakuScrapper;
 using IcotakuScrapper.Anime;
+using IcotakuScrapper.Common;
+using IcotakuScrapper.Objects;
 
 namespace IcotakuScrapperTest
 {
@@ -217,7 +219,51 @@ namespace IcotakuScrapperTest
                 IncludeThemesId = [140],
                 ExcludeThemesId = [221]
             };
-            var animes = await TanimeBase.FindAsync(parameter);
+            var animes = await TanimeBase.FindAndSaveAsync(parameter).ToArrayAsync();
+            Assert.IsNotEmpty(animes);
+        }
+
+        [Test]
+        public async Task AdvancedSearch2()
+        {
+            var parameter = new AnimeFinderParameterStruct()
+            {
+                Title = null,
+                OrigineAdaptation = null,
+                IncludeGenresId = [9],
+                ExcludeGenresId = [18],
+                IncludeThemesId = [140],
+                ExcludeThemesId = [221]
+            };
+
+            List<OperationState<TanimeBase?>> animes = new();
+
+            AnimeFinder finder = new();
+            finder.ProgressChangedRequested += (percent, state) =>
+            {
+                animes.Add(state);
+            };
+
+            finder.OperationCompletedRequested += args =>
+            {
+                Console.WriteLine(args.Result);
+            };
+
+            finder.Find(parameter);
+
+            while (finder.IsRunning)
+            {
+                await Task.Delay(100);
+            }
+
+            Assert.IsTrue(animes.Any(x => x.IsSuccess));
+            
+        }
+        
+        [Test]
+        public async Task SCrapTopAnime()
+        {
+            var animes = await TsheetMostAwaitedPopular.ScrapPageAsync(IcotakuSection.Anime, IcotakuListType.MostPopular);
             Assert.IsNotEmpty(animes);
         }
     }

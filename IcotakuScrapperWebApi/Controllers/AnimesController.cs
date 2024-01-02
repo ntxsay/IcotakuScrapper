@@ -56,11 +56,11 @@ namespace IcotakuScrapperWebApi.Controllers
 
         [HttpDelete("Delete/Id")]
         public async Task<OperationState> DeleteByIdAsync([FromQuery] uint id)
-            => await TanimeBase.DeleteAsync((int)id, SheetIntColumnSelect.Id);
+            => await TanimeBase.DeleteAsync((int)id, IntColumnSelect.Id);
 
         [HttpDelete("Delete/SheetId")]
         public async Task<OperationState> DeleteBySheetIdAsync([FromQuery] uint id)
-           => await TanimeBase.DeleteAsync((int)id, SheetIntColumnSelect.SheetId);
+           => await TanimeBase.DeleteAsync((int)id, IntColumnSelect.SheetId);
 
         [HttpDelete("Delete/Url")]
         public async Task<OperationState> DeleteBySheetIdAsync([FromQuery] string url)

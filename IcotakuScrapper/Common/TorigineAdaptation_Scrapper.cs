@@ -44,7 +44,7 @@ public partial class TorigineAdaptation
         {
             if (isDeleteSectionRecords)
             {
-                var deleteAllResult = await DeleteAllAsync(section, cancellationToken, command);
+                var deleteAllResult = await DeleteAllAsync(section, cancellationToken);
                 if (!deleteAllResult.IsSuccess)
                     continue;
             }
@@ -58,7 +58,7 @@ public partial class TorigineAdaptation
             return new OperationState(false, "Aucune origine n'a été trouvé");
 
 
-        return await InsertOrReplaceAsync(values, insertMode, cancellationToken, command);
+        return await InsertOrReplaceAsync(values, insertMode, cancellationToken);
     }
 
     private static TorigineAdaptation[] ScrapFromOrigineArrayPage(IcotakuSection section)

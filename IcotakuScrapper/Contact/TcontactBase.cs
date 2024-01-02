@@ -1,5 +1,4 @@
-﻿using IcotakuScrapper.Common;
-using IcotakuScrapper.Extensions;
+﻿using IcotakuScrapper.Extensions;
 
 using Microsoft.Data.Sqlite;
 
@@ -8,7 +7,7 @@ namespace IcotakuScrapper.Contact;
 /// <summary>
 /// Représente un contact sans les informations détaillées de <see cref="Tcontact"/>.
 /// </summary>
-public partial class TcontactBase 
+public partial class TcontactBase
 {
     /// <summary>
     /// Obtient ou définit l'id du contact.
@@ -67,13 +66,10 @@ public partial class TcontactBase
 
     #region Count
 
-    public static async Task<int> CountAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public static async Task<int> CountAsync(CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT COUNT(Id) FROM Tcontact";
-
-        if (command.Parameters.Count > 0)
-            command.Parameters.Clear();
 
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
         if (result is long count)
@@ -81,10 +77,9 @@ public partial class TcontactBase
         return 0;
     }
 
-    public static async Task<int> CountAsync(int id, IntColumnSelect columnSelect, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<int> CountAsync(int id, IntColumnSelect columnSelect, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         var isColumnSelectValid = command.IsIntColumnValidated(columnSelect,
         [
             IntColumnSelect.Id,
@@ -102,8 +97,6 @@ public partial class TcontactBase
             _ => throw new ArgumentOutOfRangeException(nameof(columnSelect), columnSelect, null)
         };
 
-        command.Parameters.Clear();
-
         command.Parameters.AddWithValue("$Id", id);
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
         if (result is long count)
@@ -111,17 +104,14 @@ public partial class TcontactBase
         return 0;
     }
 
-    public static async Task<int> CountAsync(string displayName, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<int> CountAsync(string displayName, CancellationToken? cancellationToken = null)
     {
         if (displayName.IsStringNullOrEmptyOrWhiteSpace())
             return 0;
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT COUNT(Id) FROM Tcontact WHERE DisplayName = $DisplayName COLLATE NOCASE";
 
-        command.Parameters.Clear();
-
         command.Parameters.AddWithValue("$DisplayName", displayName);
 
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
@@ -130,14 +120,11 @@ public partial class TcontactBase
         return 0;
     }
 
-    public static async Task<int> CountAsync(Uri sheetUri, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<int> CountAsync(Uri sheetUri, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT COUNT(Id) FROM Tcontact WHERE Url = $Url COLLATE NOCASE";
 
-        command.Parameters.Clear();
-
         command.Parameters.AddWithValue("$Url", sheetUri.ToString());
 
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
@@ -146,17 +133,14 @@ public partial class TcontactBase
         return 0;
     }
 
-    public static async Task<int> CountAsync(string displayName, int sheetId, Uri sheetUri, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<int> CountAsync(string displayName, int sheetId, Uri sheetUri, CancellationToken? cancellationToken = null)
     {
         if (displayName.IsStringNullOrEmptyOrWhiteSpace())
             return 0;
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT COUNT(Id) FROM Tcontact WHERE DisplayName = $DisplayName COLLATE NOCASE OR Url = $Url COLLATE NOCASE OR SheetId = $SheetId";
 
-        command.Parameters.Clear();
-
         command.Parameters.AddWithValue("$Url", sheetUri.ToString());
         command.Parameters.AddWithValue("$DisplayName", displayName);
         command.Parameters.AddWithValue("$SheetId", sheetId);
@@ -166,17 +150,16 @@ public partial class TcontactBase
             return (int)count;
         return 0;
     }
-    
-    public static async Task<int> CountAsync(string displayName, int sheetId, ContactType contactType, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+
+    public static async Task<int> CountAsync(string displayName, int sheetId, ContactType contactType, CancellationToken? cancellationToken = null)
     {
         if (displayName.IsStringNullOrEmptyOrWhiteSpace())
             return 0;
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT COUNT(Id) FROM Tcontact WHERE DisplayName = $DisplayName COLLATE NOCASE AND Type = $Type AND SheetId = $SheetId";
 
-        command.Parameters.Clear();
+
 
         command.Parameters.AddWithValue("$DisplayName", displayName);
         command.Parameters.AddWithValue("$SheetId", sheetId);
@@ -188,13 +171,10 @@ public partial class TcontactBase
         return 0;
     }
 
-    public static async Task<int?> GetIdOfAsync(Uri sheetUri, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<int?> GetIdOfAsync(Uri sheetUri, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT Id FROM Tcontact WHERE Url = $Url COLLATE NOCASE";
-
-        command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$Url", sheetUri.ToString());
 
@@ -203,17 +183,14 @@ public partial class TcontactBase
             return (int)count;
         return null;
     }
-    
-    public static async Task<int?> GetIdOfAsync(string displayName, int sheetId, ContactType contactType, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+
+    public static async Task<int?> GetIdOfAsync(string displayName, int sheetId, ContactType contactType, CancellationToken? cancellationToken = null)
     {
         if (displayName.IsStringNullOrEmptyOrWhiteSpace())
             return null;
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT Id FROM Tcontact WHERE SheetId = $SheetId AND Type = $Type AND DisplayName = $DisplayName COLLATE NOCASE";
-
-        command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$DisplayName", displayName);
         command.Parameters.AddWithValue("$SheetId", sheetId);
@@ -224,17 +201,14 @@ public partial class TcontactBase
             return (int)count;
         return null;
     }
-    
-    public static async Task<int?> GetIdOfAsync(string displayName, Uri sheetUri, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+
+    public static async Task<int?> GetIdOfAsync(string displayName, Uri sheetUri, CancellationToken? cancellationToken = null)
     {
         if (displayName.IsStringNullOrEmptyOrWhiteSpace())
             return null;
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT Id FROM Tcontact WHERE DisplayName = $DisplayName COLLATE NOCASE AND (Url = $Url COLLATE NOCASE OR Url LIKE $Url COLLATE NOCASE)";
-
-        command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$Url", sheetUri.ToString());
         command.Parameters.AddWithValue("$DisplayName", displayName);
@@ -245,16 +219,13 @@ public partial class TcontactBase
         return null;
     }
 
-    public static async Task<int?> GetIdOfAsync(string displayName, int sheetId, Uri sheetUri, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<int?> GetIdOfAsync(string displayName, int sheetId, Uri sheetUri, CancellationToken? cancellationToken = null)
     {
         if (displayName.IsStringNullOrEmptyOrWhiteSpace())
             return null;
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT Id FROM Tcontact WHERE DisplayName = $DisplayName COLLATE NOCASE OR Url = $Url COLLATE NOCASE OR SheetId = $SheetId";
-
-        command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$Url", sheetUri.ToString());
         command.Parameters.AddWithValue("$DisplayName", displayName);
@@ -269,34 +240,28 @@ public partial class TcontactBase
 
     #region Exists
 
-    public static async Task<bool> ExistsAsync(int id, IntColumnSelect columnSelect, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(id, columnSelect, cancellationToken, cmd) > 0;
+    public static async Task<bool> ExistsAsync(int id, IntColumnSelect columnSelect, CancellationToken? cancellationToken = null)
+        => await CountAsync(id, columnSelect, cancellationToken) > 0;
 
-    public static async Task<bool> ExistsAsync(string displayName, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(displayName, cancellationToken, cmd) > 0;
+    public static async Task<bool> ExistsAsync(string displayName, CancellationToken? cancellationToken = null)
+        => await CountAsync(displayName, cancellationToken) > 0;
 
-    public static async Task<bool> ExistsAsync(Uri sheetUri, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(sheetUri, cancellationToken, cmd) > 0;
+    public static async Task<bool> ExistsAsync(Uri sheetUri, CancellationToken? cancellationToken = null)
+        => await CountAsync(sheetUri, cancellationToken) > 0;
 
-    public static async Task<bool> ExistsAsync(string displayName, int sheetId, Uri sheetUri, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(displayName, sheetId, sheetUri, cancellationToken, cmd) > 0;
-    
-    public static async Task<bool> ExistsAsync(string displayName, int sheetId, ContactType contactType, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
-        => await CountAsync(displayName, sheetId, contactType, cancellationToken, cmd) > 0;
+    public static async Task<bool> ExistsAsync(string displayName, int sheetId, Uri sheetUri, CancellationToken? cancellationToken = null)
+        => await CountAsync(displayName, sheetId, sheetUri, cancellationToken) > 0;
+
+    public static async Task<bool> ExistsAsync(string displayName, int sheetId, ContactType contactType, CancellationToken? cancellationToken = null)
+        => await CountAsync(displayName, sheetId, contactType, cancellationToken) > 0;
 
     #endregion
 
     #region Single
 
-    public static async Task<TcontactBase?> SingleAsync(int id, IntColumnSelect columnSelect, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<TcontactBase?> SingleAsync(int id, IntColumnSelect columnSelect, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         var isColumnSelectValid = command.IsIntColumnValidated(columnSelect,
         [
             IntColumnSelect.Id,
@@ -316,26 +281,21 @@ public partial class TcontactBase
             _ => throw new ArgumentOutOfRangeException(nameof(columnSelect), columnSelect, null)
         };
 
-        command.Parameters.Clear();
-
         command.Parameters.AddWithValue("$Id", id);
 
         var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         return !reader.HasRows ? null : await GetRecords(reader, cancellationToken).FirstOrDefaultAsync();
     }
 
-    public static async Task<TcontactBase?> SingleAsync(string displayName, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<TcontactBase?> SingleAsync(string displayName, CancellationToken? cancellationToken = null)
     {
         if (displayName.IsStringNullOrEmptyOrWhiteSpace())
             return null;
 
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = SqlSelectScript + Environment.NewLine;
 
         command.CommandText += "WHERE Tcontact.DisplayName = $DisplayName COLLATE NOCASE";
-
-        command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$DisplayName", displayName);
 
@@ -343,46 +303,38 @@ public partial class TcontactBase
         return !reader.HasRows ? null : await GetRecords(reader, cancellationToken).FirstOrDefaultAsync();
     }
 
-    public static async Task<TcontactBase?> SingleAsync(Uri sheetUri, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<TcontactBase?> SingleAsync(Uri sheetUri, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = SqlSelectScript + Environment.NewLine;
 
         command.CommandText += "WHERE Tcontact.Url = $Url COLLATE NOCASE";
-
-        command.Parameters.Clear();
-
         command.Parameters.AddWithValue("$Url", sheetUri.ToString());
 
         var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         return !reader.HasRows ? null : await GetRecords(reader, cancellationToken).FirstOrDefaultAsync();
     }
-    
-    public static async Task<TcontactBase?> SingleAsync(string displayName, int sheetId, ContactType contactType, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+
+    public static async Task<TcontactBase?> SingleAsync(string displayName, int sheetId, ContactType contactType, CancellationToken? cancellationToken = null)
     {
         if (displayName.IsStringNullOrEmptyOrWhiteSpace())
             return null;
-        
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = SqlSelectScript + Environment.NewLine;
-        
+
         command.CommandText += "WHERE Tcontact.DisplayName = $DisplayName COLLATE NOCASE AND Tcontact.Type = $Type AND Tcontact.SheetId = $SheetId";
-        
-        command.Parameters.Clear();
-        
         command.Parameters.AddWithValue("$DisplayName", displayName);
         command.Parameters.AddWithValue("$Type", (byte)contactType);
         command.Parameters.AddWithValue("$SheetId", sheetId);
-        
+
         var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         return !reader.HasRows ? null : await GetRecords(reader, cancellationToken).FirstOrDefaultAsync();
     }
 
-    public static async Task<Guid> GetGuid(int id, IntColumnSelect columnSelect, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public static async Task<Guid> GetGuid(int id, IntColumnSelect columnSelect, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         var isColumnSelectValid = command.IsIntColumnValidated(columnSelect,
         [
             IntColumnSelect.Id,
@@ -401,8 +353,6 @@ public partial class TcontactBase
             _ => throw new ArgumentOutOfRangeException(nameof(columnSelect), columnSelect, null)
         };
 
-        command.Parameters.Clear();
-
         command.Parameters.AddWithValue("$Id", id);
 
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
@@ -411,11 +361,10 @@ public partial class TcontactBase
         return Guid.Empty;
     }
 
-    public static async Task<Guid> GetGuid(Uri sheetUri, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    public static async Task<Guid> GetGuid(Uri sheetUri, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT Guid FROM Tcontact WHERE Url = $Url COLLATE NOCASE";
-        command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$Url", sheetUri.ToString());
 
@@ -427,13 +376,12 @@ public partial class TcontactBase
     #endregion
 
     #region Delete
-    public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
-        => await DeleteAsync(Id, cancellationToken, cmd);
+    public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null)
+        => await DeleteAsync(Id, cancellationToken);
 
-    public static async Task<OperationState> DeleteAsync(int id, CancellationToken? cancellationToken = null,
-        SqliteCommand? cmd = null)
+    public static async Task<OperationState> DeleteAsync(int id, CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
         command.CommandText =
             """
             DELETE FROM TanimeStudio WHERE IdStudio = $Id;
@@ -443,8 +391,6 @@ public partial class TcontactBase
             DELETE FROM TcontactWebSite WHERE IdContact = $Id;
             DELETE FROM Tcontact WHERE Id = $Id;
             """;
-
-        command.Parameters.Clear();
 
         command.Parameters.AddWithValue("$Id", id);
 
@@ -461,7 +407,7 @@ public partial class TcontactBase
     }
 
     #endregion
-    
+
     private static async IAsyncEnumerable<TcontactBase> GetRecords(SqliteDataReader reader,
         CancellationToken? cancellationToken = null)
     {

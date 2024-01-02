@@ -9,6 +9,7 @@ public enum ItemGroupCountKind
     Category,
     ReleaseMonth,
     GroupName,
+    Target,
 }
 
 public struct ItemGroupCountStruct

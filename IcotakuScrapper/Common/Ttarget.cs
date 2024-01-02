@@ -52,12 +52,12 @@ public partial class Ttarget : ITableNameDescriptionBase<Ttarget>
     
     public static async Task<int> CountAsync(CancellationToken? cancellationToken = null)
     {
-        Main.Command.ClearCommand();
-        Main.Command.CommandText = "SELECT COUNT(Id) FROM Ttarget";
+        await using var command = Main.Connection.CreateCommand();
+        command.CommandText = "SELECT COUNT(Id) FROM Ttarget";
 
         try
         {
-            var result = await Main.Command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
+            var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
             if (result is long count)
                 return (int)count;
             return 0;
@@ -71,13 +71,13 @@ public partial class Ttarget : ITableNameDescriptionBase<Ttarget>
 
     public static async Task<int> CountAsync(int id, CancellationToken? cancellationToken = null)
     {
-        Main.Command.ClearCommand();
-        Main.Command.CommandText = "SELECT COUNT(Id) FROM Ttarget WHERE Id = $Id";
+        await using var command = Main.Connection.CreateCommand();
+        command.CommandText = "SELECT COUNT(Id) FROM Ttarget WHERE Id = $Id";
 
-        Main.Command.Parameters.AddWithValue("$Id", id);
+        command.Parameters.AddWithValue("$Id", id);
         try
         {
-            var result = await Main.Command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
+            var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
             if (result is long count)
                 return (int)count;
             return 0;
@@ -95,22 +95,21 @@ public partial class Ttarget : ITableNameDescriptionBase<Ttarget>
     /// <param name="name"></param>
     /// <param name="section"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
     public static async Task<int> CountAsync(string name, IcotakuSection section, CancellationToken? cancellationToken = null)
     {
         if (name.IsStringNullOrEmptyOrWhiteSpace())
             return 0;
 
-        Main.Command.ClearCommand();
-        Main.Command.CommandText = "SELECT COUNT(Id) FROM Ttarget WHERE Section = $Section AND Name = $Name COLLATE NOCASE";
+        await using var command = Main.Connection.CreateCommand();
+        command.CommandText = "SELECT COUNT(Id) FROM Ttarget WHERE Section = $Section AND Name = $Name COLLATE NOCASE";
 
-        Main.Command.Parameters.AddWithValue("$Name", name.Trim());
-        Main.Command.Parameters.AddWithValue("$Section", (byte)section);
+        command.Parameters.AddWithValue("$Name", name.Trim());
+        command.Parameters.AddWithValue("$Section", (byte)section);
 
         try
         {
-            var result = await Main.Command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
+            var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
             if (result is long count)
                 return (int)count;
             return 0;
@@ -128,15 +127,15 @@ public partial class Ttarget : ITableNameDescriptionBase<Ttarget>
         if (name.IsStringNullOrEmptyOrWhiteSpace())
             return null;
 
-        Main.Command.ClearCommand();
-        Main.Command.CommandText = "SELECT Id FROM Ttarget WHERE Section = $Section AND Name = $Name COLLATE NOCASE";
+        await using var command = Main.Connection.CreateCommand();
+        command.CommandText = "SELECT Id FROM Ttarget WHERE Section = $Section AND Name = $Name COLLATE NOCASE";
 
-        Main.Command.Parameters.AddWithValue("$Name", name.Trim());
-        Main.Command.Parameters.AddWithValue("$Section", (byte)section);
+        command.Parameters.AddWithValue("$Name", name.Trim());
+        command.Parameters.AddWithValue("$Section", (byte)section);
 
         try
         {
-            var result = await Main.Command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
+            var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
             if (result is long count)
                 return (int)count;
             return null;
@@ -167,17 +166,17 @@ public partial class Ttarget : ITableNameDescriptionBase<Ttarget>
         uint limit = 0, uint skip = 0,
         CancellationToken? cancellationToken = null)
     {
-        Main.Command.ClearCommand();
-        Main.Command.CommandText = SqlSelectScript;
+        await using var command = Main.Connection.CreateCommand();
+        command.CommandText = SqlSelectScript;
 
-        Main.Command.CommandText += Environment.NewLine + $"ORDER BY {sortBy} {orderBy}";
+        command.CommandText += Environment.NewLine + $"ORDER BY {sortBy} {orderBy}";
 
         if (limit > 0)
-            Main.Command.CommandText += Environment.NewLine + $"LIMIT {limit} OFFSET {skip}";
+            command.CommandText += Environment.NewLine + $"LIMIT {limit} OFFSET {skip}";
 
         try
         {
-            await using var reader = await Main.Command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
             if (!reader.HasRows)
                 return [];
 
@@ -195,19 +194,19 @@ public partial class Ttarget : ITableNameDescriptionBase<Ttarget>
         uint limit = 0, uint skip = 0,
         CancellationToken? cancellationToken = null)
     {
-        Main.Command.ClearCommand();
-        Main.Command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Section = $Section";
+        await using var command = Main.Connection.CreateCommand();
+        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Section = $Section";
 
-        Main.Command.CommandText += Environment.NewLine + $"ORDER BY {sortBy} {orderBy}";
+        command.CommandText += Environment.NewLine + $"ORDER BY {sortBy} {orderBy}";
 
         if (limit > 0)
-            Main.Command.CommandText += Environment.NewLine + $"LIMIT {limit} OFFSET {skip}";
+            command.CommandText += Environment.NewLine + $"LIMIT {limit} OFFSET {skip}";
 
-        Main.Command.Parameters.AddWithValue("$Section", (byte)section);
+        command.Parameters.AddWithValue("$Section", (byte)section);
 
         try
         {
-            await using var reader = await Main.Command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
             if (!reader.HasRows)
                 return [];
 
@@ -226,12 +225,12 @@ public partial class Ttarget : ITableNameDescriptionBase<Ttarget>
 
     public static async Task<Ttarget?> SingleAsync(int id, CancellationToken? cancellationToken = null)
     {
-        Main.Command.ClearCommand();
-        Main.Command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Id = $Id";
+        await using var command = Main.Connection.CreateCommand();
+        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Id = $Id";
         try
         {
-            Main.Command.Parameters.AddWithValue("$Id", id);
-            await using var reader = await Main.Command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
+            command.Parameters.AddWithValue("$Id", id);
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
             if (!reader.HasRows)
                 return null;
 
@@ -251,15 +250,15 @@ public partial class Ttarget : ITableNameDescriptionBase<Ttarget>
         if (name.IsStringNullOrEmptyOrWhiteSpace())
             return null;
 
-        Main.Command.ClearCommand();
-        Main.Command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Section = $Section AND Name = $Name COLLATE NOCASE";
+        await using var command = Main.Connection.CreateCommand();
+        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Section = $Section AND Name = $Name COLLATE NOCASE";
 
-        Main.Command.Parameters.AddWithValue("$Name", name.Trim());
-        Main.Command.Parameters.AddWithValue("$Section", (byte)section);
+        command.Parameters.AddWithValue("$Name", name.Trim());
+        command.Parameters.AddWithValue("$Section", (byte)section);
 
         try
         {
-            await using var reader = await Main.Command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
             if (!reader.HasRows)
                 return null;
 
@@ -284,24 +283,24 @@ public partial class Ttarget : ITableNameDescriptionBase<Ttarget>
         if (!disableVerification && await ExistsAsync(Name, Section, cancellationToken))
             return new OperationState<int>(false, "Le nom de l'item existe déjà");
 
-        Main.Command.ClearCommand();
-        Main.Command.CommandText =
+        await using var command = Main.Connection.CreateCommand();
+        command.CommandText =
             """
             INSERT INTO Ttarget
                 (Name, Section, Description)
             VALUES
                 ($Name, $Section, $Description)
             """;
-        Main.Command.Parameters.AddWithValue("$Section", (byte)Section);
-        Main.Command.Parameters.AddWithValue("$Name", Name.Trim());
-        Main.Command.Parameters.AddWithValue("$Description", Description ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$Section", (byte)Section);
+        command.Parameters.AddWithValue("$Name", Name.Trim());
+        command.Parameters.AddWithValue("$Description", Description ?? (object)DBNull.Value);
 
         try
         {
-            if (await Main.Command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None) <= 0)
+            if (await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None) <= 0)
                 return new OperationState<int>(false, "Une erreur est survenue lors de l'insertion");
 
-            Id = await Main.Command.GetLastInsertRowIdAsync();
+            Id = await command.GetLastInsertRowIdAsync();
             return new OperationState<int>(true, "Insertion réussie", Id);
         }
         catch (Exception e)
@@ -317,10 +316,10 @@ public partial class Ttarget : ITableNameDescriptionBase<Ttarget>
         if (values.Count == 0)
             return new OperationState(false, "La liste des valeurs ne peut pas être vide");
 
-        Main.Command.ClearCommand();
-        Main.Command.StartWithInsertMode(insertMode);
+        await using var command = Main.Connection.CreateCommand();
+        command.StartWithInsertMode(insertMode);
         
-        Main.Command.CommandText += " INTO Ttarget (Name, Section, Description) VALUES ";
+        command.CommandText += " INTO Ttarget (Name, Section, Description) VALUES ";
         for (uint i = 0; i < values.Count; i++)
         {
             var value = values.ElementAt((int)i);
@@ -331,23 +330,23 @@ public partial class Ttarget : ITableNameDescriptionBase<Ttarget>
                 continue;
             }
 
-            Main.Command.CommandText += Environment.NewLine + $"($Name{i}, $Section{i}, $Description{i})";
+            command.CommandText += Environment.NewLine + $"($Name{i}, $Section{i}, $Description{i})";
 
-            Main.Command.Parameters.AddWithValue($"$Name{i}", value.Name.Trim());
-            Main.Command.Parameters.AddWithValue($"$Section{i}", (byte)value.Section);
-            Main.Command.Parameters.AddWithValue($"$Description{i}", value.Description ?? (object)DBNull.Value);
+            command.Parameters.AddWithValue($"$Name{i}", value.Name.Trim());
+            command.Parameters.AddWithValue($"$Section{i}", (byte)value.Section);
+            command.Parameters.AddWithValue($"$Description{i}", value.Description ?? (object)DBNull.Value);
 
             if (i == values.Count - 1)
-                Main.Command.CommandText += ";";
+                command.CommandText += ";";
             else
-                Main.Command.CommandText += ",";
+                command.CommandText += ",";
             
             LogServices.LogDebug("Ajout de l'item " + value.Name + " à la commande.");
         }
 
         try
         {
-            var count = await Main.Command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
+            var count = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
             return new OperationState(count > 0, $"{count} enregistrement(s) sur {values.Count} ont été insérés avec succès.");
         }
         catch (Exception e)
@@ -363,7 +362,6 @@ public partial class Ttarget : ITableNameDescriptionBase<Ttarget>
     /// <param name="value"></param>
     /// <param name="reloadIfExist"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
     public static async Task<Ttarget?> SingleOrCreateAsync(Ttarget value, bool reloadIfExist= false, CancellationToken? cancellationToken = null)
     {
@@ -402,8 +400,8 @@ public partial class Ttarget : ITableNameDescriptionBase<Ttarget>
                 return new OperationState(false, "Le nom de l'item existe déjà");
         }
         
-        Main.Command.ClearCommand();
-        Main.Command.CommandText =
+        await using var command = Main.Connection.CreateCommand();
+        command.CommandText =
             """
             UPDATE Ttarget SET
                 Section = $Section,
@@ -411,14 +409,14 @@ public partial class Ttarget : ITableNameDescriptionBase<Ttarget>
                 Description = $Description
             WHERE Id = $Id
             """;
-        Main.Command.Parameters.AddWithValue("$Id", Id);
-        Main.Command.Parameters.AddWithValue("$Section", (byte)Section);
-        Main.Command.Parameters.AddWithValue("$Name", Name.Trim());
-        Main.Command.Parameters.AddWithValue("$Description", Description ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$Id", Id);
+        command.Parameters.AddWithValue("$Section", (byte)Section);
+        command.Parameters.AddWithValue("$Name", Name.Trim());
+        command.Parameters.AddWithValue("$Description", Description ?? (object)DBNull.Value);
 
         try
         {
-            return await Main.Command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None) <= 0
+            return await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None) <= 0
                 ? new OperationState(false, "Une erreur est survenue lors de la mise à jour")
                 : new OperationState(true, "Mise à jour réussie");
         }
@@ -437,7 +435,6 @@ public partial class Ttarget : ITableNameDescriptionBase<Ttarget>
     /// Supprime cet enregistrement de la table Ttarget
     /// </summary>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
     public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null)
         => await DeleteAsync(Id, cancellationToken);
@@ -450,13 +447,13 @@ public partial class Ttarget : ITableNameDescriptionBase<Ttarget>
     /// <returns></returns>
     public static async Task<OperationState> DeleteAsync(int id, CancellationToken? cancellationToken = null)
     {
-        Main.Command.ClearCommand();
-        Main.Command.CommandText = "DELETE FROM Ttarget WHERE Id = $Id";
-        Main.Command.Parameters.AddWithValue("$Id", id);
+        await using var command = Main.Connection.CreateCommand();
+        command.CommandText = "DELETE FROM Ttarget WHERE Id = $Id";
+        command.Parameters.AddWithValue("$Id", id);
 
         try
         {
-            var count = await Main.Command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
+            var count = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
             return new OperationState(true, $"{count} enregistrement(s) ont été supprimés.");
         }
         catch (Exception e)
@@ -468,13 +465,13 @@ public partial class Ttarget : ITableNameDescriptionBase<Ttarget>
     
     internal static async Task<OperationState> DeleteAsync(IcotakuSection section, CancellationToken? cancellationToken = null)
     {
-        Main.Command.ClearCommand();
-        Main.Command.CommandText = "DELETE FROM Ttarget WHERE Section = $Section";
-        Main.Command.Parameters.AddWithValue("$Section", section);
+        await using var command = Main.Connection.CreateCommand();
+        command.CommandText = "DELETE FROM Ttarget WHERE Section = $Section";
+        command.Parameters.AddWithValue("$Section", section);
 
         try
         {
-            var count = await Main.Command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
+            var count = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
             return new OperationState(true, $"{count} enregistrement(s) ont été supprimés.");
         }
         catch (Exception e)

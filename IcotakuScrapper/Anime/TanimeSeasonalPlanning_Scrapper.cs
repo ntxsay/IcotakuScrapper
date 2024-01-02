@@ -4,6 +4,7 @@ using IcotakuScrapper.Contact;
 using IcotakuScrapper.Extensions;
 using Microsoft.Data.Sqlite;
 using System.Web;
+using IcotakuScrapper.Objects;
 
 namespace IcotakuScrapper.Anime;
 
@@ -18,28 +19,27 @@ public partial class TanimeSeasonalPlanning
     /// <param name="insertMode"></param>
     /// <param name="isDeleteSectionRecords"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
     public static async Task<OperationState> ScrapAsync(WeatherSeason season,
         DbInsertMode insertMode = DbInsertMode.InsertOrReplace,
-        bool isDeleteSectionRecords = true, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        bool isDeleteSectionRecords = true, CancellationToken? cancellationToken = null)
     {
-        var planning = await ScrapAnimeSeasonalPlanning(season, cancellationToken, cmd).ToArrayAsync();
+        var planning = await ScrapAnimeSeasonalPlanning(season, cancellationToken).ToArrayAsync();
         if (planning.Length == 0)
             return new OperationState(false, "Le planning est vide");
 
         if (isDeleteSectionRecords)
         {
-            var deleteAllResult = await DeleteAllAsync(season, cancellationToken, cmd);
+            var deleteAllResult = await DeleteAllAsync(season, cancellationToken);
             if (!deleteAllResult.IsSuccess)
                 return deleteAllResult;
         }
 
-        return await InsertAsync(planning, insertMode, cancellationToken, cmd);
+        return await InsertAsync(planning, insertMode, cancellationToken);
     }
 
 
-    internal static async IAsyncEnumerable<TanimeSeasonalPlanning> ScrapAnimeSeasonalPlanning(WeatherSeason season, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    internal static async IAsyncEnumerable<TanimeSeasonalPlanning> ScrapAnimeSeasonalPlanning(WeatherSeason season, CancellationToken? cancellationToken = null)
     {
         additionalContentList.Clear();
 
@@ -54,7 +54,7 @@ public partial class TanimeSeasonalPlanning
         if (htmlNodes == null || htmlNodes.Length == 0)
             yield break;
 
-        var seasonRecord = await GetSeasonAsync(season, cancellationToken, cmd);
+        var seasonRecord = await GetSeasonAsync(season, cancellationToken);
         if (seasonRecord is null)
             yield break;
 
@@ -72,7 +72,7 @@ public partial class TanimeSeasonalPlanning
 
             foreach (var tableNode in tableNodes)
             {
-                tasks.Add(ScrapItemAndGetAdditionalInfosAsync(tableNode, categoryName, cancellationToken, cmd));
+                tasks.Add(ScrapItemAndGetAdditionalInfosAsync(tableNode, categoryName, cancellationToken));
             }
         }
 
@@ -96,9 +96,8 @@ public partial class TanimeSeasonalPlanning
     /// <param name="tableItemNode">Correspond au noeud de type Table qui contient des informations pour un animé</param>
     /// <param name="categoryName"></param>
     /// <param name="cancellationToken"></param>
-    /// <param name="cmd"></param>
     /// <returns></returns>
-    private static async Task<TanimeSeasonalPlanning?> ScrapItemAndGetAdditionalInfosAsync(HtmlNode tableItemNode, string categoryName, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    private static async Task<TanimeSeasonalPlanning?> ScrapItemAndGetAdditionalInfosAsync(HtmlNode tableItemNode, string categoryName, CancellationToken? cancellationToken = null)
     {
         //Si le noeud est null, on retourne null
         if (tableItemNode is null)
@@ -163,7 +162,7 @@ public partial class TanimeSeasonalPlanning
         var distributorsNode = tableItemNode.SelectSingleNode(".//span[contains(@class, 'editeur')]/text()");
         if (distributorsNode != null)
         {
-            var distributorsName = await GetContact(distributorsNode, ContactType.Distributor, cancellationToken, cmd).ToArrayAsync();
+            var distributorsName = await GetContact(distributorsNode, ContactType.Distributor, cancellationToken).ToArrayAsync();
             if (distributorsName.Length > 0)
                 foreach (var distributorName in distributorsName)
                     record.Distributors.Add(distributorName);
@@ -173,7 +172,7 @@ public partial class TanimeSeasonalPlanning
         var studiosNode = tableItemNode.SelectSingleNode(".//span[contains(@class, 'studio')]/text()");
         if (studiosNode != null)
         {
-            var studiosName = await GetContact(studiosNode, ContactType.Studio, cancellationToken, cmd).ToArrayAsync();
+            var studiosName = await GetContact(studiosNode, ContactType.Studio, cancellationToken).ToArrayAsync();
             if (studiosName.Length > 0)
                 foreach (var studioName in studiosName)
                     record.Studios.Add(studioName);
@@ -194,7 +193,7 @@ public partial class TanimeSeasonalPlanning
         return record;
     }
 
-    private static async Task<Tseason?> GetSeasonAsync(WeatherSeason season, CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+    private static async Task<Tseason?> GetSeasonAsync(WeatherSeason season, CancellationToken? cancellationToken = null)
     {
         var intSeason = season.ToIntSeason();
         if (intSeason == 0)
@@ -210,11 +209,11 @@ public partial class TanimeSeasonalPlanning
             DisplayName = seasonLiteral,
         };
 
-        return await Tseason.SingleOrCreateAsync(seasonRecord, false, cancellationToken, cmd);
+        return await Tseason.SingleOrCreateAsync(seasonRecord, false, cancellationToken);
     }
 
     private static async Task<TorigineAdaptation?> GetOrigineAdaptationAsync(string? value,
-        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
         if (value == null || value.IsStringNullOrEmptyOrWhiteSpace())
             return null;
@@ -225,11 +224,11 @@ public partial class TanimeSeasonalPlanning
             Section = IcotakuSection.Anime,
         };
 
-        return await TorigineAdaptation.SingleOrCreateAsync(record, true, cancellationToken, cmd);
+        return await TorigineAdaptation.SingleOrCreateAsync(record, true, cancellationToken);
     }
 
     private static async IAsyncEnumerable<string> GetContact(HtmlNode htmlNode, ContactType contactType,
-        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
         if (htmlNode.InnerText.IsStringNullOrEmptyOrWhiteSpace())
             yield break;
@@ -243,7 +242,7 @@ public partial class TanimeSeasonalPlanning
                 if (decodedItem == null || decodedItem.IsStringNullOrEmptyOrWhiteSpace())
                     continue;
 
-                var isExist = await TcontactBase.ExistsAsync(decodedItem, cancellationToken, cmd);
+                var isExist = await TcontactBase.ExistsAsync(decodedItem, cancellationToken);
                 if (!isExist)
                 {
                     var contact = new Tcontact()
@@ -252,7 +251,7 @@ public partial class TanimeSeasonalPlanning
                         Type = contactType,
                     };
 
-                    var resultInsert = await contact.InsertAync(cancellationToken, cmd);
+                    var resultInsert = await contact.InsertAync(false, cancellationToken);
                     if (!resultInsert.IsSuccess)
                         continue;
                 }

@@ -2,6 +2,7 @@
 using IcotakuScrapper.Extensions;
 using Microsoft.Data.Sqlite;
 using System.Text;
+using IcotakuScrapper.Objects;
 
 namespace IcotakuScrapper.Anime;
 
@@ -256,12 +257,12 @@ public partial class TanimeSeasonalPlanning
         uint currentPage = 1, uint maxContentByPage = 20,
         SeasonalAnimePlanningSortBy sortBy = SeasonalAnimePlanningSortBy.ReleaseMonth,
         OrderBy orderBy = OrderBy.Asc,
-        CancellationToken? cancellationToken = null, SqliteCommand? cmd = null)
+        CancellationToken? cancellationToken = null)
     {
-        await using var command = cmd ?? (await Main.GetSqliteConnectionAsync()).CreateCommand();
+        await using var command = Main.Connection.CreateCommand();
 
         int totalItems = 0;
-        _ = GetSqlSelectScript(command, DbScriptMode.Count, options, sortBy, orderBy);
+        _ = GetSqlSelectScript(Main.Command, DbScriptMode.Count, options, sortBy, orderBy);
 
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
         if (result is long count)
@@ -278,7 +279,7 @@ public partial class TanimeSeasonalPlanning
         var totalPages = ExtensionMethods.CountPage((uint)totalItems, (uint)maxContentByPage);
 
 
-        _ = GetSqlSelectScript(command, DbScriptMode.Select, options, sortBy, orderBy);
+        _ = GetSqlSelectScript(Main.Command, DbScriptMode.Select, options, sortBy, orderBy);
         command.AddPagination(currentPage, maxContentByPage);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
@@ -463,7 +464,7 @@ public partial class TanimeSeasonalPlanning
             sqlScript += "TanimeSeasonalPlanning.GroupName = $GroupName COLLATE NOCASE";
         }
 
-        FilterSelection(command, ref sqlScript, options.ItemGroupCountData);
+        FilterSelection(ref command, ref sqlScript, options.ItemGroupCountData);
 
         sqlScript += Environment.NewLine;
         sqlScript += sortBy switch
@@ -508,7 +509,7 @@ public partial class TanimeSeasonalPlanning
         return sqlScript;
     }
 
-    private static void FilterSelection(SqliteCommand command, ref string sqlScript, IReadOnlyCollection<ItemGroupCountStruct> groups)
+    private static void FilterSelection(ref SqliteCommand command, ref string sqlScript, IReadOnlyCollection<ItemGroupCountStruct> groups)
     {
         //Si la requête est vide, on ne fait rien
         if (sqlScript.IsStringNullOrEmptyOrWhiteSpace())
