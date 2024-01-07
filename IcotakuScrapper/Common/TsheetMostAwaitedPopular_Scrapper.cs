@@ -14,7 +14,7 @@ public partial class TsheetMostAwaitedPopular
     [GeneratedRegex(@"(\d+)")]
     internal static partial Regex GetVoteCountRegex();
 
-    public static async Task<TsheetMostAwaitedPopular[]> ScrapPageAsync(IcotakuSection section, IcotakuListType listType)
+    public static async Task<TsheetMostAwaitedPopular[]> ScrapPageAsync(uint length, IcotakuSection section, IcotakuListType listType)
     {
         //récupère l'url de la page
         var url= listType switch
