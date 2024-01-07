@@ -1,7 +1,7 @@
-﻿using System.Text.RegularExpressions;
-using System.Web;
-using HtmlAgilityPack;
+﻿using HtmlAgilityPack;
 using IcotakuScrapper.Extensions;
+using System.Text.RegularExpressions;
+using System.Web;
 
 namespace IcotakuScrapper.Common;
 
@@ -16,7 +16,7 @@ public partial class TsheetStatistic
     /// <returns></returns>
     [GeneratedRegex(@"\b\d{2}/\d{2}/\d{4} à \d{2}:\d{2}\b")]
     private static partial Regex GetFrenchFullDate();
-    
+
     /// <summary>
     /// Pattern pour rechercher l'âge au format "xx ans"
     /// </summary>
@@ -24,19 +24,32 @@ public partial class TsheetStatistic
     [GeneratedRegex(@"\b(\d{1,2}(\.\d)?)\s+(an|ans)?\b")]
     private static partial Regex GetFrenchAge();
 
+    /// <summary>
+    /// Scrap les statistiques d'une fiche et les enregistre dans la base de données. Retourne l'identifiant de la fiche si l'opération s'est bien déroulée
+    /// </summary>
+    /// <param name="section"></param>
+    /// <param name="sheetId"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     public static async Task<OperationState<int>> ScrapAndSaveAsync(IcotakuSection section, int sheetId,
         CancellationToken? cancellationToken = null)
     {
-        var statistic = await ScrapStatisticAsync(sheetId);
+        var statistic = await ScrapStatisticAsync(section, sheetId);
         if (statistic == null)
             return new OperationState<int>(false, "Impossible de récupérer les statistiques de la fiche");
-        
+
         return await statistic.AddOrUpdateAsync(cancellationToken);
     }
-    
-    public static async Task<TsheetStatistic?> ScrapStatisticAsync(int sheetId)
+
+    /// <summary>
+    /// Scrap les statistiques d'une fiche
+    /// </summary>
+    /// <param name="sheetId">Id de la fiche</param>
+    /// <param name="section">Section de la fiche</param>
+    /// <returns></returns>
+    public static async Task<TsheetStatistic?> ScrapStatisticAsync(IcotakuSection section, int sheetId)
     {
-        var url = IcotakuWebHelpers.GetSheetStatisticUrl(IcotakuSection.Anime, sheetId);
+        var url = IcotakuWebHelpers.GetSheetStatisticUrl(section, sheetId);
         if (url == null || url.IsStringNullOrEmptyOrWhiteSpace())
             return null;
 
@@ -51,10 +64,11 @@ public partial class TsheetStatistic
         var (updatedDate, updatedBy) = ScrapUpdatedDate(ref contentNode);
         var inWatchListAverageAge = ScrapInWatchListAverageAge(ref contentNode);
         var (visitorCount, lastVisitorName) = ScrapVisitorCount(ref contentNode);
-        
+
         return new TsheetStatistic
         {
-            Section = IcotakuSection.Anime,
+            SheetId = sheetId,
+            Section = section,
             CreatingDate = creatingDate,
             LastUpdatedDate = updatedDate,
             CreatedBy = createdBy,
@@ -85,18 +99,18 @@ public partial class TsheetStatistic
         if (fullDateMatch.Success && !fullDateMatch.Value.IsStringNullOrEmptyOrWhiteSpace())
             if (DateTime.TryParseExact(fullDateMatch.Value, "dd/MM/yyyy à HH:mm", null, System.Globalization.DateTimeStyles.None, out var date))
                 creatingDate = date;
-        
+
         var indexOfPar = creatingDateAndCreatorNameText.IndexOf("par", StringComparison.OrdinalIgnoreCase);
         if (indexOfPar == -1)
             return (creatingDate, null);
-        
+
         var creatorName = creatingDateAndCreatorNameText.Substring(indexOfPar + 3).Trim().TrimEnd('.');
         if (creatorName.IsStringNullOrEmptyOrWhiteSpace())
             return (creatingDate, null);
-        
+
         return (creatingDate, creatorName);
     }
-    
+
     /// <summary>
     /// Scrap la date de la dernière mise à jour et le nom du dernier membre à l'avoir mise à jour
     /// </summary>
@@ -117,24 +131,24 @@ public partial class TsheetStatistic
         if (fullDateMatch.Success && !fullDateMatch.Value.IsStringNullOrEmptyOrWhiteSpace())
             if (DateTime.TryParseExact(fullDateMatch.Value, "dd/MM/yyyy à HH:mm", null, System.Globalization.DateTimeStyles.None, out var date))
                 updatedDate = date;
-        
+
         var indexOfPar = updatedDateAndUpdaterNameText.IndexOf("par", StringComparison.OrdinalIgnoreCase);
         if (indexOfPar == -1)
             return (updatedDate, null);
-        
+
         var updaterName = updatedDateAndUpdaterNameText.Substring(indexOfPar + 3).Trim().TrimEnd('.');
         if (updaterName.IsStringNullOrEmptyOrWhiteSpace())
             return (updatedDate, null);
-        
+
         return (updatedDate, updaterName);
     }
-    
+
     /// <summary>
     /// Scrap l'âge moyen des membres ayant cet animé dans leur watchlist
     /// </summary>
     /// <param name="contentNode"></param>
     /// <returns></returns>
-    private static Half? ScrapInWatchListAverageAge(ref HtmlNode contentNode)
+    private static float? ScrapInWatchListAverageAge(ref HtmlNode contentNode)
     {
         var inWatchListAverageAgeNode = contentNode.SelectSingleNode("./p[3]");
         if (inWatchListAverageAgeNode == null)
@@ -150,13 +164,13 @@ public partial class TsheetStatistic
             var ageString = ageMatch.Groups[1].Value;
             if (!ageString.IsStringNullOrEmptyOrWhiteSpace() && ageString.Contains('.'))
                 ageString = ageString.Replace('.', ',');
-            if (Half.TryParse(ageString, out var age))
+            if (float.TryParse(ageString, out float age))
                 return age;
         }
 
         return null;
     }
-    
+
     /// <summary>
     /// Scrap le nombre de visite qu'a eu cette fiche jusqu'à présent et le nom du dernier membre à l'avoir visité
     /// </summary>
@@ -166,7 +180,7 @@ public partial class TsheetStatistic
     {
         uint visitorCount = 0;
         string? lastVisitorName = null;
-        
+
         var visitorCountNode = contentNode.SelectSingleNode("./p[4]/text()[1]");
         if (visitorCountNode != null)
         {
@@ -182,7 +196,7 @@ public partial class TsheetStatistic
                 }
             }
         }
-        
+
         var lastVisitorNameNode = contentNode.SelectSingleNode("./p[4]/text()[2]");
         if (lastVisitorNameNode != null)
         {
@@ -198,7 +212,7 @@ public partial class TsheetStatistic
                 }
             }
         }
-        
+
         return (visitorCount, lastVisitorName);
     }
 }

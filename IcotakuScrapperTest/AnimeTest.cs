@@ -263,7 +263,7 @@ namespace IcotakuScrapperTest
         [Test]
         public async Task SCrapTopAnime()
         {
-            var animes = await TsheetMostAwaitedPopular.ScrapPageAsync(IcotakuSection.Anime, IcotakuListType.MostPopular);
+            var animes = await TsheetMostAwaitedPopular.ScrapPageAsync(15, IcotakuSection.Anime, IcotakuListType.MostPopular);
             Assert.IsNotEmpty(animes);
         }
     }

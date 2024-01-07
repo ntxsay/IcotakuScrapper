@@ -33,7 +33,7 @@ public interface ITsheetStatistic
     /// <summary>
     /// Obtient ou définit l'âge moyen des membres ayant cet anime dans leur watchlist
     /// </summary>
-    public Half? InWatchListAverageAge { get; set; }
+    public float? InWatchListAverageAge { get; set; }
     
     /// <summary>
     /// Obtient ou définit le nombre de visite qu'a eu cette fiche jusqu'à présent

@@ -40,7 +40,7 @@ public partial  class TsheetStatistic : ITableSheetBase<TsheetStatistic>, ITshee
     /// <summary>
     /// Obtient ou définit l'âge moyen des membres ayant cet anime dans leur watchlist
     /// </summary>
-    public Half? InWatchListAverageAge { get; set; }
+    public float? InWatchListAverageAge { get; set; }
     
     /// <summary>
     /// Obtient ou définit le nombre de visite qu'a eu cette fiche jusqu'à présent
@@ -77,7 +77,21 @@ public partial  class TsheetStatistic : ITableSheetBase<TsheetStatistic>, ITshee
         clone.Copy(this);
         return clone;
     }
-    
+
+    public override string ToString()
+    {
+        var section = Section switch
+        {
+            IcotakuSection.Anime => "Anime",
+            IcotakuSection.Manga => "Manga",
+            IcotakuSection.Drama => "Drama",
+            IcotakuSection.LightNovel => "Light Novel",
+            IcotakuSection.Community => "Communauté",
+            _ => "Inconnue"
+        };
+        return $"Stats N°{Id} de la fiche {section} n°{SheetId} créée le {CreatingDate:dd/MM/yyyy à HH:mm} par {CreatedBy} et mise à jour le {LastUpdatedDate:dd/MM/yyyy à HH:mm} par {LastUpdatedBy}.";
+    }
+
     #region Count
 
     public static async Task<int> CountAsync(CancellationToken? cancellationToken = null)
@@ -397,9 +411,6 @@ public partial  class TsheetStatistic : ITableSheetBase<TsheetStatistic>, ITshee
 
         //Si l'item n'existe pas, on l'ajoute
         var addResult = await value.InsertAsync(true, cancellationToken);
-        if (addResult.IsSuccess)
-            value.Id = addResult.Data;
-
         return addResult;
     }
 
@@ -491,7 +502,7 @@ public partial  class TsheetStatistic : ITableSheetBase<TsheetStatistic>, ITshee
                     : reader.GetString(reader.GetOrdinal("LastVisitedBy")),
                 InWatchListAverageAge = reader.IsDBNull(reader.GetOrdinal("InReadOrWatchListAverageAge"))
                     ? null
-                    : reader.GetFieldValue<Half>(reader.GetOrdinal("InReadOrWatchListAverageAge")),
+                    : reader.GetFloat(reader.GetOrdinal("InReadOrWatchListAverageAge")),
                 VisitCount = (uint)reader.GetInt32(reader.GetOrdinal("VisitCount"))
             };
         }

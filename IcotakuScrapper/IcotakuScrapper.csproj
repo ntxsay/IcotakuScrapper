@@ -12,13 +12,11 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <Description>IcotakuScrapper vous permet l'obtention et le stockage local d’informations détaillées sur les animés depuis le site web d’Icotaku.com vers une base de données SQLite.</Description>
     <Authors>ntxsay</Authors>
-    <Version>1.0.0-alpha2</Version>
+    <Version>1.0.0-alpha3</Version>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
     <PackageReleaseNotes>- Correction de bugs
-- Ajout d'outils de configuration de la base de données et du dossier de travail
-- Ajout de propriétés permettant l'accès ou l'interdiction aux contenus réservé aux adultes et/ou un public averti
-- Possibilité de télécharger les ressources (vignettes et captures d'écran) de la fiche
+- Ajout du scraping des statistiques des fiches (animes, mangas, etc)
 - Amélioration de la documentation </PackageReleaseNotes>
   </PropertyGroup>
 
