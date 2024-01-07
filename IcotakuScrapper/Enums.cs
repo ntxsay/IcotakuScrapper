@@ -98,6 +98,23 @@ public enum IcotakuSection : byte
     Community,
 }
 
+/// <summary>
+/// Enumération des types de fiches Icotaku.
+/// </summary>
+public enum IcotakuSheetType : byte
+{
+    Unknown,
+    Anime,
+    Manga,
+    LightNovel,
+    Drama,
+    Person,
+    Character,
+    Studio,
+    Distributor,
+}
+
+
 public enum IcotakuDefaultSubFolder : byte
 {
     /// <summary>
@@ -122,21 +139,6 @@ public enum IcotakuDefaultSubFolder : byte
 }
 
 
-/// <summary>
-/// Enumération des types de fiches Icotaku.
-/// </summary>
-public enum IcotakuSheetType : byte
-{
-    Unknown,
-    Anime,
-    Manga,
-    LightNovel,
-    Drama,
-    Person,
-    Character,
-    Studio,
-    Distributor,
-}
 
 public enum IcotakuDefaultFolder : byte
 {

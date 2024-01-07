@@ -125,7 +125,7 @@ public static class IcotakuWebHelpers
 
         return sheetIdInt;
     }
-    
+
     /// <summary>
     /// Retourne le type de contact à partir de l'url de la fiche du contact (personne, personnage, studio, éditeur, etc...)
     /// </summary>
@@ -146,13 +146,36 @@ public static class IcotakuWebHelpers
             "personnage" => ContactType.Character,
             _ => ContactType.Unknown
         };
-            
-        return contactType != ContactType.Unknown 
-            ? contactType 
+
+        return contactType != ContactType.Unknown
+            ? contactType
             : null;
     }
 
     #region Get Url
+
+    /// <summary>
+    /// Retourne l'url des statistiques d'une fiche
+    /// </summary>
+    /// <param name="section"></param>
+    /// <param name="sheetId"></param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentOutOfRangeException"></exception>
+    internal static string? GetSheetStatisticUrl(IcotakuSection section, int sheetId)
+    {
+        if (section == IcotakuSection.Community)
+            return null;
+
+        return GetBaseUrl(section) + "/fiche/statistique" + section switch
+        {
+            IcotakuSection.Anime => $"/anime/{sheetId}",
+            IcotakuSection.Manga => $"/manga/{sheetId}",
+            IcotakuSection.LightNovel => $"/novel/{sheetId}",
+            IcotakuSection.Drama => $"/drama/{sheetId}",
+            _ => throw new ArgumentOutOfRangeException(nameof(section), section,
+                "Ce type de contenu n'est pas pris en charge")
+        };
+    }
 
     /// <summary>
     /// Retourne l'url complète du planning saisonnier à partir de la saison
@@ -191,21 +214,26 @@ public static class IcotakuWebHelpers
             IcotakuSection.Anime => sheetType switch
             {
                 IcotakuSheetType.Unknown => null,
-                IcotakuSheetType.Anime => $"https://anime.icotaku.com/animes.html?filter=all{(page == 0 ? "" : "&page=" + page)}",
-                IcotakuSheetType.Person => $"https://anime.icotaku.com/individus.html?filter=all{(page == 0 ? "" : "&page=" + page)}",
-                IcotakuSheetType.Character => $"https://anime.icotaku.com/personnages.html?filter=all{(page == 0 ? "" : "&page=" + page)}",
+                IcotakuSheetType.Anime =>
+                    $"https://anime.icotaku.com/animes.html?filter=all{(page == 0 ? "" : "&page=" + page)}",
+                IcotakuSheetType.Person =>
+                    $"https://anime.icotaku.com/individus.html?filter=all{(page == 0 ? "" : "&page=" + page)}",
+                IcotakuSheetType.Character =>
+                    $"https://anime.icotaku.com/personnages.html?filter=all{(page == 0 ? "" : "&page=" + page)}",
                 IcotakuSheetType.Studio => null,
                 IcotakuSheetType.Distributor => null,
-                _ => throw new ArgumentOutOfRangeException(nameof(sheetType), sheetType, "Ce type de fiche n'est pas pris en charge.")
+                _ => throw new ArgumentOutOfRangeException(nameof(sheetType), sheetType,
+                    "Ce type de fiche n'est pas pris en charge.")
             },
             IcotakuSection.Manga => null,
             IcotakuSection.LightNovel => null,
             IcotakuSection.Drama => null,
             IcotakuSection.Community => null,
-            _ => throw new ArgumentOutOfRangeException(nameof(contentSection), contentSection, "Cette section du site Icotaku n'est pas prise en charge.")
+            _ => throw new ArgumentOutOfRangeException(nameof(contentSection), contentSection,
+                "Cette section du site Icotaku n'est pas prise en charge.")
         };
     }
-    
+
     /// <summary>
     /// Retourne l'url de la page de catégorie en fonction du type de contenu (Anime, Manga, etc) depuis icotaku.com
     /// </summary>
@@ -215,15 +243,12 @@ public static class IcotakuWebHelpers
     /// <exception cref="ArgumentOutOfRangeException"></exception>
     internal static string GetCategoriesUrl(IcotakuSection section, CategoryType categoryType)
     {
-        return section switch
+        return GetBaseUrl(section) + categoryType switch
         {
-            IcotakuSection.Anime => categoryType switch
-            {
-                CategoryType.Theme => GetBaseUrl(section) + "/themes.html",
-                CategoryType.Genre => GetBaseUrl(section) + "/genres.html",
-                _ => throw new ArgumentOutOfRangeException(nameof(categoryType), categoryType, "Ce type de catégorie n'est pas pris en charge")
-            },
-            _ => throw new ArgumentOutOfRangeException(nameof(section), section, "Ce type de contenu n'est pas pris en charge")
+            CategoryType.Theme => "/themes.html",
+            CategoryType.Genre => "/genres.html",
+            _ => throw new ArgumentOutOfRangeException(nameof(categoryType), categoryType,
+                "Ce type de catégorie n'est pas pris en charge")
         };
     }
 
@@ -237,7 +262,7 @@ public static class IcotakuWebHelpers
     {
         return GetBaseUrl(section) + $"/classement/attendus/all/{page}.html";
     }
-    
+
     /// <summary>
     /// Obtient l'url de la page de la liste des animes les plus populaires
     /// </summary>
@@ -248,10 +273,10 @@ public static class IcotakuWebHelpers
     {
         return GetBaseUrl(section) + $"/classement/top/all/{page}.html";
     }
-    
-    public static Uri? GetAdvancedSearchUri(IcotakuSection section, AnimeFinderParameterStruct findParameter, uint page = 1)
+
+    public static Uri? GetAdvancedSearchUri(IcotakuSection section, AnimeFinderParameterStruct findParameter,
+        uint page = 1)
     {
-        
         var baseUrl = section switch
         {
             IcotakuSection.Anime => $"{IcotakuAnimeUrl}/recherche-avancee.html?",
@@ -259,16 +284,17 @@ public static class IcotakuWebHelpers
             IcotakuSection.LightNovel => null,
             IcotakuSection.Drama => null,
             IcotakuSection.Community => null,
-            _ => throw new ArgumentOutOfRangeException(nameof(section), section, "Cette section du site Icotaku n'est pas prise en charge.")
+            _ => throw new ArgumentOutOfRangeException(nameof(section), section,
+                "Cette section du site Icotaku n'est pas prise en charge.")
         };
-        
+
         if (baseUrl == null)
             return null;
-        
+
         //Rechercher dans les titres
         if (findParameter.Title != null && !findParameter.Title.IsStringNullOrEmptyOrWhiteSpace())
             baseUrl += $"titre={findParameter.Title}";
-        
+
         //Rechercher dans les catégories
         if (findParameter.Format != null && !findParameter.Format.IsStringNullOrEmptyOrWhiteSpace())
         {
@@ -276,7 +302,7 @@ public static class IcotakuWebHelpers
                 baseUrl += "&";
             baseUrl += $"&categorie={findParameter.Format}";
         }
-        
+
         //Rechercher dans les publics
         if (findParameter.Target != null && !findParameter.Target.IsStringNullOrEmptyOrWhiteSpace())
         {
@@ -284,15 +310,16 @@ public static class IcotakuWebHelpers
                 baseUrl += "&";
             baseUrl += $"&public={findParameter.Target}";
         }
-        
+
         //Rechercher dans les origines
-        if (findParameter.OrigineAdaptation != null && !findParameter.OrigineAdaptation.IsStringNullOrEmptyOrWhiteSpace())
+        if (findParameter.OrigineAdaptation != null &&
+            !findParameter.OrigineAdaptation.IsStringNullOrEmptyOrWhiteSpace())
         {
             if (!baseUrl.EndsWith('?'))
                 baseUrl += "&";
             baseUrl += $"&origine={findParameter.OrigineAdaptation}";
         }
-        
+
         //Rechercher dans les studios
         if (findParameter.StudioId is > 0)
         {
@@ -300,7 +327,7 @@ public static class IcotakuWebHelpers
                 baseUrl += "&";
             baseUrl += $"&studio={findParameter.StudioId}";
         }
-        
+
         //Rechercher dans les états de diffusion
         if (findParameter.DiffusionState != DiffusionStateKind.Unknown)
         {
@@ -308,7 +335,7 @@ public static class IcotakuWebHelpers
                 baseUrl += "&";
             baseUrl += $"&diffusion={findParameter.DiffusionState.GetSearchPamareter()}";
         }
-        
+
         //Rechercher dans les éditeurs
         if (findParameter.DistributorId is > 0)
         {
@@ -316,7 +343,7 @@ public static class IcotakuWebHelpers
                 baseUrl += "&";
             baseUrl += $"&editeurFr={findParameter.DistributorId}";
         }
-        
+
         //Rechercher dans les années
         if (findParameter.Year > 0)
         {
@@ -324,7 +351,7 @@ public static class IcotakuWebHelpers
                 baseUrl += "&";
             baseUrl += $"&annee={findParameter.Year}";
         }
-        
+
         //Rechercher dans les mois
         if (findParameter.MonthNumber is >= 1 and <= 12)
         {
@@ -332,7 +359,7 @@ public static class IcotakuWebHelpers
                 baseUrl += "&";
             baseUrl += $"&mois={findParameter.MonthNumber.GetMonthSearchPamareter()}";
         }
-        
+
         //Rechercher dans les saisons
         if (findParameter.Season != WeatherSeasonKind.Unknown)
         {
@@ -340,7 +367,7 @@ public static class IcotakuWebHelpers
                 baseUrl += "&";
             baseUrl += $"&saison={findParameter.Season.GetSearchPamareter()}";
         }
-        
+
         //Rechercher dans les genres (inclus)
         if (findParameter.IncludeGenresId.Length > 0)
         {
@@ -348,7 +375,7 @@ public static class IcotakuWebHelpers
                 baseUrl += "&";
             baseUrl += $"&genres_inclus[]={string.Join("&genres_inclus[]=", findParameter.IncludeGenresId)}";
         }
-        
+
         //Rechercher dans les genres (exclus)
         if (findParameter.ExcludeGenresId.Length > 0)
         {
@@ -356,7 +383,7 @@ public static class IcotakuWebHelpers
                 baseUrl += "&";
             baseUrl += $"&genres_exclus[]={string.Join("&genres_exclus[]=", findParameter.ExcludeGenresId)}";
         }
-        
+
         //Rechercher dans les thèmes (inclus)
         if (findParameter.IncludeThemesId.Length > 0)
         {
@@ -364,7 +391,7 @@ public static class IcotakuWebHelpers
                 baseUrl += "&";
             baseUrl += $"&themes_inclus[]={string.Join("&themes_inclus[]=", findParameter.IncludeThemesId)}";
         }
-        
+
         //Rechercher dans les thèmes (exclus)
         if (findParameter.ExcludeThemesId.Length > 0)
         {
@@ -372,14 +399,14 @@ public static class IcotakuWebHelpers
                 baseUrl += "&";
             baseUrl += $"&themes_exclus[]={string.Join("&themes_exclus[]=", findParameter.ExcludeThemesId)}";
         }
-        
+
         //commit
         if (!baseUrl.EndsWith('?'))
         {
             baseUrl += "&";
             baseUrl += "commit=Rechercher";
         }
-        
+
         //page
         if (page > 0)
         {
@@ -387,7 +414,7 @@ public static class IcotakuWebHelpers
                 baseUrl += "&";
             baseUrl += $"&page={page}";
         }
-        
+
         if (baseUrl.EndsWith('?'))
             baseUrl = baseUrl.TrimEnd('?');
         else if (baseUrl.EndsWith('&'))
@@ -409,31 +436,37 @@ public static class IcotakuWebHelpers
     /// <param name="page"></param>
     /// <returns></returns>
     /// <exception cref="ArgumentOutOfRangeException"></exception>
-    public static string? GetIcotakuFilterUrl(char letter, IcotakuSection contentSection, IcotakuSheetType sheetType, uint page = 1)
+    public static string? GetIcotakuFilterUrl(char letter, IcotakuSection contentSection, IcotakuSheetType sheetType,
+        uint page = 1)
     {
         if (!char.IsLetter(letter))
             return null;
-        
+
         return contentSection switch
         {
-            IcotakuSection.Anime =>sheetType switch
+            IcotakuSection.Anime => sheetType switch
             {
                 IcotakuSheetType.Unknown => null,
-                IcotakuSheetType.Anime => $"{IcotakuAnimeUrl}/animes.html?filter={letter}{(page == 0 ? "" : "&page=" + page)}",
-                IcotakuSheetType.Person => $"{IcotakuAnimeUrl}/individus.html?filter={{letter}}{(page == 0 ? "" : "&page=" + page)}",
-                IcotakuSheetType.Character => $"{IcotakuAnimeUrl}/personnages.html?filter={{letter}}{(page == 0 ? "" : "&page=" + page)}",
+                IcotakuSheetType.Anime =>
+                    $"{IcotakuAnimeUrl}/animes.html?filter={letter}{(page == 0 ? "" : "&page=" + page)}",
+                IcotakuSheetType.Person =>
+                    $"{IcotakuAnimeUrl}/individus.html?filter={{letter}}{(page == 0 ? "" : "&page=" + page)}",
+                IcotakuSheetType.Character =>
+                    $"{IcotakuAnimeUrl}/personnages.html?filter={{letter}}{(page == 0 ? "" : "&page=" + page)}",
                 IcotakuSheetType.Studio => null,
                 IcotakuSheetType.Distributor => null,
-                _ => throw new ArgumentOutOfRangeException(nameof(sheetType), sheetType, "Ce type de fiche n'est pas pris en charge.")
+                _ => throw new ArgumentOutOfRangeException(nameof(sheetType), sheetType,
+                    "Ce type de fiche n'est pas pris en charge.")
             },
             IcotakuSection.Manga => null,
             IcotakuSection.LightNovel => null,
             IcotakuSection.Drama => null,
             IcotakuSection.Community => null,
-            _ => throw new ArgumentOutOfRangeException(nameof(contentSection), contentSection, "Cette section du site Icotaku n'est pas prise en charge.")
+            _ => throw new ArgumentOutOfRangeException(nameof(contentSection), contentSection,
+                "Cette section du site Icotaku n'est pas prise en charge.")
         };
     }
-    
+
     /// <summary>
     /// Obtient l'url de la page du planning saisonnier
     /// </summary>
@@ -447,8 +480,8 @@ public static class IcotakuWebHelpers
         LogServices.LogDebug($"La section {section} n'est pas prise en charge.");
         return null;
     }
-    
-    
+
+
     /// <summary>
     /// Retourne l'url absolue de l'image à partir de l'attribut src du noeud img
     /// </summary>
@@ -469,7 +502,7 @@ public static class IcotakuWebHelpers
         bool isUri = Uri.TryCreate(value, UriKind.Absolute, out var uri);
         return isUri && uri != null ? uri : null;
     }
-    
+
     public static string? GetStartImgSrcByContactType(ContactType contactType)
     {
         return contactType switch
@@ -493,7 +526,7 @@ public static class IcotakuWebHelpers
         var href = node.GetAttributeValue("href", string.Empty);
         if (href.IsStringNullOrEmptyOrWhiteSpace())
             return null;
-        
+
         return GetFullHrefFromRelativePath(href, section);
     }
 
@@ -514,7 +547,7 @@ public static class IcotakuWebHelpers
             href = href.TrimStart('/');
 
         href = $"{GetBaseUrl(section)}/{href}";
-        
+
         href = href.Replace("&amp;", "&");
 
         if (Uri.TryCreate(href, UriKind.Absolute, out var uri) && uri.IsAbsoluteUri)
@@ -598,7 +631,8 @@ public static class IcotakuWebHelpers
     /// <param name="episodeNumber"></param>
     /// <param name="separatorPath">Caractère permettant de séparer un chemin d'accès. Si ce paramètre est null alors <see cref="Path.DirectorySeparatorChar"/> sera utilisé à la place.</param>
     /// <returns></returns>
-    public static string? GetRelativeSubFolderPath(IcotakuDefaultSubFolder type, int episodeNumber = 0, char? separatorPath = null)
+    public static string? GetRelativeSubFolderPath(IcotakuDefaultSubFolder type, int episodeNumber = 0,
+        char? separatorPath = null)
     {
         var separator = separatorPath ?? Path.DirectorySeparatorChar;
         return type switch
@@ -707,7 +741,8 @@ public static class IcotakuWebHelpers
         }
     }
 
-        internal static async Task<string?> GetAdvancedSearchHtmlAsync(IcotakuSection section, Uri sheetUri, string username,
+    internal static async Task<string?> GetAdvancedSearchHtmlAsync(IcotakuSection section, Uri sheetUri,
+        string username,
         string password)
     {
         try
@@ -832,9 +867,10 @@ public static class IcotakuWebHelpers
 
         //Retourne le chemin d'accès complet du dossier de la fiche
         var partialPaths = relativeSubFolderPath
-            .Split(Path.DirectorySeparatorChar, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToList();
+            .Split(Path.DirectorySeparatorChar, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .ToList();
         partialPaths.Insert(0, baseFolderPath);
-        
+
         //Crée le chemin d'accès complet du dossier de la fiche
         var folderPath = Path.Combine(partialPaths.ToArray());
         if (!Directory.Exists(folderPath))
@@ -849,13 +885,13 @@ public static class IcotakuWebHelpers
         var thumbnailPath = Path.Combine(folderPath, fileName);
         if (!Path.IsPathFullyQualified(thumbnailPath))
             return null;
-        
+
         //Si le fichier existe déjà alors on le supprime si l'option est activée sinon on retourne le chemin d'accès
         if (File.Exists(thumbnailPath))
         {
             if (!deleteIfExists)
                 return thumbnailPath;
-            
+
             File.Delete(thumbnailPath);
         }
 

@@ -526,6 +526,13 @@ public partial class Tanime : TanimeBase
                 }
             }
             
+            if (!reader.IsDBNull(reader.GetOrdinal("IdStatistic")))
+            {
+                var statisticId = reader.GetInt32(reader.GetOrdinal("IdStatistic"));
+                var statistic = await TsheetStatistic.SingleAsync(statisticId, cancellationToken);
+                if (statistic != null)
+                    anime.Statistic = statistic;
+            }
         }
         
         return [.. animeList];
@@ -536,6 +543,7 @@ public partial class Tanime : TanimeBase
         SELECT
             Tanime.Id AS AnimeId,
             Tanime.Guid AS AnimeGuid,
+            Tanime.IdStatistic,
             Tanime.IdTarget,
             Tanime.IdFormat,
             Tanime.IdOrigine,

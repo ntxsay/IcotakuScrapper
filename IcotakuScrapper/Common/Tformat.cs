@@ -61,9 +61,6 @@ public partial class Tformat
         await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT COUNT(Id) FROM Tformat";
 
-        
-            
-
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
         if (result is long count)
             return (int)count;
@@ -333,8 +330,6 @@ public partial class Tformat
             WHERE Id = $Id
             """;
 
-        
-
         command.Parameters.AddWithValue("$Id", Id);
         command.Parameters.AddWithValue("$Section", (byte)Section);
         command.Parameters.AddWithValue("$Name", Name.Trim());
@@ -410,8 +405,6 @@ public partial class Tformat
     /// <returns></returns>
     public static async Task<Tformat?> SingleOrCreateAsync(Tformat value, bool reloadIfExist = false, CancellationToken? cancellationToken = null)
     {
-        await using var command = Main.Connection.CreateCommand();
-        
         if (!reloadIfExist)
         {
             var id = await GetIdOfAsync(value.Name, value.Section, cancellationToken);
@@ -529,8 +522,6 @@ public partial class Tformat
     {
         await using var command = Main.Connection.CreateCommand();
         command.CommandText = "DELETE FROM Tformat WHERE Id = $Id";
-
-        
 
         command.Parameters.AddWithValue("$Id", id);
 

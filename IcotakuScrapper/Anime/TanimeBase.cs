@@ -19,7 +19,7 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
     /// Obtient ou définit le guid de l'anime.
     /// </summary>
     public Guid Guid { get; protected set; } = Guid.Empty;
-
+    
     /// <summary>
     /// Obtient ou définit l'id de la fiche Icotaku de l'anime.
     /// </summary>
@@ -98,6 +98,8 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
     public TorigineAdaptation? OrigineAdaptation { get; set; }
 
     public Tseason? Season { get; set; }
+    
+    public TsheetStatistic? Statistic { get; set; }
 
     /// <summary>
     /// Obtient ou définit la description de l'anime.
@@ -171,6 +173,7 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
         DiffusionState = value.DiffusionState;
         EpisodesCount = value.EpisodesCount;
         Duration = value.Duration;
+        Statistic = value.Statistic?.Clone() ?? null;
         Format = value.Format;
         Target = value.Target;
         OrigineAdaptation = value.OrigineAdaptation;
@@ -186,6 +189,13 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
         Studios.ToObservableCollection(value.Studios, true);
         Staffs.ToObservableCollection(value.Staffs, true);
         
+    }
+    
+    public TanimeBase Clone()
+    {
+        var clone = new TanimeBase();
+        clone.Copy(this);
+        return clone;
     }
 
     public override string ToString() => $"{Name} ({Id}/{SheetId})";
@@ -1216,6 +1226,14 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
                         record.Staffs.Add(staff);
                 }
             }
+            
+            if (!reader.IsDBNull(reader.GetOrdinal("IdStatistic")))
+            {
+                var statisticId = reader.GetInt32(reader.GetOrdinal("IdStatistic"));
+                var statistic = await TsheetStatistic.SingleAsync(statisticId, cancellationToken);
+                if (statistic != null)
+                    record.Statistic = statistic;
+            }
         }
 
         return [.. records];
@@ -1227,6 +1245,7 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
             Tanime.Id AS AnimeId,
             Tanime.Guid AS AnimeGuid,
             Tanime.Name AS AnimeName,
+            Tanime.IdStatistic,
             Tanime.IdFormat,
             Tanime.IdTarget,
             Tanime.IdOrigine,

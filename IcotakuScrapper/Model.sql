@@ -16,6 +16,28 @@ CREATE TABLE IF NOT EXISTS TsheetIndex
 );
 -- endregion
 
+-- region Table TsheetStatistic
+/*
+ Création de la table TsheetIndex qui permet 
+ d'indexer les adresses url des fiches des animés ou autres
+ */
+DROP TABLE IF EXISTS TsheetStatistic;
+CREATE TABLE IF NOT EXISTS TsheetStatistic
+(
+    "Id"                          INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
+    "SheetId"                     INTEGER NOT NULL DEFAULT 0, -- Id de la fiche (anime, manga, etc)
+    "Section"                     INTEGER NOT NULL,           -- Section de la fiche (ANime, Manga, etc)
+    "CreatingDate"                TEXT    NULL,
+    "LastUpdateDate"              TEXT    NULL,
+    "CreatedBy"                   TEXT    NULL,
+    "LastUpdatedBy"               TEXT    NULL,
+    "InReadOrWatchListAverageAge" REAL    NULL,
+    "VisitCount"                  INTEGER NOT NULL DEFAULT 0,
+    "LastVisitedBy"               TEXT    NULL
+
+);
+-- endregion
+
 -- region Table TsheetIndex
 /*
  Création de la table TsheetIndex qui permet 
@@ -24,16 +46,16 @@ CREATE TABLE IF NOT EXISTS TsheetIndex
 DROP TABLE IF EXISTS TsheetMostAwaitedPopular;
 CREATE TABLE IF NOT EXISTS TsheetMostAwaitedPopular
 (
-    "Id"          INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
-    "SheetId"     INTEGER NOT NULL DEFAULT 0, -- Id de la fiche (anime, manga, etc)
-    "Url"         TEXT    NOT NULL,    -- Url de la fiche (anime, manga, etc)
-    "Section"     INTEGER NOT NULL,           -- Section de la fiche (ANime, Manga, etc)
-    "SheetName"   TEXT    NOT NULL,           -- Nom de la fiche (anime, manga, etc)
-    "SheetType"   INTEGER NOT NULL,           -- Type de la fiche (anime, manga, character, studios, individual, etc)
-    "ListType"    INTEGER NOT NULL,           -- Type de liste (most awaited, most popular)
-    "Rank"        INTEGER NOT NULL DEFAULT 0,   -- Classement
-    "VoteCount"   INTEGER NOT NULL DEFAULT 0,   -- Nombre de vote
-    "Note"        REAL    NOT NULL DEFAULT 0    -- Note
+    "Id"        INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
+    "SheetId"   INTEGER NOT NULL DEFAULT 0, -- Id de la fiche (anime, manga, etc)
+    "Url"       TEXT    NOT NULL,           -- Url de la fiche (anime, manga, etc)
+    "Section"   INTEGER NOT NULL,           -- Section de la fiche (ANime, Manga, etc)
+    "SheetName" TEXT    NOT NULL,           -- Nom de la fiche (anime, manga, etc)
+    "SheetType" INTEGER NOT NULL,           -- Type de la fiche (anime, manga, character, studios, individual, etc)
+    "ListType"  INTEGER NOT NULL,           -- Type de liste (most awaited, most popular)
+    "Rank"      INTEGER NOT NULL DEFAULT 0, -- Classement
+    "VoteCount" INTEGER NOT NULL DEFAULT 0, -- Nombre de vote
+    "Note"      REAL    NOT NULL DEFAULT 0  -- Note
 );
 -- endregion
 
@@ -232,6 +254,7 @@ CREATE TABLE IF NOT EXISTS Tanime
                                                          substr('89ab', 1 + (abs(random()) % 4), 1) ||
                                                          substr(lower(hex(randomblob(2))), 2) || '-' ||
                                                          lower(hex(randomblob(6)))),
+    "IdStatistic"       INTEGER NULL REFERENCES TsheetStatistic (Id) ON DELETE CASCADE,
     "IdTarget"          INTEGER NULL REFERENCES Ttarget (Id) ON DELETE CASCADE,
     "IdFormat"          INTEGER NULL REFERENCES Tformat (Id) ON DELETE CASCADE,
     "IdOrigine"         INTEGER NULL REFERENCES TorigineAdaptation (Id) ON DELETE CASCADE,

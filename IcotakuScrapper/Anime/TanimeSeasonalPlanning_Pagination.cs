@@ -262,7 +262,7 @@ public partial class TanimeSeasonalPlanning
         await using var command = Main.Connection.CreateCommand();
 
         int totalItems = 0;
-        _ = GetSqlSelectScript(Main.Command, DbScriptMode.Count, options, sortBy, orderBy);
+        _ = GetSqlSelectScript(command, DbScriptMode.Count, options, sortBy, orderBy);
 
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
         if (result is long count)
@@ -279,7 +279,7 @@ public partial class TanimeSeasonalPlanning
         var totalPages = ExtensionMethods.CountPage((uint)totalItems, (uint)maxContentByPage);
 
 
-        _ = GetSqlSelectScript(Main.Command, DbScriptMode.Select, options, sortBy, orderBy);
+        _ = GetSqlSelectScript(command, DbScriptMode.Select, options, sortBy, orderBy);
         command.AddPagination(currentPage, maxContentByPage);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);

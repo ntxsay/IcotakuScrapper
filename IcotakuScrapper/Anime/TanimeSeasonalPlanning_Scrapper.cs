@@ -66,6 +66,10 @@ public partial class TanimeSeasonalPlanning
             if (categoryName == null || categoryName.IsStringNullOrEmptyOrWhiteSpace())
                 continue;
 
+            //Si le nom de la catégorie est "Hentai" et que l'accès au contenu adulte est désactivé, on passe à la catégorie suivante
+            if (!Main.IsAccessingToAdultContent && categoryName.Equals("Hentai", StringComparison.OrdinalIgnoreCase))
+                continue;
+
             var tableNodes = categoryNode.SelectNodes(".//table")?.ToArray();
             if (tableNodes == null || tableNodes.Length == 0)
                 yield break;

@@ -122,6 +122,34 @@ public partial class TanimeSeasonalPlanning
             return null;
         return await TanimeBase.GetOrDownloadThumbnailAsync(uri, cancellationToken);
     }
+    
+    /// <summary>
+    /// Retourne les planning d'une saison spécifiée dont les fiches n'ont pas été téléchargées.
+    /// </summary>
+    /// <param name="season"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static async Task<TanimeSeasonalPlanning[]> GetPlanningsWithFullSheetNotDownloaded(WeatherSeason season, CancellationToken? cancellationToken = null)
+    {
+        var intSeason = season.ToIntSeason();
+        if (intSeason == 0)
+            return [];
+
+        await using var command = Main.Connection.CreateCommand();
+        command.CommandText = SqlSelectScript + Environment.NewLine;
+        command.CommandText += "WHERE TanimeSeasonalPlanning.SheetId NOT IN (SELECT Tanime.SheetId FROM Tanime)";
+        
+        //sql partiel interdisant l'accès aux contenus explicites et adultes si l'utilisateur n'a pas activé l'option   
+        command.AddExplicitContentFilter(DbStartFilterMode.And, "TanimeSeasonalPlanning.IsAdultContent", "TanimeSeasonalPlanning.IsExplicitContent");
+
+        // WHERE Tanime.SheetId = TanimeSeasonalPlanning.SheetId
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
+        if (!reader.HasRows)
+            return [];
+
+        return await GetRecords(reader, cancellationToken).ToArrayAsync();
+    }
 
     #region Count
 
