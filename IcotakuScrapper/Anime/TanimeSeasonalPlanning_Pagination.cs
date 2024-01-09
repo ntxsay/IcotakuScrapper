@@ -519,67 +519,79 @@ public partial class TanimeSeasonalPlanning
         {
             SeasonalAnimePlanningSortBy.Default => groupBy switch
             {
-                SeasonalAnimePlanningGroupBy.GroupName => $"ORDER BY TanimeSeasonalPlanning.GroupName {groupHeaderOrderedBy}, ORDER BY TanimeSeasonalPlanning.Id {itemsOrderedBy}",
-                SeasonalAnimePlanningGroupBy.OrigineAdaptation => $"ORDER BY TorigineAdaptation.Name {groupHeaderOrderedBy}, ORDER BY TanimeSeasonalPlanning.Id {itemsOrderedBy}",
-                SeasonalAnimePlanningGroupBy.ReleaseMonth => $"ORDER BY TanimeSeasonalPlanning.ReleaseMonth {groupHeaderOrderedBy}, ORDER BY TanimeSeasonalPlanning.Id {itemsOrderedBy}",
-                SeasonalAnimePlanningGroupBy.Season => $"ORDER BY Tseason.SeasonNumber {groupHeaderOrderedBy}, ORDER BY TanimeSeasonalPlanning.Id {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.GroupName => $"ORDER BY TanimeSeasonalPlanning.GroupName {groupHeaderOrderedBy}, TanimeSeasonalPlanning.Id {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.OrigineAdaptation => $"ORDER BY TorigineAdaptation.Name {groupHeaderOrderedBy}, TanimeSeasonalPlanning.Id {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.ReleaseMonth => $"ORDER BY TanimeSeasonalPlanning.ReleaseMonth {groupHeaderOrderedBy}, TanimeSeasonalPlanning.Id {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.Season => $"ORDER BY Tseason.SeasonNumber {groupHeaderOrderedBy}, TanimeSeasonalPlanning.Id {itemsOrderedBy}",
                 SeasonalAnimePlanningGroupBy.Default => $"ORDER BY TanimeSeasonalPlanning.Id {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.Category => $"ORDER BY Tcategory.Name {groupHeaderOrderedBy}, TanimeSeasonalPlanning.Id {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.Letter => $"ORDER BY UPPER(SUBSTR(TanimeSeasonalPlanning.AnimeName, 1, 1)) {groupHeaderOrderedBy}, TanimeSeasonalPlanning.Id {itemsOrderedBy}",
                 _ => throw new ArgumentOutOfRangeException(nameof(groupBy), groupBy, null)
             },
             SeasonalAnimePlanningSortBy.Season => groupBy switch
             {
-                SeasonalAnimePlanningGroupBy.GroupName => $"ORDER BY TanimeSeasonalPlanning.GroupName {groupHeaderOrderedBy}, ORDER BY Tseason.SeasonNumber {itemsOrderedBy}",
-                SeasonalAnimePlanningGroupBy.OrigineAdaptation => $"ORDER BY TorigineAdaptation.Name {groupHeaderOrderedBy}, ORDER BY Tseason.SeasonNumber {itemsOrderedBy}",
-                SeasonalAnimePlanningGroupBy.ReleaseMonth => $"ORDER BY TanimeSeasonalPlanning.ReleaseMonth {groupHeaderOrderedBy}, ORDER BY Tseason.SeasonNumber {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.GroupName => $"ORDER BY TanimeSeasonalPlanning.GroupName {groupHeaderOrderedBy}, Tseason.SeasonNumber {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.OrigineAdaptation => $"ORDER BY TorigineAdaptation.Name {groupHeaderOrderedBy}, Tseason.SeasonNumber {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.ReleaseMonth => $"ORDER BY TanimeSeasonalPlanning.ReleaseMonth {groupHeaderOrderedBy}, Tseason.SeasonNumber {itemsOrderedBy}",
                 SeasonalAnimePlanningGroupBy.Season => $"ORDER BY Tseason.SeasonNumber {itemsOrderedBy}",
-                SeasonalAnimePlanningGroupBy.Default => $"ORDER BY TanimeSeasonalPlanning.Id {itemsOrderedBy}, ORDER BY Tseason.SeasonNumber {groupHeaderOrderedBy}",
+                SeasonalAnimePlanningGroupBy.Default => $"ORDER BY TanimeSeasonalPlanning.Id {itemsOrderedBy}, Tseason.SeasonNumber {groupHeaderOrderedBy}",
+                SeasonalAnimePlanningGroupBy.Category => $"ORDER BY Tcategory.Name {groupHeaderOrderedBy}, Tseason.SeasonNumber {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.Letter => $"ORDER BY UPPER(SUBSTR(TanimeSeasonalPlanning.AnimeName, 1, 1)) {groupHeaderOrderedBy}, Tseason.SeasonNumber {itemsOrderedBy}",
                 _ => throw new ArgumentOutOfRangeException(nameof(groupBy), groupBy, null)
             },
             SeasonalAnimePlanningSortBy.ReleaseMonth => groupBy switch
             {
-                SeasonalAnimePlanningGroupBy.GroupName => $"ORDER BY TanimeSeasonalPlanning.GroupName {groupHeaderOrderedBy}, ORDER BY TanimeSeasonalPlanning.ReleaseMonth {itemsOrderedBy}",
-                SeasonalAnimePlanningGroupBy.OrigineAdaptation => $"ORDER BY TorigineAdaptation.Name {groupHeaderOrderedBy}, ORDER BY TanimeSeasonalPlanning.ReleaseMonth {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.GroupName => $"ORDER BY TanimeSeasonalPlanning.GroupName {groupHeaderOrderedBy}, TanimeSeasonalPlanning.ReleaseMonth {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.OrigineAdaptation => $"ORDER BY TorigineAdaptation.Name {groupHeaderOrderedBy}, TanimeSeasonalPlanning.ReleaseMonth {itemsOrderedBy}",
                 SeasonalAnimePlanningGroupBy.ReleaseMonth => $"ORDER BY TanimeSeasonalPlanning.ReleaseMonth {itemsOrderedBy}",
-                SeasonalAnimePlanningGroupBy.Season => $"ORDER BY Tseason.SeasonNumber {groupHeaderOrderedBy}, ORDER BY TanimeSeasonalPlanning.ReleaseMonth {itemsOrderedBy}",
-                SeasonalAnimePlanningGroupBy.Default => $"ORDER BY TanimeSeasonalPlanning.Id {itemsOrderedBy}, ORDER BY TanimeSeasonalPlanning.ReleaseMonth {groupHeaderOrderedBy}",
+                SeasonalAnimePlanningGroupBy.Season => $"ORDER BY Tseason.SeasonNumber {groupHeaderOrderedBy}, TanimeSeasonalPlanning.ReleaseMonth {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.Default => $"ORDER BY TanimeSeasonalPlanning.Id {itemsOrderedBy}, TanimeSeasonalPlanning.ReleaseMonth {groupHeaderOrderedBy}",
+                SeasonalAnimePlanningGroupBy.Category => $"ORDER BY Tcategory.Name {groupHeaderOrderedBy}, TanimeSeasonalPlanning.ReleaseMonth {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.Letter => $"ORDER BY UPPER(SUBSTR(TanimeSeasonalPlanning.AnimeName, 1, 1)) {groupHeaderOrderedBy}, TanimeSeasonalPlanning.ReleaseMonth {itemsOrderedBy}",
                 _ => throw new ArgumentOutOfRangeException(nameof(groupBy), groupBy, null)
             },
             SeasonalAnimePlanningSortBy.AnimeName => groupBy switch
             {
-                SeasonalAnimePlanningGroupBy.GroupName => $"ORDER BY TanimeSeasonalPlanning.AnimeName {itemsOrderedBy}, TanimeSeasonalPlanning.GroupName {groupHeaderOrderedBy}",
-                SeasonalAnimePlanningGroupBy.OrigineAdaptation => $"ORDER BY TanimeSeasonalPlanning.AnimeName {itemsOrderedBy}, TorigineAdaptation.Name {groupHeaderOrderedBy}",
-                SeasonalAnimePlanningGroupBy.ReleaseMonth => $"ORDER BY TanimeSeasonalPlanning.AnimeName {itemsOrderedBy}, TanimeSeasonalPlanning.ReleaseMonth {groupHeaderOrderedBy}",
-                SeasonalAnimePlanningGroupBy.Season => $"ORDER BY TanimeSeasonalPlanning.AnimeName {itemsOrderedBy}, Tseason.SeasonNumber {groupHeaderOrderedBy}",
+                SeasonalAnimePlanningGroupBy.GroupName => $"ORDER BY TanimeSeasonalPlanning.GroupName {groupHeaderOrderedBy}, TanimeSeasonalPlanning.AnimeName {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.OrigineAdaptation => $"ORDER BY TorigineAdaptation.Name {groupHeaderOrderedBy}, TanimeSeasonalPlanning.AnimeName {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.ReleaseMonth => $"ORDER BY TanimeSeasonalPlanning.ReleaseMonth {groupHeaderOrderedBy}, TanimeSeasonalPlanning.AnimeName {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.Season => $"ORDER BY Tseason.SeasonNumber {groupHeaderOrderedBy}, TanimeSeasonalPlanning.AnimeName {itemsOrderedBy}",
                 SeasonalAnimePlanningGroupBy.Default => $"ORDER BY TanimeSeasonalPlanning.AnimeName {itemsOrderedBy}",
-                SeasonalAnimePlanningGroupBy.Category => expr,
-                SeasonalAnimePlanningGroupBy.Letter => expr,
+                SeasonalAnimePlanningGroupBy.Category => $"ORDER BY Tcategory.Name {groupHeaderOrderedBy}, TanimeSeasonalPlanning.AnimeName {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.Letter => $"ORDER BY UPPER(SUBSTR(TanimeSeasonalPlanning.AnimeName, 1, 1)) {groupHeaderOrderedBy}, TanimeSeasonalPlanning.AnimeName {itemsOrderedBy}",
                 _ => throw new ArgumentOutOfRangeException(nameof(groupBy), groupBy, null)
             },
             SeasonalAnimePlanningSortBy.GroupName => groupBy switch
             {
                 SeasonalAnimePlanningGroupBy.GroupName => $"ORDER BY TanimeSeasonalPlanning.GroupName {itemsOrderedBy}",
-                SeasonalAnimePlanningGroupBy.OrigineAdaptation => $"ORDER BY TanimeSeasonalPlanning.GroupName {itemsOrderedBy}, TorigineAdaptation.Name {groupHeaderOrderedBy}",
-                SeasonalAnimePlanningGroupBy.ReleaseMonth => $"ORDER BY TanimeSeasonalPlanning.GroupName {itemsOrderedBy}, TanimeSeasonalPlanning.ReleaseMonth {groupHeaderOrderedBy}",
-                SeasonalAnimePlanningGroupBy.Season => $"ORDER BY TanimeSeasonalPlanning.GroupName {itemsOrderedBy}, Tseason.SeasonNumber {groupHeaderOrderedBy}",
+                SeasonalAnimePlanningGroupBy.OrigineAdaptation => $"ORDER BY TorigineAdaptation.Name {groupHeaderOrderedBy}, TanimeSeasonalPlanning.GroupName {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.ReleaseMonth => $"ORDER BY TanimeSeasonalPlanning.ReleaseMonth {groupHeaderOrderedBy}, TanimeSeasonalPlanning.GroupName {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.Season => $"ORDER BY Tseason.SeasonNumber {groupHeaderOrderedBy}, TanimeSeasonalPlanning.GroupName {itemsOrderedBy}",
                 SeasonalAnimePlanningGroupBy.Default => $"ORDER BY TanimeSeasonalPlanning.GroupName {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.Category => $"ORDER BY Tcategory.Name {groupHeaderOrderedBy}, TanimeSeasonalPlanning.GroupName {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.Letter => $"ORDER BY UPPER(SUBSTR(TanimeSeasonalPlanning.AnimeName, 1, 1)) {groupHeaderOrderedBy}, TanimeSeasonalPlanning.GroupName {itemsOrderedBy}",
                 _ => throw new ArgumentOutOfRangeException(nameof(groupBy), groupBy, null)
             },
             SeasonalAnimePlanningSortBy.SheetId => groupBy switch
             {
-                SeasonalAnimePlanningGroupBy.GroupName => $"ORDER BY TanimeSeasonalPlanning.SheetId {itemsOrderedBy}, TanimeSeasonalPlanning.GroupName {groupHeaderOrderedBy}",
-                SeasonalAnimePlanningGroupBy.OrigineAdaptation => $"ORDER BY TanimeSeasonalPlanning.SheetId {itemsOrderedBy}, TorigineAdaptation.Name {groupHeaderOrderedBy}",
-                SeasonalAnimePlanningGroupBy.ReleaseMonth => $"ORDER BY TanimeSeasonalPlanning.SheetId {itemsOrderedBy}, TanimeSeasonalPlanning.ReleaseMonth {groupHeaderOrderedBy}",
-                SeasonalAnimePlanningGroupBy.Season => $"ORDER BY TanimeSeasonalPlanning.SheetId {itemsOrderedBy}, Tseason.SeasonNumber {groupHeaderOrderedBy}",
+                SeasonalAnimePlanningGroupBy.GroupName => $"ORDER BY TanimeSeasonalPlanning.GroupName {groupHeaderOrderedBy}, TanimeSeasonalPlanning.SheetId {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.OrigineAdaptation => $"ORDER BY TorigineAdaptation.Name {groupHeaderOrderedBy}, TanimeSeasonalPlanning.SheetId {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.ReleaseMonth => $"ORDER BY TanimeSeasonalPlanning.ReleaseMonth {groupHeaderOrderedBy}, TanimeSeasonalPlanning.SheetId {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.Season => $"ORDER BY Tseason.SeasonNumber {groupHeaderOrderedBy}, TanimeSeasonalPlanning.SheetId {itemsOrderedBy}",
                 SeasonalAnimePlanningGroupBy.Default => $"ORDER BY TanimeSeasonalPlanning.SheetId {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.Category => $"ORDER BY Tcategory.Name {groupHeaderOrderedBy}, TanimeSeasonalPlanning.SheetId {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.Letter => $"ORDER BY UPPER(SUBSTR(TanimeSeasonalPlanning.AnimeName, 1, 1)) {groupHeaderOrderedBy}, TanimeSeasonalPlanning.SheetId {itemsOrderedBy}",
                 _ => throw new ArgumentOutOfRangeException(nameof(groupBy), groupBy, null)
             },
             SeasonalAnimePlanningSortBy.OrigineAdaptation => groupBy switch
             {
-                SeasonalAnimePlanningGroupBy.GroupName => $"ORDER BY TorigineAdaptation.Name {itemsOrderedBy}, TanimeSeasonalPlanning.GroupName {groupHeaderOrderedBy}",
+                SeasonalAnimePlanningGroupBy.GroupName => $"ORDER BY TanimeSeasonalPlanning.GroupName {groupHeaderOrderedBy}, TorigineAdaptation.Name {itemsOrderedBy}",
                 SeasonalAnimePlanningGroupBy.OrigineAdaptation => $"ORDER BY TorigineAdaptation.Name {itemsOrderedBy}",
-                SeasonalAnimePlanningGroupBy.ReleaseMonth => $"ORDER BY TorigineAdaptation.Name {itemsOrderedBy}, TanimeSeasonalPlanning.ReleaseMonth {groupHeaderOrderedBy}",
-                SeasonalAnimePlanningGroupBy.Season => $"ORDER BY TorigineAdaptation.Name {itemsOrderedBy}, Tseason.SeasonNumber {groupHeaderOrderedBy}",
+                SeasonalAnimePlanningGroupBy.ReleaseMonth => $"ORDER BY TanimeSeasonalPlanning.ReleaseMonth {groupHeaderOrderedBy}, TorigineAdaptation.Name {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.Season => $"ORDER BY Tseason.SeasonNumber {groupHeaderOrderedBy}, TorigineAdaptation.Name {itemsOrderedBy}",
                 SeasonalAnimePlanningGroupBy.Default => $"ORDER BY TorigineAdaptation.Name {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.Category => $"ORDER BY Tcategory.Name {groupHeaderOrderedBy}, TorigineAdaptation.Name {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.Letter => $"ORDER BY UPPER(SUBSTR(TanimeSeasonalPlanning.AnimeName, 1, 1)) {groupHeaderOrderedBy}, TorigineAdaptation.Name {itemsOrderedBy}",
                 _ => throw new ArgumentOutOfRangeException(nameof(groupBy), groupBy, null)
             },
             _ => throw new ArgumentOutOfRangeException(nameof(sortBy), sortBy, null)
