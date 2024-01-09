@@ -40,6 +40,23 @@ public partial class TsheetStatistic
 
         return await statistic.AddOrUpdateAsync(cancellationToken);
     }
+    
+    /// <summary>
+    /// Scrap les statistiques d'une fiche, les enregistre dans la base de données puis le retourne si l'opération s'est bien déroulée
+    /// </summary>
+    /// <param name="section"></param>
+    /// <param name="sheetId"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static async Task<TsheetStatistic?> ScrapAndGetAsync(IcotakuSection section, int sheetId,
+        CancellationToken? cancellationToken = null)
+    {
+        var result = await ScrapAndSaveAsync(section, sheetId, cancellationToken);
+        if (!result.IsSuccess)
+            return null;
+        
+        return await SingleAsync(result.Data, cancellationToken);
+    }
 
     /// <summary>
     /// Scrap les statistiques d'une fiche

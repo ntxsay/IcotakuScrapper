@@ -68,7 +68,7 @@ namespace IcotakuScrapper.Services
         {
             command.CommandText += Environment.NewLine + sortBy switch
             {
-                SeasonalAnimePlanningSortBy.Id => $"ORDER BY TanimeSeasonalPlanning.Id {orderBy}",
+                SeasonalAnimePlanningSortBy.Default => $"ORDER BY TanimeSeasonalPlanning.Id {orderBy}",
                 SeasonalAnimePlanningSortBy.SheetId => $"ORDER BY TanimeSeasonalPlanning.SheetId {orderBy}",
                 SeasonalAnimePlanningSortBy.ReleaseMonth => $"ORDER BY TanimeSeasonalPlanning.ReleaseMonth {orderBy}",
                 SeasonalAnimePlanningSortBy.AnimeName => $"ORDER BY TanimeSeasonalPlanning.AnimeName {orderBy}",

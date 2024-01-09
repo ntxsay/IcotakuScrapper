@@ -8,7 +8,8 @@ namespace IcotakuScrapper.Anime;
 
 public enum SeasonalAnimePlanningSortBy : byte
 {
-    Id,
+    //Organise les données par Id
+    Default,
     SheetId,
     OrigineAdaptation,
     Season,
@@ -137,11 +138,12 @@ public partial class TanimeSeasonalPlanning
 
         await using var command = Main.Connection.CreateCommand();
         command.CommandText = SqlSelectScript + Environment.NewLine;
-        command.CommandText += "WHERE TanimeSeasonalPlanning.SheetId NOT IN (SELECT Tanime.SheetId FROM Tanime)";
-        
+        command.CommandText += "WHERE TanimeSeasonalPlanning.SheetId NOT IN (SELECT Tanime.SheetId FROM Tanime) AND TanimeSeasonalPlanning.IdSeason = (SELECT Id FROM Tseason WHERE SeasonNumber = $SeasonNumber)";
+        //SELECT * FROM TanimeSeasonalPlanning 
         //sql partiel interdisant l'accès aux contenus explicites et adultes si l'utilisateur n'a pas activé l'option   
         command.AddExplicitContentFilter(DbStartFilterMode.And, "TanimeSeasonalPlanning.IsAdultContent", "TanimeSeasonalPlanning.IsExplicitContent");
 
+        command.Parameters.AddWithValue("$SeasonNumber", intSeason);
         // WHERE Tanime.SheetId = TanimeSeasonalPlanning.SheetId
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
@@ -446,9 +448,6 @@ public partial class TanimeSeasonalPlanning
         command.AddOrderSort(sortBy, orderBy);
         command.AddLimitOffset(limit, offset);
 
-        
-            
-
         command.Parameters.AddWithValue("$IdSeason", idSeason);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
@@ -467,10 +466,6 @@ public partial class TanimeSeasonalPlanning
         command.AddOrderSort(sortBy, orderBy);
 
         command.AddLimitOffset(limit, offset);
-
-        
-            
-
         command.Parameters.AddWithValue("$Date", DateHelpers.GetYearMonthInt(date));
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
@@ -481,14 +476,7 @@ public partial class TanimeSeasonalPlanning
     }
 
     #endregion
-
-    #region Paginate
-
-
-
-
-    #endregion
-
+    
     #region Single
 
     public static async Task<TanimeSeasonalPlanning?> SingleAsync(int id, IntColumnSelect columnSelect,
@@ -507,9 +495,6 @@ public partial class TanimeSeasonalPlanning
             Debug.WriteLine($"La valeur de {nameof(columnSelect)} est invalide : {columnSelect}");
             return null;
         }
-
-        
-            
 
         command.Parameters.AddWithValue("$Id", id);
 
@@ -718,6 +703,55 @@ public partial class TanimeSeasonalPlanning
 
     #endregion
 
+    public async Task<OperationState<int>> AddOrUpdateAsync(CancellationToken? cancellationToken = null)
+        => await AddOrUpdateAsync(this, cancellationToken);
+
+    public static async Task<OperationState<int>> AddOrUpdateAsync(TanimeSeasonalPlanning value,
+        CancellationToken? cancellationToken = null)
+    {
+        if (value.Url.IsStringNullOrEmptyOrWhiteSpace() || !Uri.TryCreate(value.Url, UriKind.Absolute, out var uri) || !uri.IsAbsoluteUri)
+            return new OperationState<int>(false, "L'URL de la fiche est invalide");
+
+        if (value.AnimeName.IsStringNullOrEmptyOrWhiteSpace())
+            return new OperationState<int>(false, "Le nom de l'anime est invalide");
+
+        if (value.GroupName.IsStringNullOrEmptyOrWhiteSpace())
+            return new OperationState<int>(false, "Le nom du groupe est invalide");
+
+        if (value.Season.Id <= 0 || !await Tseason.ExistsAsync(value.Season.Id, cancellationToken))
+            return new OperationState<int>(false, "La saison est invalide");
+
+        //Vérifie si l'item existe déjà
+        var existingId = await GetIdOfAsync(uri, cancellationToken);
+
+        //Si l'item existe déjà
+        if (existingId.HasValue)
+        {
+            /*
+             * Si l'id de la item actuel n'est pas neutre c'est-à-dire que l'id n'est pas inférieur ou égal à 0
+             * Et qu'il existe un Id correspondant à un enregistrement dans la base de données
+             * mais que celui-ci ne correspond pas à l'id de l'item actuel
+             * alors l'enregistrement existe déjà et on annule l'opération
+             */
+            if (value.Id > 0 && existingId.Value != value.Id)
+                return new OperationState<int>(false, "Un item autre que celui-ci existe déjà");
+
+            /*
+             * Si l'id de l'item actuel est neutre c'est-à-dire que l'id est inférieur ou égal à 0
+             * alors on met à jour l'id de l'item actuel avec l'id de l'enregistrement existant
+             */
+            if (existingId.Value != value.Id)
+                value.Id = existingId.Value;
+
+            //On met à jour l'enregistrement
+            return (await value.UpdateAsync(true, cancellationToken)).ToGenericState(value.Id);
+        }
+
+        //Si l'item n'existe pas, on l'ajoute
+        var addResult = await value.InsertAsync(true, cancellationToken);
+        return addResult;
+    }
+    
     #region Delete
 
     public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null)

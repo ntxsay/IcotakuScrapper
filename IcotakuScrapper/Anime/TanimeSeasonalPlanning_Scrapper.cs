@@ -10,7 +10,7 @@ namespace IcotakuScrapper.Anime;
 
 public partial class TanimeSeasonalPlanning
 {
-    private static readonly HashSet<AnimeAdditionalInfosStruct> additionalContentList = [];
+    private static readonly HashSet<AnimeAdditionalInfosStruct> AdditionalContentList = [];
 
     /// <summary>
     /// Scrappe le planning saisonnier d'animé
@@ -24,8 +24,8 @@ public partial class TanimeSeasonalPlanning
         DbInsertMode insertMode = DbInsertMode.InsertOrReplace,
         bool isDeleteSectionRecords = true, CancellationToken? cancellationToken = null)
     {
-        var planning = await ScrapAnimeSeasonalPlanning(season, cancellationToken).ToArrayAsync();
-        if (planning.Length == 0)
+        var seasonalPlannings = await ScrapAnimeSeasonalPlanning(season, cancellationToken).ToArrayAsync();
+        if (seasonalPlannings.Length == 0)
             return new OperationState(false, "Le planning est vide");
 
         if (isDeleteSectionRecords)
@@ -35,13 +35,31 @@ public partial class TanimeSeasonalPlanning
                 return deleteAllResult;
         }
 
-        return await InsertAsync(planning, insertMode, cancellationToken);
+        return await InsertAsync(seasonalPlannings, insertMode, cancellationToken);
     }
 
+    public static async Task<OperationState> ScrapAndAddOrUpdateAsync(WeatherSeason season, CancellationToken? cancellationToken = null)
+    {
+        var seasonalPlannings = await ScrapAnimeSeasonalPlanning(season, cancellationToken).ToArrayAsync();
+        if (seasonalPlannings.Length == 0)
+            return new OperationState(false, "Le planning est vide");
+
+        List<OperationState> results = [];
+        foreach (var seasonalPlanning in seasonalPlannings)
+        {
+            results.Add((await seasonalPlanning.AddOrUpdateAsync()).ToBaseState());
+        }
+        
+        if (results.All(a => a.IsSuccess))
+            return new OperationState(true, "Tous les animés ont été ajoutés ou mis à jour");
+        return results.All(a => !a.IsSuccess) 
+            ? new OperationState(false, "Aucun animé n'a été ajouté ou mis à jour") 
+            : new OperationState(true, "Certains animés ont été ajoutés ou mis à jour");
+    }
 
     internal static async IAsyncEnumerable<TanimeSeasonalPlanning> ScrapAnimeSeasonalPlanning(WeatherSeason season, CancellationToken? cancellationToken = null)
     {
-        additionalContentList.Clear();
+        AdditionalContentList.Clear();
 
         var url = IcotakuWebHelpers.GetAnimeSeasonalPlanningUrl(season);
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || !uri.IsAbsoluteUri)

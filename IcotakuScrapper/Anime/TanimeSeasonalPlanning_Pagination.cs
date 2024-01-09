@@ -10,6 +10,17 @@ public partial class TanimeSeasonalPlanning
 {
     #region Selection Mode
 
+    /// <summary>
+    /// Retourne des groupe d'éléments en fonction du mode de sélection et affiche le nombre d'éléments par groupe.
+    /// </summary>
+    /// <param name="selectionMode"></param>
+    /// <param name="season"></param>
+    /// <param name="orderBy"></param>
+    /// <param name="isAdultContent"></param>
+    /// <param name="isExplicitContent"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentOutOfRangeException"></exception>
     public static async IAsyncEnumerable<ItemGroupCountStruct> CountAndGroupBySelectionMode(SeasonalAnimeSelectionMode selectionMode, WeatherSeason season, OrderBy orderBy = OrderBy.Asc,
         bool? isAdultContent = false, bool? isExplicitContent = false, CancellationToken? cancellationToken = null)
     {
@@ -256,13 +267,14 @@ public partial class TanimeSeasonalPlanning
     public static async Task<Paginate<TanimeSeasonalPlanning>> PaginateAsync(SeasonalAnimePlanningOptions options,
         uint currentPage = 1, uint maxContentByPage = 20,
         SeasonalAnimePlanningSortBy sortBy = SeasonalAnimePlanningSortBy.ReleaseMonth,
-        OrderBy orderBy = OrderBy.Asc,
+        SeasonalAnimePlanningGroupBy groupBy = SeasonalAnimePlanningGroupBy.ReleaseMonth,
+        OrderBy itemsOrderedBy = OrderBy.Asc, OrderBy groupHeaderOrderedBy = OrderBy.Asc,
         CancellationToken? cancellationToken = null)
     {
         await using var command = Main.Connection.CreateCommand();
 
         int totalItems = 0;
-        _ = GetSqlSelectScript(command, DbScriptMode.Count, options, sortBy, orderBy);
+        _ = GetSqlSelectScript(command, DbScriptMode.Count, options, sortBy, groupBy, itemsOrderedBy, groupHeaderOrderedBy);
 
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
         if (result is long count)
@@ -276,10 +288,10 @@ public partial class TanimeSeasonalPlanning
                 totalItems: 0,
                 items: []);
 
-        var totalPages = ExtensionMethods.CountPage((uint)totalItems, (uint)maxContentByPage);
+        var totalPages = ExtensionMethods.CountPage((uint)totalItems, maxContentByPage);
 
 
-        _ = GetSqlSelectScript(command, DbScriptMode.Select, options, sortBy, orderBy);
+        _ = GetSqlSelectScript(command, DbScriptMode.Select, options, sortBy, groupBy, itemsOrderedBy, groupHeaderOrderedBy);
         command.AddPagination(currentPage, maxContentByPage);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
@@ -310,8 +322,9 @@ public partial class TanimeSeasonalPlanning
 
     private static string GetSqlSelectScript(SqliteCommand command, DbScriptMode scriptMode,
         SeasonalAnimePlanningOptions options,
-        SeasonalAnimePlanningSortBy sortBy = SeasonalAnimePlanningSortBy.ReleaseMonth,
-        OrderBy orderBy = OrderBy.Asc)
+        SeasonalAnimePlanningSortBy sortBy = SeasonalAnimePlanningSortBy.ReleaseMonth, 
+        SeasonalAnimePlanningGroupBy groupBy = SeasonalAnimePlanningGroupBy.ReleaseMonth,
+        OrderBy itemsOrderedBy = OrderBy.Asc, OrderBy groupHeaderOrderedBy = OrderBy.Asc)
     {
         var sqlScript = scriptMode switch
         {
@@ -466,18 +479,7 @@ public partial class TanimeSeasonalPlanning
 
         FilterSelection(ref command, ref sqlScript, options.ItemGroupCountData);
 
-        sqlScript += Environment.NewLine;
-        sqlScript += sortBy switch
-        {
-            SeasonalAnimePlanningSortBy.Id => $"ORDER BY TanimeSeasonalPlanning.Id {orderBy}",
-            SeasonalAnimePlanningSortBy.Season => $"ORDER BY Tseason.SeasonNumber {orderBy}",
-            SeasonalAnimePlanningSortBy.ReleaseMonth => $"ORDER BY TanimeSeasonalPlanning.ReleaseMonth {orderBy}",
-            SeasonalAnimePlanningSortBy.AnimeName => $"ORDER BY TanimeSeasonalPlanning.AnimeName {orderBy}",
-            SeasonalAnimePlanningSortBy.GroupName => $"ORDER BY TanimeSeasonalPlanning.GroupName {orderBy}",
-            SeasonalAnimePlanningSortBy.SheetId => $"ORDER BY TanimeSeasonalPlanning.SheetId {orderBy}",
-            SeasonalAnimePlanningSortBy.OrigineAdaptation => $"ORDER BY TorigineAdaptation.Name {orderBy}",
-            _ => throw new ArgumentOutOfRangeException(nameof(sortBy), sortBy, null)
-        };
+        OrderRequestBy(ref sqlScript, sortBy, groupBy, itemsOrderedBy, groupHeaderOrderedBy);
 
         command.CommandText = sqlScript;
         command.Parameters.Clear();
@@ -509,6 +511,81 @@ public partial class TanimeSeasonalPlanning
         return sqlScript;
     }
 
+    private static void OrderRequestBy(ref string sqlScript, SeasonalAnimePlanningSortBy sortBy,
+        SeasonalAnimePlanningGroupBy groupBy, OrderBy itemsOrderedBy, OrderBy groupHeaderOrderedBy)
+    {
+        sqlScript += Environment.NewLine;
+        sqlScript += sortBy switch
+        {
+            SeasonalAnimePlanningSortBy.Default => groupBy switch
+            {
+                SeasonalAnimePlanningGroupBy.GroupName => $"ORDER BY TanimeSeasonalPlanning.GroupName {groupHeaderOrderedBy}, ORDER BY TanimeSeasonalPlanning.Id {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.OrigineAdaptation => $"ORDER BY TorigineAdaptation.Name {groupHeaderOrderedBy}, ORDER BY TanimeSeasonalPlanning.Id {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.ReleaseMonth => $"ORDER BY TanimeSeasonalPlanning.ReleaseMonth {groupHeaderOrderedBy}, ORDER BY TanimeSeasonalPlanning.Id {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.Season => $"ORDER BY Tseason.SeasonNumber {groupHeaderOrderedBy}, ORDER BY TanimeSeasonalPlanning.Id {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.Default => $"ORDER BY TanimeSeasonalPlanning.Id {itemsOrderedBy}",
+                _ => throw new ArgumentOutOfRangeException(nameof(groupBy), groupBy, null)
+            },
+            SeasonalAnimePlanningSortBy.Season => groupBy switch
+            {
+                SeasonalAnimePlanningGroupBy.GroupName => $"ORDER BY TanimeSeasonalPlanning.GroupName {groupHeaderOrderedBy}, ORDER BY Tseason.SeasonNumber {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.OrigineAdaptation => $"ORDER BY TorigineAdaptation.Name {groupHeaderOrderedBy}, ORDER BY Tseason.SeasonNumber {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.ReleaseMonth => $"ORDER BY TanimeSeasonalPlanning.ReleaseMonth {groupHeaderOrderedBy}, ORDER BY Tseason.SeasonNumber {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.Season => $"ORDER BY Tseason.SeasonNumber {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.Default => $"ORDER BY TanimeSeasonalPlanning.Id {itemsOrderedBy}, ORDER BY Tseason.SeasonNumber {groupHeaderOrderedBy}",
+                _ => throw new ArgumentOutOfRangeException(nameof(groupBy), groupBy, null)
+            },
+            SeasonalAnimePlanningSortBy.ReleaseMonth => groupBy switch
+            {
+                SeasonalAnimePlanningGroupBy.GroupName => $"ORDER BY TanimeSeasonalPlanning.GroupName {groupHeaderOrderedBy}, ORDER BY TanimeSeasonalPlanning.ReleaseMonth {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.OrigineAdaptation => $"ORDER BY TorigineAdaptation.Name {groupHeaderOrderedBy}, ORDER BY TanimeSeasonalPlanning.ReleaseMonth {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.ReleaseMonth => $"ORDER BY TanimeSeasonalPlanning.ReleaseMonth {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.Season => $"ORDER BY Tseason.SeasonNumber {groupHeaderOrderedBy}, ORDER BY TanimeSeasonalPlanning.ReleaseMonth {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.Default => $"ORDER BY TanimeSeasonalPlanning.Id {itemsOrderedBy}, ORDER BY TanimeSeasonalPlanning.ReleaseMonth {groupHeaderOrderedBy}",
+                _ => throw new ArgumentOutOfRangeException(nameof(groupBy), groupBy, null)
+            },
+            SeasonalAnimePlanningSortBy.AnimeName => groupBy switch
+            {
+                SeasonalAnimePlanningGroupBy.GroupName => $"ORDER BY TanimeSeasonalPlanning.AnimeName {itemsOrderedBy}, TanimeSeasonalPlanning.GroupName {groupHeaderOrderedBy}",
+                SeasonalAnimePlanningGroupBy.OrigineAdaptation => $"ORDER BY TanimeSeasonalPlanning.AnimeName {itemsOrderedBy}, TorigineAdaptation.Name {groupHeaderOrderedBy}",
+                SeasonalAnimePlanningGroupBy.ReleaseMonth => $"ORDER BY TanimeSeasonalPlanning.AnimeName {itemsOrderedBy}, TanimeSeasonalPlanning.ReleaseMonth {groupHeaderOrderedBy}",
+                SeasonalAnimePlanningGroupBy.Season => $"ORDER BY TanimeSeasonalPlanning.AnimeName {itemsOrderedBy}, Tseason.SeasonNumber {groupHeaderOrderedBy}",
+                SeasonalAnimePlanningGroupBy.Default => $"ORDER BY TanimeSeasonalPlanning.AnimeName {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.Category => expr,
+                SeasonalAnimePlanningGroupBy.Letter => expr,
+                _ => throw new ArgumentOutOfRangeException(nameof(groupBy), groupBy, null)
+            },
+            SeasonalAnimePlanningSortBy.GroupName => groupBy switch
+            {
+                SeasonalAnimePlanningGroupBy.GroupName => $"ORDER BY TanimeSeasonalPlanning.GroupName {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.OrigineAdaptation => $"ORDER BY TanimeSeasonalPlanning.GroupName {itemsOrderedBy}, TorigineAdaptation.Name {groupHeaderOrderedBy}",
+                SeasonalAnimePlanningGroupBy.ReleaseMonth => $"ORDER BY TanimeSeasonalPlanning.GroupName {itemsOrderedBy}, TanimeSeasonalPlanning.ReleaseMonth {groupHeaderOrderedBy}",
+                SeasonalAnimePlanningGroupBy.Season => $"ORDER BY TanimeSeasonalPlanning.GroupName {itemsOrderedBy}, Tseason.SeasonNumber {groupHeaderOrderedBy}",
+                SeasonalAnimePlanningGroupBy.Default => $"ORDER BY TanimeSeasonalPlanning.GroupName {itemsOrderedBy}",
+                _ => throw new ArgumentOutOfRangeException(nameof(groupBy), groupBy, null)
+            },
+            SeasonalAnimePlanningSortBy.SheetId => groupBy switch
+            {
+                SeasonalAnimePlanningGroupBy.GroupName => $"ORDER BY TanimeSeasonalPlanning.SheetId {itemsOrderedBy}, TanimeSeasonalPlanning.GroupName {groupHeaderOrderedBy}",
+                SeasonalAnimePlanningGroupBy.OrigineAdaptation => $"ORDER BY TanimeSeasonalPlanning.SheetId {itemsOrderedBy}, TorigineAdaptation.Name {groupHeaderOrderedBy}",
+                SeasonalAnimePlanningGroupBy.ReleaseMonth => $"ORDER BY TanimeSeasonalPlanning.SheetId {itemsOrderedBy}, TanimeSeasonalPlanning.ReleaseMonth {groupHeaderOrderedBy}",
+                SeasonalAnimePlanningGroupBy.Season => $"ORDER BY TanimeSeasonalPlanning.SheetId {itemsOrderedBy}, Tseason.SeasonNumber {groupHeaderOrderedBy}",
+                SeasonalAnimePlanningGroupBy.Default => $"ORDER BY TanimeSeasonalPlanning.SheetId {itemsOrderedBy}",
+                _ => throw new ArgumentOutOfRangeException(nameof(groupBy), groupBy, null)
+            },
+            SeasonalAnimePlanningSortBy.OrigineAdaptation => groupBy switch
+            {
+                SeasonalAnimePlanningGroupBy.GroupName => $"ORDER BY TorigineAdaptation.Name {itemsOrderedBy}, TanimeSeasonalPlanning.GroupName {groupHeaderOrderedBy}",
+                SeasonalAnimePlanningGroupBy.OrigineAdaptation => $"ORDER BY TorigineAdaptation.Name {itemsOrderedBy}",
+                SeasonalAnimePlanningGroupBy.ReleaseMonth => $"ORDER BY TorigineAdaptation.Name {itemsOrderedBy}, TanimeSeasonalPlanning.ReleaseMonth {groupHeaderOrderedBy}",
+                SeasonalAnimePlanningGroupBy.Season => $"ORDER BY TorigineAdaptation.Name {itemsOrderedBy}, Tseason.SeasonNumber {groupHeaderOrderedBy}",
+                SeasonalAnimePlanningGroupBy.Default => $"ORDER BY TorigineAdaptation.Name {itemsOrderedBy}",
+                _ => throw new ArgumentOutOfRangeException(nameof(groupBy), groupBy, null)
+            },
+            _ => throw new ArgumentOutOfRangeException(nameof(sortBy), sortBy, null)
+        };
+    }
+    
     private static void FilterSelection(ref SqliteCommand command, ref string sqlScript, IReadOnlyCollection<ItemGroupCountStruct> groups)
     {
         //Si la requête est vide, on ne fait rien

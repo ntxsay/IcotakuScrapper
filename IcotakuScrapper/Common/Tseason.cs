@@ -89,29 +89,6 @@ public partial class Tseason
     /// <summary>
     /// Compte le nombre d'entrées dans la table Tseason ayant le nom spécifié
     /// </summary>
-    /// <param name="displayName"></param>
-    /// <param name="cancellationToken"></param>
-    /// <returns></returns>
-    public static async Task<int> CountAsync(string displayName, CancellationToken? cancellationToken = null)
-    {
-        if (displayName.IsStringNullOrEmptyOrWhiteSpace())
-            return 0;
-
-        await using var command = Main.Connection.CreateCommand();
-        command.CommandText = "SELECT COUNT(Id) FROM Tseason WHERE DisplayName = $DisplayName COLLATE NOCASE";
-
-
-
-        command.Parameters.AddWithValue("$DisplayName", displayName.Trim());
-        var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
-        if (result is long count)
-            return (int)count;
-        return 0;
-    }
-
-    /// <summary>
-    /// Compte le nombre d'entrées dans la table Tseason ayant le nom spécifié
-    /// </summary>
     /// <param name="seasonNumber"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
@@ -146,12 +123,12 @@ public partial class Tseason
     #endregion
 
     #region Exists
+    public async Task<bool> ExistsAsync(CancellationToken? cancellationToken = null)
+        => await ExistsAsync(SeasonNumber, cancellationToken);
 
     public static async Task<bool> ExistsAsync(int id, CancellationToken? cancellationToken = null)
      => await CountAsync(id, cancellationToken) > 0;
 
-    public static async Task<bool> ExistsAsync(string displayName, CancellationToken? cancellationToken = null)
-        => await CountAsync(displayName, cancellationToken) > 0;
 
     public static async Task<bool> ExistsAsync(uint seasonNumber, CancellationToken? cancellationToken = null)
         => await CountAsync(seasonNumber, cancellationToken) > 0;
