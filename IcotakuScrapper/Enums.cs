@@ -217,6 +217,44 @@ public enum CategoryType
     Genre,
 }
 
+#region Status de lecture/visionnage et statut de diffusion
+
+/// <summary>
+/// Représente le status de lecture ou de visionnage d'une oeuvre.
+/// </summary>
+public enum WatchStatusKind : byte
+{
+    /// <summary>
+    /// La lecture ou le visionnage n'a pas été plannifié
+    /// </summary>
+    NotPlanned,
+    
+    /// <summary>
+    /// La lecture ou le visionnage a été plannifié mais n'a pas encore commencé
+    /// </summary>
+    Planned,
+    
+    /// <summary>
+    /// La lecture ou le visionnage est en cours
+    /// </summary>
+    InProgress,
+    
+    /// <summary>
+    /// La lecture ou le visionnage a été mis en pause
+    /// </summary>
+    Paused,
+    
+    /// <summary>
+    /// La lecture ou le visionnage a été arrêté
+    /// </summary>
+    Dropped,
+    
+    /// <summary>
+    /// La lecture ou le visionnage a été complété
+    /// </summary>
+    Completed,
+}
+
 /// <summary>
 /// Représente un état de diffusion
 /// </summary>
@@ -247,6 +285,8 @@ public enum DiffusionStateKind : byte
     /// </summary>
     Stopped
 }
+
+#endregion
 
 public enum ContactType : byte
 {
@@ -287,6 +327,8 @@ public enum WeatherSeasonKind : byte
     Winter = 4,
 }
 
+#region Database
+
 public enum DbInsertMode
 {
     Insert,
@@ -311,4 +353,6 @@ public enum DbScriptMode : byte
     Select,
     Count,
 }
+
+#endregion
 

@@ -448,4 +448,22 @@ CREATE TABLE IF NOT EXISTS TanimeSeasonalPlanning
     ThumbnailUrl      TEXT    NULL                -- Url de l'image de l'animé
 );
 -- endregion
-    
+
+-- region Table TanimeAlternativeTitle
+/*
+ Création de la table TanimeAlternativeTitle qui permet 
+ d'enregistrer les titres alternatifs des fiches des animés
+ */
+DROP TABLE IF EXISTS TuserSheetNotation;
+CREATE TABLE IF NOT EXISTS TuserSheetNotation
+(
+    "Id"             INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
+    "IdAnime"        INTEGER NULL REFERENCES Tanime (Id) ON DELETE CASCADE,
+    "Section"        INTEGER NOT NULL, -- Section de la catégorie (ANime, Manga, etc)
+    "SheetId"        INTEGER NOT NULL, -- Id de la fiche (anime, manga, etc)
+    "WatchingStatus" INTEGER NOT NULL,
+    "Note"           REAL    NULL,
+    "PublicComment"  TEXT    NULL,
+    "PrivateComment" TEXT    NULL
+);
+-- endregion

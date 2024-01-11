@@ -155,6 +155,29 @@ public static class IcotakuWebHelpers
     #region Get Url
 
     /// <summary>
+    /// Retourne l'url de la page de l'évaluation d'une fiche depuis icotaku.com
+    /// </summary>
+    /// <param name="section"></param>
+    /// <param name="sheetId"></param>
+    /// <returns></returns>
+    /// <remarks>Cette page Icotaku requiert de ce connecter à son compte pour afficher ces données</remarks>
+    /// <exception cref="ArgumentOutOfRangeException"></exception>
+    internal static string? GetSheetEvaluationUrl(IcotakuSection section, int sheetId)
+    {
+        if (section == IcotakuSection.Community)
+            return null;
+        return GetBaseUrl(section) + section switch
+        {
+            IcotakuSection.Anime => $"/anime.php/watchlist/popupWatchlist?anime_id={sheetId}&div_name=div_edition",
+            IcotakuSection.Manga => $"/manga.php/watchlist/popupWatchlist?manga_id={sheetId}&div_name=div_edition",
+            IcotakuSection.LightNovel => $"/novel.php/watchlist/popupWatchlist?novel_id={sheetId}&div_name=div_edition",
+            IcotakuSection.Drama => $"/drama.php/watchlist/popupWatchlist?drama_id={sheetId}&div_name=div_edition",
+            IcotakuSection.Community => null,
+            _ => throw new ArgumentOutOfRangeException(nameof(section), section, null)
+        };
+    }
+    
+    /// <summary>
     /// Retourne l'url des statistiques d'une fiche
     /// </summary>
     /// <param name="section"></param>

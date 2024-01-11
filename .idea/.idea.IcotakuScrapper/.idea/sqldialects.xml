@@ -24,6 +24,7 @@
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Common/TsheetMostAwaitedPopular.cs" dialect="SQLite" />
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Common/TsheetStatistic.cs" dialect="SQLite" />
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Common/Ttarget.cs" dialect="SQLite" />
+    <file url="file://$PROJECT_DIR$/IcotakuScrapper/Common/TuserSheetNotation.cs" dialect="SQLite" />
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Contact/Tcontact.cs" dialect="SQLite" />
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Contact/TcontactBase.cs" dialect="SQLite" />
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Contact/TcontactGenre.cs" dialect="SQLite" />

@@ -167,7 +167,7 @@ public partial class Ttarget : ITableNameDescriptionBase<Ttarget>
         CancellationToken? cancellationToken = null)
     {
         await using var command = Main.Connection.CreateCommand();
-        command.CommandText = SqlSelectScript;
+        command.CommandText = IcotakuSqlSelectScript;
 
         command.CommandText += Environment.NewLine + $"ORDER BY {sortBy} {orderBy}";
 
@@ -195,7 +195,7 @@ public partial class Ttarget : ITableNameDescriptionBase<Ttarget>
         CancellationToken? cancellationToken = null)
     {
         await using var command = Main.Connection.CreateCommand();
-        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Section = $Section";
+        command.CommandText = IcotakuSqlSelectScript + Environment.NewLine + "WHERE Section = $Section";
 
         command.CommandText += Environment.NewLine + $"ORDER BY {sortBy} {orderBy}";
 
@@ -226,7 +226,7 @@ public partial class Ttarget : ITableNameDescriptionBase<Ttarget>
     public static async Task<Ttarget?> SingleAsync(int id, CancellationToken? cancellationToken = null)
     {
         await using var command = Main.Connection.CreateCommand();
-        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Id = $Id";
+        command.CommandText = IcotakuSqlSelectScript + Environment.NewLine + "WHERE Id = $Id";
         try
         {
             command.Parameters.AddWithValue("$Id", id);
@@ -251,7 +251,7 @@ public partial class Ttarget : ITableNameDescriptionBase<Ttarget>
             return null;
 
         await using var command = Main.Connection.CreateCommand();
-        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE Section = $Section AND Name = $Name COLLATE NOCASE";
+        command.CommandText = IcotakuSqlSelectScript + Environment.NewLine + "WHERE Section = $Section AND Name = $Name COLLATE NOCASE";
 
         command.Parameters.AddWithValue("$Name", name.Trim());
         command.Parameters.AddWithValue("$Section", (byte)section);
@@ -508,7 +508,7 @@ public partial class Ttarget : ITableNameDescriptionBase<Ttarget>
         }
     }
 
-    private const string SqlSelectScript =
+    private const string IcotakuSqlSelectScript =
         """
         SELECT
             Id,
