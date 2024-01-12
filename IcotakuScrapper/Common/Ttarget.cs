@@ -46,6 +46,26 @@ public partial class Ttarget : ITableNameDescriptionBase<Ttarget>
     {
         return Name;
     }
+    
+    #region Copy/Clone
+
+    public void Copy(Ttarget value)
+    {
+        Id = value.Id;
+        Name = value.Name;
+        Section = value.Section;
+        Description = value.Description;
+    }
+    
+    public Ttarget Clone()
+    {
+        var clone = new Ttarget();
+        clone.Copy(this);
+        return clone;
+    }
+
+    #endregion
+
 
     #region Count
 

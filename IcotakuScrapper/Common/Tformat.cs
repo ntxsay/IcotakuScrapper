@@ -48,6 +48,26 @@ public partial class Tformat
     {
         return Name;
     }
+    
+    #region Copy/Clone
+
+    public void Copy(Tformat value)
+    {
+        Id = value.Id;
+        Name = value.Name;
+        Section = value.Section;
+        Description = value.Description;
+    }
+    
+    public Tformat Clone()
+    {
+        var clone = new Tformat();
+        clone.Copy(this);
+        return clone;
+    }
+
+    #endregion
+
 
     #region Count
 

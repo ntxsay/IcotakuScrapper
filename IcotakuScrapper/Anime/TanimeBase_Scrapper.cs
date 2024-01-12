@@ -202,7 +202,14 @@ public partial class TanimeBase
                 }
             }
 
-
+            if (options.HasFlag(AnimeScrapingOptions.Statistic))
+            {
+                var statistic = await TsheetStatistic.ScrapAndGetAsync(IcotakuSection.Anime, sheetId);
+                if (statistic != null)
+                {
+                    animeBase.Statistic = statistic;
+                }
+            }
 
             return new OperationState<TanimeBase?>
             {

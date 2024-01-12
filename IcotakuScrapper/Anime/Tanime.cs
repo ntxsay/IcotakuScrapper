@@ -55,10 +55,11 @@ public partial class Tanime : TanimeBase
         Description = animeBase.Description;
         Remark = animeBase.Remark;
         ThumbnailUrl = animeBase.ThumbnailUrl;
-        Format = animeBase.Format;
-        Target = animeBase.Target;
-        OrigineAdaptation = animeBase.OrigineAdaptation;
+        Format = animeBase.Format?.Clone();
+        Target = animeBase.Target?.Clone();
+        OrigineAdaptation = animeBase.OrigineAdaptation?.Clone();
         Season = animeBase.Season;
+        Statistic = animeBase.Statistic?.Clone();
         AlternativeTitles.ToObservableCollection(animeBase.AlternativeTitles, true);
         Websites.ToObservableCollection(animeBase.Websites, true);
         Categories.ToObservableCollection(animeBase.Categories, true);

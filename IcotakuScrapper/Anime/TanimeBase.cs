@@ -423,10 +423,13 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
 
     #endregion
 
+    #region Index
+
     protected static async Task<OperationState<int>> CreateIndexAsync(string animeName, string animeUrl, int animeSheetId, CancellationToken? cancellationToken = null)
         => await TsheetIndex.InsertAsync(false, IcotakuSection.Anime, IcotakuSheetType.Anime, animeName, animeUrl, animeSheetId, 0, cancellationToken);
+    
 
-
+    #endregion
     
     #region Count
 
@@ -838,9 +841,9 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
         command.CommandText =
             """
             INSERT OR REPLACE INTO Tanime
-                (SheetId, Url, IsAdultContent, IsExplicitContent, Note, VoteCount, Name, DiffusionState, EpisodeCount, EpisodeDuration, ReleaseDate, EndDate, Description, ThumbnailUrl, IdFormat, IdTarget, IdOrigine, IdSeason, Remark)
+                (SheetId, Url, IsAdultContent, IsExplicitContent, Note, VoteCount, Name, DiffusionState, EpisodeCount, EpisodeDuration, ReleaseDate, EndDate, Description, ThumbnailUrl, IdFormat, IdTarget, IdOrigine, IdSeason, Remark, IdStatistic)
             VALUES
-                ($SheetId, $Url, $IsAdultContent, $IsExplicitContent, $Note, $VoteCount, $Name, $DiffusionState , $EpisodeCount, $EpisodeDuration, $ReleaseDate, $EndDate, $Description, $ThumbnailUrl, $IdFormat, $IdTarget, $IdOrigine, $IdSeason, $Remark)
+                ($SheetId, $Url, $IsAdultContent, $IsExplicitContent, $Note, $VoteCount, $Name, $DiffusionState , $EpisodeCount, $EpisodeDuration, $ReleaseDate, $EndDate, $Description, $ThumbnailUrl, $IdFormat, $IdTarget, $IdOrigine, $IdSeason, $Remark, $IdStatistic)
             """;
 
         command.Parameters.AddWithValue("$SheetId", SheetId);
@@ -862,6 +865,7 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
         command.Parameters.AddWithValue("$IdOrigine", OrigineAdaptation?.Id ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$IdSeason", Season?.Id ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$Remark", Remark ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$IdStatistic", Statistic is { Id: > 0 } ? Statistic.Id : DBNull.Value);
         
 
         try
@@ -940,7 +944,8 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
                 IdTarget = $IdTarget,
                 IdOrigine = $IdOrigine,
                 IdSeason = $IdSeason,
-                Remark = $Remark
+                Remark = $Remark,
+                IdStatistic = $IdStatistic
             WHERE Id = $Id
             """;
         command.Parameters.AddWithValue("$SheetId", SheetId);
@@ -963,10 +968,15 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
         command.Parameters.AddWithValue("$IdSeason", Season?.Id ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$Remark", Remark ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$Id", Id);
+        command.Parameters.AddWithValue("$IdStatistic", Statistic is { Id: > 0 } ? Statistic.Id : DBNull.Value);
 
         try
         {
             var result = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
+
+            AlternativeTitles.ToObservableCollection(
+                await TanimeAlternativeTitle.AddOrUpdateOrDeleteAsync(Id, AlternativeTitles, cancellationToken).ToArrayAsync(), true);
+            
             return result > 0
                 ? new OperationState(true, "La base de l'anime a été modifiée avec succès")
                 : new OperationState(false, "La base de l'anime n'a pas été modifiée");
@@ -978,6 +988,56 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
         }
     }
 
+    /// <summary>
+    /// Retourne la liste des animés à mettre à jour en fonction de la saison.
+    /// </summary>
+    /// <param name="season"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static async IAsyncEnumerable<(int Id, int SheetId, string Url)> FindAnimesToBeUpdate(WeatherSeason season, CancellationToken? cancellationToken = null)
+    {
+        if (season.ToIntSeason() <= 0)
+            yield break;
+        
+        await using var command = Main.Connection.CreateCommand();
+        command.CommandText = 
+            """
+            SELECT 
+                Id, 
+                SheetId, 
+                Url
+            FROM 
+                Tanime 
+            WHERE IdSeason = (SELECT Id FROM Tseason WHERE SeasonNumber = $SeasonNumber)
+            """;
+        
+        command.Parameters.AddWithValue("$SeasonNumber", season.ToIntSeason());
+        
+        var reader = await command.ExecuteReaderAsync();
+        if (!reader.HasRows)
+            yield break;
+        
+        while (await reader.ReadAsync(cancellationToken ?? CancellationToken.None))
+        {
+            var id = reader.GetInt32(reader.GetOrdinal("Id"));
+            var sheetId = reader.GetInt32(reader.GetOrdinal("SheetId"));
+            var sheetUri = reader.GetString(reader.GetOrdinal("Url"));
+            
+            var statistics = await TsheetStatistic.ScrapStatisticAsync(IcotakuSection.Anime, sheetId);
+            if (statistics == null)
+                continue;
+            
+            var currentStatistics = await TsheetStatistic.SingleAsync(IcotakuSection.Anime, sheetId);
+            if (currentStatistics == null)
+                continue;
+            
+            if (statistics.LastUpdatedDate <= currentStatistics.LastUpdatedDate)
+                continue;
+            
+            yield return (id, sheetId, sheetUri);
+        }
+    }
+    
     #endregion
 
     #region SingleOrCreate

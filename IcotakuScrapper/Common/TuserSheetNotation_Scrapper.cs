@@ -7,6 +7,26 @@ namespace IcotakuScrapper.Common;
 
 public partial class TuserSheetNotation
 {
+    public static async Task<OperationState<int>> ScrapAndSaveAsync(IcotakuConnexion icotakuConnexion, IcotakuSection section, int sheetId,
+        CancellationToken? cancellationToken = null)
+    {
+        var statistic = await ScrapAsync(icotakuConnexion, section, sheetId, cancellationToken);
+        if (statistic == null)
+            return new OperationState<int>(false, "Impossible de récupérer l'évaluation de la fiche");
+
+        return await statistic.AddOrUpdateAsync(cancellationToken);
+    }
+    
+    public static async Task<TuserSheetNotation?> ScrapAndGetAsync(IcotakuConnexion icotakuConnexion, IcotakuSection section, int sheetId,
+        CancellationToken? cancellationToken = null)
+    {
+        var result = await ScrapAndSaveAsync(icotakuConnexion, section, sheetId, cancellationToken);
+        if (!result.IsSuccess)
+            return null;
+        
+        return await SingleByIdAsync(result.Data, cancellationToken);
+    }
+    
     public static async Task<TuserSheetNotation?> ScrapAsync(IcotakuConnexion icotakuConnexion, IcotakuSection section, int sheetId, CancellationToken? cancellationToken = null)
     {
         var url = IcotakuWebHelpers.GetSheetEvaluationUrl(section, sheetId);
@@ -133,7 +153,7 @@ public partial class TuserSheetNotation
 
         #region csrfToken
 
-        var csrfTokenNode = formNode?.SelectSingleNode(".//input[@name='_csrf_token']");
+        var csrfTokenNode = formNode.SelectSingleNode(".//input[@name='_csrf_token']");
         if (csrfTokenNode == null)
             return false;
 

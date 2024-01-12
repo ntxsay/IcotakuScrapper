@@ -42,6 +42,25 @@ public partial class TorigineAdaptation
         Description = description;
     }
 
+    #region Copy/Clone
+
+    public void Copy(TorigineAdaptation value)
+    {
+        Id = value.Id;
+        Name = value.Name;
+        Section = value.Section;
+        Description = value.Description;
+    }
+    
+    public TorigineAdaptation Clone()
+    {
+        var clone = new TorigineAdaptation();
+        clone.Copy(this);
+        return clone;
+    }
+
+    #endregion
+
     public override string ToString()
     {
         return Name;

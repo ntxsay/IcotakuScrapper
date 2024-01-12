@@ -386,6 +386,85 @@ public class TanimeAlternativeTitle
 
         return addResult.ToBaseState();
     }
+
+    public static async IAsyncEnumerable<TanimeAlternativeTitle> AddOrUpdateOrDeleteAsync(int idAnime, IReadOnlyCollection<TanimeAlternativeTitle> values,
+        CancellationToken? cancellationToken = null)
+    {
+        if (values.Count == 0)
+        {
+            LogServices.LogDebug($"Il n'existe aucune valeur à insérer.");
+            yield break;
+        }
+        
+        var currentValues = (await SelectAsync(idAnime, OrderBy.Asc, 0, 0, cancellationToken)).ToList();
+
+        foreach (var value in values)
+        {
+            //Si la validation échoue, on retourne le résultat de la validation
+            if (value.Title.IsStringNullOrEmptyOrWhiteSpace())
+            {
+                LogServices.LogDebug($"Le nom du titre ne doit pas être vide ou ne contenir que des espaces blancs.");
+                continue;
+            }
+
+            //Vérifie si l'item existe déjà
+            var existingValue =
+                currentValues.FirstOrDefault(x => x.Title.Equals(value.Title, StringComparison.OrdinalIgnoreCase));
+            
+            var existingId = existingValue?.Id;
+            //Si l'item existe déjà
+            if (existingId.HasValue)
+            {
+                /*
+                 * Si l'id de la item actuel n'est pas neutre c'est-à-dire que l'id n'est pas inférieur ou égal à 0
+                 * Et qu'il existe un Id correspondant à un enregistrement dans la base de données
+                 * mais que celui-ci ne correspond pas à l'id de l'item actuel
+                 * alors l'enregistrement existe déjà et on annule l'opération
+                 */
+                if (value.Id > 0 && existingId.Value != value.Id)
+                {
+                    LogServices.LogDebug($"Le nom du titre existe déjà.");
+                    continue;
+                }
+
+                /*
+                 * Si l'id de l'item actuel est neutre c'est-à-dire que l'id est inférieur ou égal à 0
+                 * alors on met à jour l'id de l'item actuel avec l'id de l'enregistrement existant
+                 */
+                if (existingId.Value != value.Id)
+                    value.Id = existingId.Value;
+                var updateResult = await value.UpdateAsync(true, cancellationToken);
+                if (updateResult.IsSuccess)
+                {
+                    LogServices.LogDebug($"Le titre alternatif {value.Title} a été mis à jour.");
+                    yield return value;
+                }
+                
+                /*
+                 * On supprime l'item de la liste des items actuels peut importe le résultat de la mise à jour
+                 * Si l'item reste dans la liste des items actuels alors qu'il devait juste être mis à jour et n'a pas pu l'être
+                 * alors il sera supprimé de la base de données
+                */
+                if (existingValue != null && currentValues.Contains(existingValue))
+                    currentValues.Remove(existingValue);
+            }
+
+            //Si l'item n'existe pas, on l'ajoute
+            var addResult = await value.InsertAsync(true, cancellationToken);
+            if (addResult.IsSuccess)
+            {
+                LogServices.LogDebug($"Le titre alternatif {value.Title} a été ajouté.");
+                yield return value;
+            }
+        }
+       
+        //On supprime les items restants dans la liste des items actuels
+        foreach (var value in currentValues)
+        {
+            _ = await value.DeleteAsync(cancellationToken);
+        }
+    }
+    
     #endregion
 
     #region Delete

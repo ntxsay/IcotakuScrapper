@@ -62,6 +62,7 @@ public partial class TanimeSeasonalPlanning
     public bool IsExplicitContent { get; set; }
     public string AnimeName { get; set; } = string.Empty;
     public TanimeBase? Anime { get; set; }
+    public TuserSheetNotation? UserSheetNotation { get; set; }
     public string GroupName { get; set; } = string.Empty;
     public uint ReleaseMonth { get; set; }
     public string? ReleaseMonthLiteral => DateHelpers.GetYearMonthLiteral(ReleaseMonth);
@@ -93,6 +94,7 @@ public partial class TanimeSeasonalPlanning
         IsExplicitContent = model.IsExplicitContent;
         AnimeName = model.AnimeName;
         Anime = model.Anime;
+        UserSheetNotation = model.UserSheetNotation;
         GroupName = model.GroupName;
         ReleaseMonth = model.ReleaseMonth;
         Studios = model.Studios;
@@ -139,12 +141,11 @@ public partial class TanimeSeasonalPlanning
         await using var command = Main.Connection.CreateCommand();
         command.CommandText = SqlSelectScript + Environment.NewLine;
         command.CommandText += "WHERE TanimeSeasonalPlanning.SheetId NOT IN (SELECT Tanime.SheetId FROM Tanime) AND TanimeSeasonalPlanning.IdSeason = (SELECT Id FROM Tseason WHERE SeasonNumber = $SeasonNumber)";
-        //SELECT * FROM TanimeSeasonalPlanning 
+
         //sql partiel interdisant l'accès aux contenus explicites et adultes si l'utilisateur n'a pas activé l'option   
         command.AddExplicitContentFilter(DbStartFilterMode.And, "TanimeSeasonalPlanning.IsAdultContent", "TanimeSeasonalPlanning.IsExplicitContent");
 
         command.Parameters.AddWithValue("$SeasonNumber", intSeason);
-        // WHERE Tanime.SheetId = TanimeSeasonalPlanning.SheetId
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
@@ -152,6 +153,36 @@ public partial class TanimeSeasonalPlanning
 
         return await GetRecords(reader, cancellationToken).ToArrayAsync();
     }
+
+    /// <summary>
+    /// Retourne les planning d'une saison spécifiée dont les fiches ont été téléchargées.
+    /// </summary>
+    /// <param name="season"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static async Task<TanimeSeasonalPlanning[]> GetPlanningsWithFullSheetDownloaded(WeatherSeason season,
+        CancellationToken? cancellationToken = null)
+    {
+        var intSeason = season.ToIntSeason();
+        if (intSeason == 0)
+            return [];
+
+        await using var command = Main.Connection.CreateCommand();
+        command.CommandText = SqlSelectScript + Environment.NewLine;
+        command.CommandText += "WHERE TanimeSeasonalPlanning.SheetId IN (SELECT Tanime.SheetId FROM Tanime) AND TanimeSeasonalPlanning.IdSeason = (SELECT Id FROM Tseason WHERE SeasonNumber = $SeasonNumber)";
+
+        //sql partiel interdisant l'accès aux contenus explicites et adultes si l'utilisateur n'a pas activé l'option   
+        command.AddExplicitContentFilter(DbStartFilterMode.And, "TanimeSeasonalPlanning.IsAdultContent", "TanimeSeasonalPlanning.IsExplicitContent");
+
+        command.Parameters.AddWithValue("$SeasonNumber", intSeason);
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
+        if (!reader.HasRows)
+            return [];
+
+        return await GetRecords(reader, cancellationToken).ToArrayAsync();
+    }
+
 
     #region Count
 

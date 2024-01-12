@@ -42,13 +42,25 @@ public partial class Tseason
         DisplayName = displayName;
         SeasonNumber = seasonNumber;
     }
+    
+    #region Copy/Clone
 
-    public void Copy(Tseason season)
+    public void Copy(Tseason value)
     {
-        Id = season.Id;
-        DisplayName = season.DisplayName;
-        SeasonNumber = season.SeasonNumber;
+        Id = value.Id;
+        DisplayName = value.DisplayName;
+        SeasonNumber = value.SeasonNumber;
     }
+    
+    public Tseason Clone()
+    {
+        var clone = new Tseason();
+        clone.Copy(this);
+        return clone;
+    }
+
+    #endregion
+
 
     public WeatherSeason ToWeatherSeason()
         => DateHelpers.GetWeatherSeason(SeasonNumber);

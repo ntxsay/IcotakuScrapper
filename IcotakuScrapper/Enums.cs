@@ -181,8 +181,9 @@ public enum AnimeScrapingOptions
     FullCategories = 256,
     Licenses = 512,
     FullLicenses = 1024,
+    Statistic = 2048,
     
-    All = Episodes | Studios | FullStudios | Characters | FullCharacters | Staff | FullStaff | Categories | FullCategories | Licenses | FullLicenses,
+    All = Episodes | Studios | FullStudios | Characters | FullCharacters | Staff | FullStaff | Categories | FullCategories | Licenses | FullLicenses | Statistic,
 }
 
 /// <summary>
