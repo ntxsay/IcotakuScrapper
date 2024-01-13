@@ -221,7 +221,7 @@ public partial class TanimeSeasonalPlanning
         if (intSeason == 0)
             return null;
 
-        var seasonLiteral = DateHelpers.GetSeasonLiteral(season);
+        var seasonLiteral = SeasonHelpers.GetSeasonLiteral(season);
         if (seasonLiteral == null || seasonLiteral.IsStringNullOrEmptyOrWhiteSpace())
             return null;
 

@@ -531,7 +531,7 @@ public partial class TanimeBase
         if (text == null || text.IsStringNullOrEmptyOrWhiteSpace())
             return null;
 
-        var number = DateHelpers.GetSeasonNumber(text);
+        var number = SeasonHelpers.GetSeasonNumber(text);
         return number == 0 ? null : number;
     }
 

@@ -102,7 +102,7 @@ namespace IcotakuScrapper.Extensions
             => DateHelpers.GetMonthSearchParameter(monthNumber);
         
         public static string? GetSearchPamareter(this WeatherSeasonKind seasonKind)
-            => DateHelpers.GetSeasonSearchParameter(seasonKind);
+            => SeasonHelpers.GetSeasonSearchParameter(seasonKind);
     }
 
     internal static class ExtensionMethods

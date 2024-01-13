@@ -63,10 +63,10 @@ public partial class Tseason
 
 
     public WeatherSeason ToWeatherSeason()
-        => DateHelpers.GetWeatherSeason(SeasonNumber);
+        => SeasonHelpers.GetWeatherSeason(SeasonNumber);
 
     public override string ToString()
-        => DateHelpers.GetSeasonLiteral(SeasonNumber) ?? $"{DisplayName} ({SeasonNumber})";
+        => SeasonHelpers.GetSeasonLiteral(SeasonNumber) ?? $"{DisplayName} ({SeasonNumber})";
 
     #region Count
 
@@ -296,10 +296,10 @@ public partial class Tseason
 
     public async Task<OperationState<int>> InsertAsync(bool disableExistenceVerification = false, CancellationToken? cancellationToken = null)
     {
-        if (!DateHelpers.IsSeasonValidated(SeasonNumber))
+        if (!SeasonHelpers.IsSeasonValidated(SeasonNumber))
             return new OperationState<int>(false, "Le numéro de la saison est invalide");
         if (DisplayName.IsStringNullOrEmptyOrWhiteSpace())
-            DisplayName = DateHelpers.GetSeasonLiteral(SeasonNumber) ?? string.Empty;
+            DisplayName = SeasonHelpers.GetSeasonLiteral(SeasonNumber) ?? string.Empty;
 
         await using var command = Main.Connection.CreateCommand();
 
@@ -343,10 +343,10 @@ public partial class Tseason
         if (Id <= 0)
             return new OperationState(false, "L'identifiant de la saison est invalide");
 
-        if (!DateHelpers.IsSeasonValidated(SeasonNumber))
+        if (!SeasonHelpers.IsSeasonValidated(SeasonNumber))
             return new OperationState(false, "Le numéro de la saison est invalide");
         if (DisplayName.IsStringNullOrEmptyOrWhiteSpace())
-            DisplayName = DateHelpers.GetSeasonLiteral(SeasonNumber) ?? string.Empty;
+            DisplayName = SeasonHelpers.GetSeasonLiteral(SeasonNumber) ?? string.Empty;
 
         await using var command = Main.Connection.CreateCommand();
 
@@ -411,7 +411,7 @@ public partial class Tseason
                 continue;
             }
 
-            if (!DateHelpers.IsSeasonValidated(value.SeasonNumber))
+            if (!SeasonHelpers.IsSeasonValidated(value.SeasonNumber))
             {
                 LogServices.LogDebug($"L'item {i} n'a pas de numéro de saison valide, il sera ignoré.");
                 continue;
@@ -479,7 +479,7 @@ public partial class Tseason
         if (value.DisplayName.IsStringNullOrEmptyOrWhiteSpace())
             return new OperationState(false, "Le nom de l'item ne peut pas être vide");
 
-        if (!DateHelpers.IsSeasonValidated(value.SeasonNumber))
+        if (!SeasonHelpers.IsSeasonValidated(value.SeasonNumber))
             return new OperationState(false, "Le numéro de la saison est invalide");
 
         //Vérifie si l'item existe déjà
@@ -626,5 +626,5 @@ public readonly struct TseasonStruct
     public uint SeasonNumber { get; init; }
 
     public WeatherSeason ToWeatherSeason()
-        => DateHelpers.GetWeatherSeason(SeasonNumber);
+        => SeasonHelpers.GetWeatherSeason(SeasonNumber);
 }

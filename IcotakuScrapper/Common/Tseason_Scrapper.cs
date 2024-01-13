@@ -53,7 +53,7 @@ public partial class Tseason
                 yield return new Tseason()
                 {
                     SeasonNumber = numberedSeason,
-                    DisplayName = DateHelpers.GetSeasonLiteral(numberedSeason) ?? numberedSeason.ToString()
+                    DisplayName = SeasonHelpers.GetSeasonLiteral(numberedSeason) ?? numberedSeason.ToString()
                 };
             }
         }

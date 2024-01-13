@@ -9,12 +9,13 @@ public class UserSheetNotationTest
     [Test]
     public async Task ScrapAsyncTest()
     {
-        using var connexion = new IcotakuConnexion("userName", "passWord");
+        using var connexion = new IcotakuConnexion("Username", "passWord");
         if (!await connexion.ConnectAsync())
         {
             Assert.Fail("Impossible de se connecter en tant qu'utilisateur sur le site d'Icotaku");
             return;
         }
+        
 
         var item = await TuserSheetNotation.ScrapAsync(connexion, IcotakuSection.Anime, 556);
         Assert.Pass();
