@@ -10,6 +10,8 @@ namespace IcotakuScrapper.Objects;
 /// </summary>
 public class IcotakuConnexion : IDisposable
 {
+    private string _userName = "";
+    private string _password = "";
     private bool _isAuthenticated;
     private string? _profilImageUrl;
     private readonly Uri _baseUri = new("https://anime.icotaku.com/");
@@ -20,12 +22,12 @@ public class IcotakuConnexion : IDisposable
     /// <summary>
     /// Nom d'utilisateur de l'utilisateur
     /// </summary>
-    public string Username { get; }
+    public string Username => _userName;
 
     /// <summary>
     /// Mot de passe de l'utilisateur
     /// </summary>
-    private string Password { get; }
+    private string Password => _password;
 
     /// <summary>
     /// Obtient une valeur indiquant si l'utilisateur est connecté
@@ -34,25 +36,18 @@ public class IcotakuConnexion : IDisposable
 
     public string? ProfilImageUrl => _profilImageUrl;
 
-    public IcotakuConnexion(string username, string password)
+    public IcotakuConnexion()
     {
-        ArgumentException.ThrowIfNullOrEmpty(username);
-        ArgumentException.ThrowIfNullOrWhiteSpace(username);
-        ArgumentException.ThrowIfNullOrEmpty(password);
-        ArgumentException.ThrowIfNullOrWhiteSpace(password);
-
-        Username = username;
-        Password = password;
-
         _handler = new HttpClientHandler
         {
             CookieContainer = new CookieContainer(),
             UseCookies = true
         };
 
-        _httpClient = new HttpClient(_handler);
-
-        _httpClient.BaseAddress = _baseUri;
+        _httpClient = new HttpClient(_handler)
+        {
+            BaseAddress = _baseUri
+        };
 
         _httpClient.DefaultRequestHeaders.Accept.Clear();
         _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("text/html"));
@@ -64,20 +59,52 @@ public class IcotakuConnexion : IDisposable
         _httpClient.DefaultRequestHeaders.AcceptLanguage.Add(new StringWithQualityHeaderValue("fr"));
     }
 
+    public IcotakuConnexion(string username, string password) : this()
+    {
+        ArgumentException.ThrowIfNullOrEmpty(username);
+        ArgumentException.ThrowIfNullOrWhiteSpace(username);
+        ArgumentException.ThrowIfNullOrEmpty(password);
+        ArgumentException.ThrowIfNullOrWhiteSpace(password);
+
+        _userName = username;
+        _password = password;
+    }
+
+    /// <summary>
+    /// Lance l'autentification de l'utilisateur sur le site d'Icotaku
+    /// </summary>
+    /// <param name="username"></param>
+    /// <param name="password"></param>
+    /// <returns></returns>
+    public async Task<bool> ConnectAsync(string username, string password)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(username);
+        ArgumentException.ThrowIfNullOrWhiteSpace(username);
+        ArgumentException.ThrowIfNullOrEmpty(password);
+        ArgumentException.ThrowIfNullOrWhiteSpace(password);
+
+        await DisconnectAsync();
+
+        _userName = username;
+        _password = password;
+
+        return await ConnectAsync();
+    }
+
     /// <summary>
     /// Lance l'autentification de l'utilisateur sur le site d'Icotaku
     /// </summary>
     /// <returns></returns>
     public async Task<bool> ConnectAsync(CancellationToken? cancellationToken = null)
     {
+        if (_isAuthenticated)
+        {
+            LogServices.LogDebug("L'utilisateur est déjà connecté");
+            return true;
+        }
+
         try
         {
-            if (_isAuthenticated)
-            {
-                LogServices.LogDebug("L'utilisateur est déjà connecté");
-                return true;
-            }
-
             // Récupérer la page d'accueil pour récupérer le jeton CSRF
             using var homePageResult = await _httpClient.GetAsync("/", cancellationToken ?? CancellationToken.None);
             homePageResult.EnsureSuccessStatusCode();
@@ -119,8 +146,8 @@ public class IcotakuConnexion : IDisposable
                 new FormUrlEncodedContent(new Dictionary<string, string>
                 {
                     { "_csrf_token", csrfToken },
-                    { "login", Username },
-                    { "password", Password },
+                    { "login", _userName },
+                    { "password", _password },
                     { "referer", "/" }
                 }), cancellationToken ?? CancellationToken.None);
 
@@ -149,7 +176,7 @@ public class IcotakuConnexion : IDisposable
     }
 
     /// <summary>
-    /// Déconnecte l'utilisateur du site d'Icotaku
+    /// Déconnecte l'utilisateur du site d'Icotaku s'il est connecté
     /// </summary>
     /// <param name="cancellationToken"></param>
     public async Task DisconnectAsync(CancellationToken? cancellationToken = null)
@@ -270,7 +297,7 @@ public class IcotakuConnexion : IDisposable
     /// </summary>
     /// <param name="htmlDocument"></param>
     /// <returns></returns>
-    private bool IsUserSuccessfullyAuthenticated(HtmlDocument htmlDocument)
+    private static bool IsUserSuccessfullyAuthenticated(HtmlDocument htmlDocument)
     {
         var connexionFormNode = htmlDocument.DocumentNode.SelectSingleNode("//form[@id='form_ico_login']");
         if (connexionFormNode != null)
