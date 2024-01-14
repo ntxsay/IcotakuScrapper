@@ -12,4 +12,11 @@ public class AnimeUpdaterTest
         await updater.FindAnimeToUpdateAsync(new WeatherSeason(WeatherSeasonKind.Fall, 2010));
         Assert.True(updater.Count > 0);
     }
+    
+    [Test]
+    public async Task UpdateAnimeAsyncTest()
+    {
+        var downloader = new AnimeDownloader();
+        
+    }
 }
