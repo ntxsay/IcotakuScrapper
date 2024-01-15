@@ -40,6 +40,13 @@ public partial class Tanime
         return await ScrapAnimeAsync(htmlDocument.DocumentNode, sheetUri, options, cancellationToken);
     }
 
+    /// <summary>
+    /// Scrap la fiche anime à partir de son url
+    /// </summary>
+    /// <param name="sheetUri"></param>
+    /// <param name="options"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     private static async Task<OperationState<Tanime?>> ScrapAnimeAsync(Uri sheetUri, AnimeScrapingOptions options, CancellationToken? cancellationToken = null)
     {
         HtmlWeb web = new();

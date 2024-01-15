@@ -335,7 +335,7 @@ public partial class Tanime : TanimeBase
             return new OperationState<int>(false, "L'url de la fiche de l'anime n'est pas valide");
 
         //Vérifie si l'item existe déjà
-        var existingId = await GetIdOfAsync(value.Name, value.SheetId, uri, cancellationToken);
+        var existingId = await GetIdOfAsync(uri, value.SheetId, cancellationToken);
         
         //Si l'item existe déjà
         if (existingId.HasValue)

@@ -508,20 +508,14 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
         return 0;
     }
 
-    public static async Task<int> CountAsync(string name, int sheetId, Uri sheetUri,
+    public static async Task<int> CountAsync(Uri sheetUri, int sheetId,
         CancellationToken? cancellationToken = null)
     {
-        if (name.IsStringNullOrEmptyOrWhiteSpace())
-            return 0;
-
         await using var command = Main.Connection.CreateCommand();
         command.CommandText =
-            "SELECT COUNT(Id) FROM Tanime WHERE Name = $Name COLLATE NOCASE OR Url = $Url COLLATE NOCASE OR SheetId = $SheetId";
-
+            "SELECT COUNT(Id) FROM Tanime WHERE Url = $Url COLLATE NOCASE OR SheetId = $SheetId";
         
-
         command.Parameters.AddWithValue("$Url", sheetUri.ToString());
-        command.Parameters.AddWithValue("$Name", name);
         command.Parameters.AddWithValue("$SheetId", sheetId);
 
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
@@ -556,18 +550,12 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
         return null;
     }
 
-    public static async Task<int?> GetIdOfAsync(string name, int sheetId, Uri sheetUri,
-        CancellationToken? cancellationToken = null)
+    public static async Task<int?> GetIdOfAsync(Uri sheetUri, int sheetId, CancellationToken? cancellationToken = null)
     {
-        if (name.IsStringNullOrEmptyOrWhiteSpace())
-            return null;
-
         await using var command = Main.Connection.CreateCommand();
-        command.CommandText =
-            "SELECT Id FROM Tanime WHERE Name = $Name COLLATE NOCASE OR Url = $Url COLLATE NOCASE OR SheetId = $SheetId";
+        command.CommandText = "SELECT Id FROM Tanime WHERE Url = $Url COLLATE NOCASE OR SheetId = $SheetId";
 
         command.Parameters.AddWithValue("$Url", sheetUri.ToString());
-        command.Parameters.AddWithValue("$Name", name);
         command.Parameters.AddWithValue("$SheetId", sheetId);
 
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
@@ -575,7 +563,7 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
             return (int)count;
         return null;
     }
-
+    
     #endregion
 
     #region Select
@@ -654,9 +642,9 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
     /// <param name="sheetUri"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<bool> ExistsAsync(string name, int sheetId, Uri sheetUri,
+    public static async Task<bool> ExistsAsync(Uri sheetUri, int sheetId,
         CancellationToken? cancellationToken = null)
-        => await CountAsync(name, sheetId, sheetUri, cancellationToken) > 0;
+        => await CountAsync(sheetUri, sheetId, cancellationToken) > 0;
 
     #endregion
 
@@ -833,7 +821,7 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
         if (SheetId <= 0)
             return new OperationState<int>(false, "L'id de la fiche icotaku n'est pas valide");
 
-        if (!disableVerification && await ExistsAsync(Name, SheetId, uri, cancellationToken))
+        if (!disableVerification && await ExistsAsync(uri, SheetId, cancellationToken))
             return new OperationState<int>(false, "L'anime existe déjà");
 
 
@@ -917,7 +905,7 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
 
         if (!disableVerification)
         {
-            var existingId = await GetIdOfAsync(Name, SheetId, uri, cancellationToken);
+            var existingId = await GetIdOfAsync(uri, SheetId, cancellationToken);
             if (existingId.HasValue && existingId.Value != Id)
                 return new OperationState(false, "L'url de la fiche de l'anime existe déjà");
         }

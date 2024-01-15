@@ -11,9 +11,12 @@ public enum AnimeDownloaderFinishedOperation
     Canceled,
 }
 
+/// <summary>
+/// Classe permettant de télécharger les fiches animés et leurs vignettes en arrière plan
+/// </summary>
 public class AnimeDownloader : IDisposable, IAsyncDisposable
 {
-    private BackgroundWorker? _downloadAnimeBackgroundWorker;
+    private BackgroundWorker? _DownloadAnimeBackgroundWorker;
 
     public delegate void ProgressChangedEventHandler(Uri? animeUri, Tanime? anime, int percent);
 
@@ -25,44 +28,52 @@ public class AnimeDownloader : IDisposable, IAsyncDisposable
 
 
     /// <summary>
-    /// Lance l'opération de téléchargement des fiches animés et de leurs vignettes en arrêtant l'opération en arrière-plan
+    /// Lance l'opération de téléchargement des fiches animés et de leurs vignettes en arrière plan
     /// </summary>
     /// <param name="animeUris"></param>
     /// <returns></returns>
-    public bool LaunchOperation(IReadOnlyCollection<Uri> animeUris)
+    public async Task LaunchOperation(IReadOnlyCollection<Uri> animeUris)
     {
-        if (_downloadAnimeBackgroundWorker == null)
+        if (_DownloadAnimeBackgroundWorker == null)
         {
-            _downloadAnimeBackgroundWorker = new BackgroundWorker()
+            _DownloadAnimeBackgroundWorker = new BackgroundWorker()
             {
                 WorkerReportsProgress = true,
                 WorkerSupportsCancellation = true,
             };
 
-            _downloadAnimeBackgroundWorker.DoWork += DownloadAnimeBackgroundWorkerOnDoWork;
-            _downloadAnimeBackgroundWorker.ProgressChanged += DownloadAnimeBackgroundWorkerOnProgressChanged;
-            _downloadAnimeBackgroundWorker.RunWorkerCompleted += DownloadAnimeBackgroundWorkerOnRunWorkerCompleted;
+            _DownloadAnimeBackgroundWorker.DoWork += DownloadAnimeBackgroundWorkerOnDoWork;
+            _DownloadAnimeBackgroundWorker.ProgressChanged += DownloadAnimeBackgroundWorkerOnProgressChanged;
+            _DownloadAnimeBackgroundWorker.RunWorkerCompleted += DownloadAnimeBackgroundWorkerOnRunWorkerCompleted;
         }
 
         if (IsBusy)
-            return false;
+            return;
 
         if (animeUris.Count == 0)
-            return false;
+            return;
 
-        _downloadAnimeBackgroundWorker.RunWorkerAsync(animeUris);
-        return true;
+        _DownloadAnimeBackgroundWorker.RunWorkerAsync(animeUris);
+        while (_DownloadAnimeBackgroundWorker.IsBusy)
+        {
+            await Task.Delay(100);
+        }
     }
     
-    public void CancelDownloadAnimeOperation()
+    public async Task CancelOperationAsync()
     {
-        if (_downloadAnimeBackgroundWorker == null)
+        if (_DownloadAnimeBackgroundWorker == null)
             return;
 
-        if (!_downloadAnimeBackgroundWorker.IsBusy && !_downloadAnimeBackgroundWorker.CancellationPending)
+        if (!_DownloadAnimeBackgroundWorker.IsBusy && !_DownloadAnimeBackgroundWorker.CancellationPending)
             return;
 
-        _downloadAnimeBackgroundWorker.CancelAsync();
+        _DownloadAnimeBackgroundWorker.CancelAsync();
+        
+        while (_DownloadAnimeBackgroundWorker.IsBusy)
+        {
+            await Task.Delay(100);
+        }
     }
 
     private void DownloadAnimeBackgroundWorkerOnDoWork(object? sender, DoWorkEventArgs e)
@@ -145,27 +156,27 @@ public class AnimeDownloader : IDisposable, IAsyncDisposable
         }
         else
         {
-            OperationCompleted?.Invoke(AnimeDownloaderFinishedOperation.Success, null);
+            OperationCompleted?.Invoke(AnimeDownloaderFinishedOperation.Success, "L'opération de téléchargement des fiches anime s'est terminée.");
         }
     }
 
     public bool IsBusy
-        => _downloadAnimeBackgroundWorker is { IsBusy: true };
+        => _DownloadAnimeBackgroundWorker is { IsBusy: true };
 
     
     private void Dispose(bool disposing)
     {
         if (disposing)
         {
-            if (_downloadAnimeBackgroundWorker != null)
+            if (_DownloadAnimeBackgroundWorker != null)
             {
-                if (_downloadAnimeBackgroundWorker.IsBusy && !_downloadAnimeBackgroundWorker.CancellationPending)
+                if (_DownloadAnimeBackgroundWorker.IsBusy && !_DownloadAnimeBackgroundWorker.CancellationPending)
                 {
-                    _downloadAnimeBackgroundWorker.CancelAsync();
+                    _DownloadAnimeBackgroundWorker.CancelAsync();
                     
                     using var task = Task.Run(async () =>
                     {
-                        while (_downloadAnimeBackgroundWorker is { IsBusy: true })
+                        while (_DownloadAnimeBackgroundWorker is { IsBusy: true })
                         {
                             await Task.Delay(100);
                         }
@@ -174,7 +185,7 @@ public class AnimeDownloader : IDisposable, IAsyncDisposable
                     task.Wait();
                 }
             }
-            _downloadAnimeBackgroundWorker?.Dispose();
+            _DownloadAnimeBackgroundWorker?.Dispose();
         }
     }
 
@@ -186,23 +197,23 @@ public class AnimeDownloader : IDisposable, IAsyncDisposable
 
     private async ValueTask DisposeAsyncCore()
     {
-        if (_downloadAnimeBackgroundWorker != null)
+        if (_DownloadAnimeBackgroundWorker != null)
         {
-            if (_downloadAnimeBackgroundWorker.IsBusy && !_downloadAnimeBackgroundWorker.CancellationPending)
+            if (_DownloadAnimeBackgroundWorker.IsBusy && !_DownloadAnimeBackgroundWorker.CancellationPending)
             {
-                _downloadAnimeBackgroundWorker.CancelAsync();
-                while (_downloadAnimeBackgroundWorker.IsBusy)
+                _DownloadAnimeBackgroundWorker.CancelAsync();
+                while (_DownloadAnimeBackgroundWorker.IsBusy)
                 {
                     await Task.Delay(100);
                 }
             }
         }
 
-        if (_downloadAnimeBackgroundWorker is IAsyncDisposable downloadAnimeBackgroundWorkerAsyncDisposable)
+        if (_DownloadAnimeBackgroundWorker is IAsyncDisposable downloadAnimeBackgroundWorkerAsyncDisposable)
             await downloadAnimeBackgroundWorkerAsyncDisposable.DisposeAsync();
         else
         {
-            _downloadAnimeBackgroundWorker?.Dispose();
+            _DownloadAnimeBackgroundWorker?.Dispose();
         }
     }
 
