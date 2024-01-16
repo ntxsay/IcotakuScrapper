@@ -120,6 +120,59 @@ public class TanimeLicense
 
     #region Select
 
+    /// <summary>
+    /// Retourne les distributeurs de l'anime spécifié
+    /// </summary>
+    /// <param name="idAnime"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static async IAsyncEnumerable<TcontactBase> GetDistributors(int idAnime, CancellationToken? cancellationToken = null)
+    {
+        await using var command = Main.Connection.CreateCommand();
+
+        command.CommandText = "SELECT DISTINCT IdDistributor FROM TanimeLicense WHERE IdAnime = $IdAnime";
+
+        command.Parameters.AddWithValue("$IdAnime", idAnime);
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
+        if (!reader.HasRows)
+            yield break;
+        while (await reader.ReadAsync(cancellationToken ?? CancellationToken.None))
+        {
+            var id = reader.GetInt32(reader.GetOrdinal("IdDistributor"));
+            var contact = await TcontactBase.SingleAsync(id, IntColumnSelect.Id, cancellationToken);
+            if (contact == null)
+                continue;
+            
+            yield return contact;
+        }
+    }
+
+    /// <summary>
+    /// Retourne tous les distributeurs liés à un anime
+    /// </summary>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static async IAsyncEnumerable<TcontactBase> GetDistributors(CancellationToken? cancellationToken = null)
+    {
+        await using var command = Main.Connection.CreateCommand();
+
+        command.CommandText = "SELECT DISTINCT IdDistributor FROM TanimeLicense";
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
+        if (!reader.HasRows)
+            yield break;
+        while (await reader.ReadAsync(cancellationToken ?? CancellationToken.None))
+        {
+            var id = reader.GetInt32(reader.GetOrdinal("IdDistributor"));
+            var contact = await TcontactBase.SingleAsync(id, IntColumnSelect.Id, cancellationToken);
+            if (contact == null)
+                continue;
+            
+            yield return contact;
+        }
+    }
+
+    
     public static async Task<TanimeLicense[]> SelectAsync(int id, IntColumnSelect columnSelect, OrderBy orderBy = OrderBy.Asc, uint limit = 0, uint skip = 0 , CancellationToken? cancellationToken = null)
     {
         await using var command = Main.Connection.CreateCommand();
