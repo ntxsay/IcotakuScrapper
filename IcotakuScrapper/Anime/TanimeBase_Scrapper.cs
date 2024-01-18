@@ -14,7 +14,7 @@ public partial class TanimeBase
     protected static partial Regex GetNoteRegex();
 
     [GeneratedRegex(@"(\d+)")]
-    protected static partial Regex GetVoteCountRegex();
+    private static partial Regex GetVoteCountRegex();
 
     public static async IAsyncEnumerable<OperationState<int>> FindAndSaveAsync(AnimeFinderParameterStruct finderParameter, AnimeScrapingOptions options = AnimeScrapingOptions.All, CancellationToken? cancellationToken = null)
     {
@@ -777,7 +777,7 @@ public partial class TanimeBase
 
         foreach (var node in nodes)
         {
-            var contact = await TcontactBase.ScrapContactBase(node, scrapFull, cancellationToken);
+            var contact = await TcontactBase.ScrapContactBase(node, scrapFull, IcotakuSection.Anime, cancellationToken);
             if (contact == null)
                 continue;
             yield return contact;
@@ -837,7 +837,7 @@ public partial class TanimeBase
     {
         foreach (var node in distributorNodes)
         {
-            var contact = await TcontactBase.ScrapContactBase(node, scrapFull, cancellationToken);
+            var contact = await TcontactBase.ScrapContactBase(node, scrapFull, IcotakuSection.Anime, cancellationToken);
             if (contact == null)
                 continue;
 
@@ -849,7 +849,7 @@ public partial class TanimeBase
 
     #region Staff
 
-    protected static async IAsyncEnumerable<TanimeStaff> ScrapStaffAsync(HtmlNode documentNode, bool scrapFullStaff,
+    private static async IAsyncEnumerable<TanimeStaff> ScrapStaffAsync(HtmlNode documentNode, bool scrapFullStaff,
         CancellationToken? cancellationToken = null)
     {
         var htmlNodes = documentNode.SelectNodes(
@@ -863,7 +863,7 @@ public partial class TanimeBase
             if (linkNode == null)
                 continue;
 
-            var contact = await TcontactBase.ScrapContactBase(linkNode, scrapFullStaff, cancellationToken);
+            var contact = await TcontactBase.ScrapContactBase(linkNode, scrapFullStaff, IcotakuSection.Anime, cancellationToken);
             if (contact == null)
                 continue;
 

@@ -1,23 +1,30 @@
 ﻿using HtmlAgilityPack;
 using IcotakuScrapper.Extensions;
-using Microsoft.Data.Sqlite;
 using System.Web;
 
 namespace IcotakuScrapper.Contact
 {
     public partial class TcontactBase
     {
-        internal static async Task<TcontactBase?> ScrapContactBase(HtmlNode contactlinkNode, bool scrapFull = false,
+        /// <summary>
+        /// Scrappe juste le nom et l'url du contact contenu dans le noeud a html
+        /// </summary>
+        /// <param name="contactlinkNode">Noeud html A</param>
+        /// <param name="scrapFull">SCrappe toutes les informations concernant l'identité du contact (présentation, age, date, etc) en fonction de son type (individu, distributeur)</param>
+        /// <param name="section"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        internal static async Task<TcontactBase?> ScrapContactBase( HtmlNode contactlinkNode, bool scrapFull = false, IcotakuSection section = IcotakuSection.Anime,
             CancellationToken? cancellationToken = null)
         {
-            if (contactlinkNode is null)
+            if (contactlinkNode.Name != "a")
                 return null;
 
             var contactHref = contactlinkNode.Attributes["href"]?.Value;
             if (contactHref == null || contactHref.IsStringNullOrEmptyOrWhiteSpace())
                 return null;
 
-            var contactUri = IcotakuWebHelpers.GetFullHrefFromHtmlNode(contactlinkNode, IcotakuSection.Anime);
+            var contactUri = IcotakuWebHelpers.GetFullHrefFromHtmlNode(contactlinkNode, section);
             if (contactUri == null)
                 return null;
 
