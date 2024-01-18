@@ -1,4 +1,5 @@
-﻿using IcotakuScrapper.Extensions;
+﻿using HtmlAgilityPack;
+using IcotakuScrapper.Extensions;
 
 namespace IcotakuScrapper.Services
 {
@@ -53,6 +54,24 @@ namespace IcotakuScrapper.Services
                 LogServices.LogDebug(e);
                 return false;
             }
+        }
+
+
+        /// <summary>
+        /// Récupère l'attribut href de l'élément spécifié
+        /// </summary>
+        /// <param name="element"></param>
+        /// <returns></returns>
+        public static string? GetHrefFromElement(HtmlNode element)
+        {
+            string? href = element.GetAttributeValue("href", null);
+            if (href == null || href.IsStringNullOrEmptyOrWhiteSpace())
+            {
+                LogServices.LogDebug("Impossible de récupérer l'attribut href de l'élément");
+                return null;
+            }
+
+            return href;
         }
     }
 }

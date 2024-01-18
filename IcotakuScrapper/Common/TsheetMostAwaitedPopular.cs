@@ -215,7 +215,6 @@ public partial class TsheetMostAwaitedPopular : ITableSheetBase<TsheetMostAwaite
     
     #endregion
 
-
     #region Insert
 
     public async Task<OperationState<int>> InsertAsync(bool disableVerification = false, CancellationToken? cancellationToken = null)
@@ -410,6 +409,51 @@ public partial class TsheetMostAwaitedPopular : ITableSheetBase<TsheetMostAwaite
 
     #endregion
 
+    #region AddOrUpdate
+    public async Task<OperationState<int>> AddOrUpdateAsync(CancellationToken? cancellationToken = null)
+        => await AddOrUpdateAsync(this, cancellationToken);
+
+    public static async Task<OperationState<int>> AddOrUpdateAsync(TsheetMostAwaitedPopular value, CancellationToken? cancellationToken = null)
+    {
+        //Si la validation échoue, on retourne le résultat de la validation
+        if (value.Section == IcotakuSection.Community)
+            return new OperationState<int>(false, "La section de la fiche est invalide.");
+
+        if (!Uri.TryCreate(value.Url, UriKind.Absolute, out var uri) || !uri.IsAbsoluteUri)
+            return new OperationState<int>(false, "L'url n'est pas valide");
+
+        //Vérifie si l'item existe déjà
+        var existingId = await GetIdOfAsync(uri, value.ListType, cancellationToken);
+
+        //Si l'item existe déjà
+        if (existingId.HasValue)
+        {
+            /*
+             * Si l'id de la item actuel n'est pas neutre c'est-à-dire que l'id n'est pas inférieur ou égal à 0
+             * Et qu'il existe un Id correspondant à un enregistrement dans la base de données
+             * mais que celui-ci ne correspond pas à l'id de l'item actuel
+             * alors l'enregistrement existe déjà et on annule l'opération
+             */
+            if (value.Id > 0 && existingId.Value != value.Id)
+                return new OperationState<int>(false, "Un item autre que celui-ci existe déjà");
+
+            /*
+             * Si l'id de l'item actuel est neutre c'est-à-dire que l'id est inférieur ou égal à 0
+             * alors on met à jour l'id de l'item actuel avec l'id de l'enregistrement existant
+             */
+            if (existingId.Value != value.Id)
+                value.Id = existingId.Value;
+
+            //On met à jour l'enregistrement
+            return (await value.UpdateAsync(true, cancellationToken)).ToGenericState(value.Id);
+        }
+
+        //Si l'item n'existe pas, on l'ajoute
+        var addResult = await value.InsertAsync(true, cancellationToken);
+        return addResult;
+    }
+    #endregion
+
     #region Delete
 
     public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null)
@@ -572,7 +616,9 @@ public partial class TsheetMostAwaitedPopular : ITableSheetBase<TsheetMostAwaite
             };
         }
     }
+
     
+
     private const string SqlSelectScript =
         """
         SELECT 

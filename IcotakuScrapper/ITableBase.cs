@@ -1,3 +1,4 @@
+using IcotakuScrapper.Common;
 using Microsoft.Data.Sqlite;
 
 namespace IcotakuScrapper;
@@ -42,6 +43,32 @@ public interface ITableBase<T>  where T : class
     public Task<OperationState> UpdateAsync(bool disableVerification, CancellationToken? cancellationToken = null);
 
     /// <summary>
+    /// Retourne l'ojet <typeparamref name="T"/> si elle existe dans la base de données ou l'insère si elle n'existe pas (puis la retourne).
+    /// </summary>
+    /// <param name="value"></param>
+    /// <param name="reloadIfExist"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static abstract Task<T?> SingleOrCreateAsync(T value, bool reloadIfExist = false,
+        CancellationToken? cancellationToken = null);
+
+    /// <summary>
+    /// Ajoute ou met à jour l'objet <typeparamref name="T"/> dans la base de données.
+    /// </summary>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public Task<OperationState<int>> AddOrUpdateAsync(CancellationToken? cancellationToken = null);
+
+    /// <summary>
+    /// Ajoute ou met à jour l'objet <typeparamref name="T"/> dans la base de données.
+    /// </summary>
+    /// <param name="value"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static abstract Task<OperationState<int>> AddOrUpdateAsync(T value,
+        CancellationToken? cancellationToken = null);
+
+    /// <summary>
     /// Supprime l'objet <typeparamref name="T"/> dans la base de données.
     /// </summary>
     /// <param name="cancellationToken"></param>
@@ -56,15 +83,6 @@ public interface ITableBase<T>  where T : class
     /// <returns></returns>
     public static abstract Task<T?> SingleAsync(int id, CancellationToken? cancellationToken = null);*/
 
-    /// <summary>
-    /// Retourne l'ojet <typeparamref name="T"/> si elle existe dans la base de données ou l'insère si elle n'existe pas.
-    /// </summary>
-    /// <param name="value"></param>
-    /// <param name="reloadIfExist"></param>
-    /// <param name="cancellationToken"></param>
-    /// <returns></returns>
-    public static abstract Task<T?> SingleOrCreateAsync(T value, bool reloadIfExist = false,
-        CancellationToken? cancellationToken = null);
 }
 
 public interface ITableSheetBase<T> : ITableBase<T> where T : class

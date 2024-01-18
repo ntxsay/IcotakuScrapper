@@ -12,8 +12,8 @@ public class TanimeLicense
     public int IdAnime { get; set; }
 
     public TlicenseType Type { get; set; } = new();
-    public TcontactBase Distributor { get; set; } = new ();
-    
+    public TcontactBase Distributor { get; set; } = new();
+
     public TanimeLicense()
     {
     }
@@ -22,21 +22,21 @@ public class TanimeLicense
     {
         Id = id;
     }
-    
+
     public TanimeLicense(int idAnime, Tcontact distributor)
     {
         IdAnime = idAnime;
         Distributor = distributor;
     }
-    
-     #region Count
 
-     /// <summary>
-     /// Compte le nombre d'entrées dans la table TanimeLicense
-     /// </summary>
-     /// <param name="cancellationToken"></param>
-     /// <returns></returns>
-     public static async Task<int> CountAsync(CancellationToken? cancellationToken = null)
+    #region Count
+
+    /// <summary>
+    /// Compte le nombre d'entrées dans la table TanimeLicense
+    /// </summary>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static async Task<int> CountAsync(CancellationToken? cancellationToken = null)
     {
         await using var command = Main.Connection.CreateCommand();
 
@@ -80,8 +80,8 @@ public class TanimeLicense
 
         command.CommandText = "SELECT COUNT(Id) FROM TanimeLicense WHERE IdAnime = $IdAnime AND IdDistributor = $IdDistributor AND IdLicenseType = $IdLicenseType";
 
-        
-        
+
+
         command.Parameters.AddWithValue("$IdAnime", idAnime);
         command.Parameters.AddWithValue("$IdDistributor", idContact);
         command.Parameters.AddWithValue("$IdLicenseType", idLicenseType);
@@ -126,7 +126,7 @@ public class TanimeLicense
     /// <param name="idAnime"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async IAsyncEnumerable<TcontactBase> GetDistributors(int idAnime, CancellationToken? cancellationToken = null)
+    public static async IAsyncEnumerable<TcontactBase> GetDistributorsAsync(int idAnime, CancellationToken? cancellationToken = null)
     {
         await using var command = Main.Connection.CreateCommand();
 
@@ -142,7 +142,7 @@ public class TanimeLicense
             var contact = await TcontactBase.SingleAsync(id, IntColumnSelect.Id, cancellationToken);
             if (contact == null)
                 continue;
-            
+
             yield return contact;
         }
     }
@@ -152,7 +152,7 @@ public class TanimeLicense
     /// </summary>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async IAsyncEnumerable<TcontactBase> GetDistributors(CancellationToken? cancellationToken = null)
+    public static async IAsyncEnumerable<TcontactBase> GetDistributorsAsync(CancellationToken? cancellationToken = null)
     {
         await using var command = Main.Connection.CreateCommand();
 
@@ -167,13 +167,13 @@ public class TanimeLicense
             var contact = await TcontactBase.SingleAsync(id, IntColumnSelect.Id, cancellationToken);
             if (contact == null)
                 continue;
-            
+
             yield return contact;
         }
     }
 
-    
-    public static async Task<TanimeLicense[]> SelectAsync(int id, IntColumnSelect columnSelect, OrderBy orderBy = OrderBy.Asc, uint limit = 0, uint skip = 0 , CancellationToken? cancellationToken = null)
+
+    public static async Task<TanimeLicense[]> SelectAsync(int id, IntColumnSelect columnSelect, OrderBy orderBy = OrderBy.Asc, uint limit = 0, uint skip = 0, CancellationToken? cancellationToken = null)
     {
         await using var command = Main.Connection.CreateCommand();
         var isColumnSelectValid = command.IsIntColumnValidated(columnSelect,
@@ -183,7 +183,7 @@ public class TanimeLicense
             IntColumnSelect.IdContact,
             IntColumnSelect.IdLicenseType,
         ]);
-        
+
         if (!isColumnSelectValid)
         {
             return [];
@@ -197,9 +197,9 @@ public class TanimeLicense
             IntColumnSelect.IdLicenseType => "WHERE TanimeLicense.IdLicenseType = $Id",
             _ => throw new ArgumentOutOfRangeException(nameof(columnSelect), columnSelect, null)
         };
-        
+
         command.CommandText += Environment.NewLine + $"ORDER BY Tcontact.DisplayName {orderBy}";
-        
+
         command.AddLimitOffset(limit, skip);
 
         command.Parameters.AddWithValue("$Id", id);
@@ -218,20 +218,20 @@ public class TanimeLicense
         await using var command = Main.Connection.CreateCommand();
 
         command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE TanimeLicense.Id = $Id";
-        
+
         command.Parameters.AddWithValue("$Id", id);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
             return null;
         return await GetRecords(reader, cancellationToken).FirstOrDefaultAsync(cancellationToken ?? CancellationToken.None);
     }
-    
+
     public static async Task<TanimeLicense?> SingleAsync(int idAnime, int idContact, CancellationToken? cancellationToken = null)
     {
         await using var command = Main.Connection.CreateCommand();
 
         command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE TanimeLicense.IdAnime = $IdAnime AND TanimeLicense.IdDistributor = $IdDistributor";
-        
+
         command.Parameters.AddWithValue("$IdAnime", idAnime);
         command.Parameters.AddWithValue("$IdDistributor", idContact);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
@@ -241,30 +241,30 @@ public class TanimeLicense
     }
 
     #endregion
-    
+
     #region Insert
 
     public async Task<OperationState<int>> InsertAsync(bool disableVerification = false, CancellationToken? cancellationToken = null)
     {
         if (IdAnime <= 0 || (!disableVerification && !await TanimeBase.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken)))
             return new OperationState<int>(false, "L'anime n'existe pas.");
-        
+
         if (Distributor.Id <= 0 || (!disableVerification && !await TcontactBase.ExistsAsync(Distributor.Id, IntColumnSelect.Id, cancellationToken)))
             return new OperationState<int>(false, "Le distributor n'existe pas.");
-        
+
         if (Type.Id <= 0 || (!disableVerification && !await TlicenseType.ExistsAsync(Type.Id, cancellationToken)))
             return new OperationState<int>(false, "Le type de licence n'existe pas.");
-        
+
         if (!disableVerification && await ExistsAsync(IdAnime, Distributor.Id, Type.Id, cancellationToken))
             return new OperationState<int>(false, "Le lien existe déjà.");
-        
+
         await using var command = Main.Connection.CreateCommand();
         command.CommandText = "INSERT INTO TanimeLicense (IdAnime, IdDistributor, IdLicenseType) VALUES ($IdAnime, $IdDistributor, $IdLicenseType);";
-        
+
         command.Parameters.AddWithValue("$IdAnime", IdAnime);
         command.Parameters.AddWithValue("$IdDistributor", Distributor.Id);
         command.Parameters.AddWithValue("$IdLicenseType", Type.Id);
-        
+
         try
         {
             if (await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None) <= 0)
@@ -281,17 +281,17 @@ public class TanimeLicense
     }
 
     #endregion
-    
+
     #region Update
-    
+
     public async Task<OperationState> UpdateAsync(bool disableExistenceVerification = false, CancellationToken? cancellationToken = null)
     {
         if (IdAnime <= 0 || (!disableExistenceVerification && !await TanimeBase.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken)))
             return new OperationState(false, "L'anime n'existe pas.");
-        
+
         if (Distributor.Id <= 0 || (!disableExistenceVerification && !await TcontactBase.ExistsAsync(Distributor.Id, IntColumnSelect.Id, cancellationToken)))
             return new OperationState(false, "Le distributor n'existe pas.");
-        
+
         if (Type.Id <= 0 || (!disableExistenceVerification && !await TlicenseType.ExistsAsync(Type.Id, cancellationToken)))
             return new OperationState(false, "Le type de licence n'existe pas.");
 
@@ -301,9 +301,9 @@ public class TanimeLicense
             if (existingId is not null && existingId != Id)
                 return new OperationState(false, "Le lien existe déjà.");
         }
-        
+
         await using var command = Main.Connection.CreateCommand();
-        command.CommandText = 
+        command.CommandText =
             """
             UPDATE TanimeLicense SET 
                 IdAnime = $IdAnime, 
@@ -311,12 +311,12 @@ public class TanimeLicense
                 IdLicenseType = $IdLicenseType
             WHERE Id = $Id;
             """;
-        
+
         command.Parameters.AddWithValue("$Id", Id);
         command.Parameters.AddWithValue("$IdAnime", IdAnime);
         command.Parameters.AddWithValue("$IdDistributor", Distributor.Id);
         command.Parameters.AddWithValue("$IdLicenseType", Type.Id);
-        
+
         try
         {
             if (await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None) <= 0)
@@ -330,24 +330,24 @@ public class TanimeLicense
             return new OperationState(false, "Une erreur est survenue lors de la mise à jour");
         }
     }
-    
+
     #endregion
 
     #region Add or update
 
-        public static async Task<OperationState> InsertOrReplaceAsync(int idAnime, IReadOnlyCollection<TanimeLicense> values,
-        DbInsertMode insertMode = DbInsertMode.InsertOrReplace, CancellationToken? cancellationToken = null)
+    public static async Task<OperationState> InsertOrReplaceAsync(int idAnime, IReadOnlyCollection<TanimeLicense> values,
+    DbInsertMode insertMode = DbInsertMode.InsertOrReplace, CancellationToken? cancellationToken = null)
     {
         if (values.Count == 0)
             return new OperationState(false, "Aucun distributor n'a été trouvé.");
 
         if (idAnime <= 0 || !await TanimeBase.ExistsAsync(idAnime, IntColumnSelect.Id, cancellationToken))
             return new OperationState(false, "L'anime n'existe pas.");
-        
+
         await using var command = Main.Connection.CreateCommand();
         command.StartWithInsertMode(insertMode);
         command.CommandText += " INTO TanimeLicense (IdAnime, IdDistributor, IdLicenseType) VALUES";
-        
+
         for (var i = 0; i < values.Count; i++)
         {
             var value = values.ElementAt(i);
@@ -356,28 +356,28 @@ public class TanimeLicense
                 LogServices.LogDebug($"L'identifiant  du distributor ne peut pas être égal ou inférieur à 0.");
                 continue;
             }
-            
+
             if (value.Type.Id <= 0)
             {
                 LogServices.LogDebug($"L'identifiant  du type de licence ne peut pas être égal ou inférieur à 0.");
                 continue;
             }
-            
+
             command.CommandText += Environment.NewLine + $"($IdAnime, $IdDistributor{i}, $IdLicenseType{i})";
             command.Parameters.AddWithValue($"$IdDistributor{i}", value.Distributor.Id);
             command.Parameters.AddWithValue($"$IdLicenseType{i}", value.Type.Id);
-            
+
             if (i == values.Count - 1)
                 command.CommandText += ";";
             else
                 command.CommandText += ",";
         }
-        
+
         if (command.Parameters.Count == 0)
             return new OperationState(false, "Aucun distributeur n'a été sélectionné.");
-        
+
         command.Parameters.AddWithValue("$IdAnime", idAnime);
-        
+
         try
         {
             var count = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
@@ -392,30 +392,30 @@ public class TanimeLicense
 
     public async Task<OperationState> AddOrUpdateAsync(CancellationToken? cancellationToken = null)
         => await AddOrUpdateAsync(this, cancellationToken);
-    
+
     public static async Task<OperationState> AddOrUpdateAsync(TanimeLicense value,
         CancellationToken? cancellationToken = null)
     {
         //Si la validation échoue, on retourne le résultat de la validation
         if (!await TanimeBase.ExistsAsync(value.IdAnime, IntColumnSelect.Id, cancellationToken))
             return new OperationState(false, "L'anime n'existe pas.");
-        
+
         if (!await TcontactBase.ExistsAsync(value.Distributor.Id, IntColumnSelect.Id, cancellationToken))
             return new OperationState(false, "Le distributor n'existe pas.");
-        
+
         if (!await TlicenseType.ExistsAsync(value.Type.Id, cancellationToken))
             return new OperationState(false, "Le type de licence n'existe pas.");
-        
+
         //Vérifie si l'item existe déjà
         var existingId = await GetIdOfAsync(value.IdAnime, value.Distributor.Id, value.Type.Id, cancellationToken);
-        
+
         //Si l'item existe déjà
         if (existingId.HasValue)
         {
             //Si l'id n'appartient pas à l'item alors l'enregistrement existe déjà on annule l'opération
             if (value.Id > 0 && existingId.Value != value.Id)
                 return new OperationState(false, "Le nom de l'item existe déjà");
-            
+
             //Si l'id appartient à l'item alors on met à jour l'enregistrement
             if (existingId.Value != value.Id)
                 value.Id = existingId.Value;
@@ -426,14 +426,14 @@ public class TanimeLicense
         var addResult = await value.InsertAsync(true, cancellationToken);
         if (addResult.IsSuccess)
             value.Id = addResult.Data;
-        
+
         return addResult.ToBaseState();
     }
-    
+
     #endregion
-    
+
     #region Delete
-    
+
     /// <summary>
     /// Supprime les enregistrements de la table TanimeEpisode qui ne sont pas dans la liste spécifiée
     /// </summary>
@@ -453,7 +453,7 @@ public class TanimeLicense
             command.Parameters.AddWithValue($"$IdDistributor{i}", idDistributor);
             i++;
         }
-        
+
         command.CommandText += ") AND IdLicenseType NOT IN (";
         i = 0;
         foreach (var (_, idLicenseType, _) in actualValues)
@@ -462,7 +462,7 @@ public class TanimeLicense
             command.Parameters.AddWithValue($"$IdLicenseType{i}", idLicenseType);
             i++;
         }
-        
+
         command.CommandText += ") AND IdAnime NOT IN (";
         i = 0;
         foreach (var (_, _, idAnime) in actualValues)
@@ -484,7 +484,7 @@ public class TanimeLicense
             return new OperationState(false, "Une erreur est survenue lors de la suppression");
         }
     }
-    
+
     public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null)
         => await DeleteAsync(Id, cancellationToken);
 
@@ -493,9 +493,9 @@ public class TanimeLicense
         await using var command = Main.Connection.CreateCommand();
 
         command.CommandText = "DELETE FROM TanimeLicense WHERE Id = $Id";
-        
+
         command.Parameters.AddWithValue("$Id", id);
-        
+
         try
         {
             var count = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
@@ -526,18 +526,18 @@ public class TanimeLicense
                     Section = (IcotakuSection)reader.GetByte(reader.GetOrdinal("LicenceTypeSection"))
                 }
             };
-            
+
             var idContact = reader.GetInt32(reader.GetOrdinal("IdDistributor"));
             var contact = await TcontactBase.SingleAsync(idContact, IntColumnSelect.Id, cancellationToken);
             if (contact == null)
                 continue;
-            
+
             record.Distributor = contact;
 
             yield return record;
         }
     }
-    
+
     private const string SqlSelectScript =
         """
         SELECT

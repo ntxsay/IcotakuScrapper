@@ -449,6 +449,48 @@ public partial class Ttarget : ITableNameDescriptionBase<Ttarget>
 
     #endregion
 
+    #region AddOrUpdate
+    public async Task<OperationState<int>> AddOrUpdateAsync(CancellationToken? cancellationToken = null)
+        => await AddOrUpdateAsync(this, cancellationToken);
+
+    public static async Task<OperationState<int>> AddOrUpdateAsync(Ttarget value, CancellationToken? cancellationToken = null)
+    {
+        //Si la validation échoue, on retourne le résultat de la validation
+        if (value.Section == IcotakuSection.Community)
+            return new OperationState<int>(false, "La section de la fiche est invalide.");
+
+        //Vérifie si l'item existe déjà
+        var existingId = await GetIdOfAsync(value.Name, value.Section, cancellationToken);
+
+        //Si l'item existe déjà
+        if (existingId.HasValue)
+        {
+            /*
+             * Si l'id de la item actuel n'est pas neutre c'est-à-dire que l'id n'est pas inférieur ou égal à 0
+             * Et qu'il existe un Id correspondant à un enregistrement dans la base de données
+             * mais que celui-ci ne correspond pas à l'id de l'item actuel
+             * alors l'enregistrement existe déjà et on annule l'opération
+             */
+            if (value.Id > 0 && existingId.Value != value.Id)
+                return new OperationState<int>(false, "Un item autre que celui-ci existe déjà");
+
+            /*
+             * Si l'id de l'item actuel est neutre c'est-à-dire que l'id est inférieur ou égal à 0
+             * alors on met à jour l'id de l'item actuel avec l'id de l'enregistrement existant
+             */
+            if (existingId.Value != value.Id)
+                value.Id = existingId.Value;
+
+            //On met à jour l'enregistrement
+            return (await value.UpdateAsync(true, cancellationToken)).ToGenericState(value.Id);
+        }
+
+        //Si l'item n'existe pas, on l'ajoute
+        var addResult = await value.InsertAsync(true, cancellationToken);
+        return addResult;
+    }
+    #endregion
+
     #region Delete
 
     /// <summary>
@@ -527,6 +569,8 @@ public partial class Ttarget : ITableNameDescriptionBase<Ttarget>
             yield return GetRecord(reader, idIndex, sectionIndex, nameIndex, descriptionIndex);
         }
     }
+
+    
 
     private const string IcotakuSqlSelectScript =
         """

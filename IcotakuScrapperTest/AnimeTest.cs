@@ -36,7 +36,7 @@ namespace IcotakuScrapperTest
 
             if (anime is null)
             {
-                Console.WriteLine("L'anime n'a pas été trouvé");
+                Assert.Fail("L'anime n'a pas été trouvé");
                 return;
             }
 

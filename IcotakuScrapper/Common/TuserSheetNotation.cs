@@ -174,10 +174,14 @@ public partial class TuserSheetNotation : ITableSheetBase<TuserSheetNotation>
 
     public async Task<OperationState<int>> InsertAsync(bool disableVerification = false, CancellationToken? cancellationToken = null)
     {
+        //Vérifie si l'item existe déjà
         if (!disableVerification && await ExistsAsync(Section, SheetId, cancellationToken))
             return new OperationState<int>(false, "Le nom de l'item existe déjà");
 
+        //Initialise la commande SQLite
         await using var command = Main.Connection.CreateCommand();
+        
+        //Définit la commande SQL
         command.CommandText =
             """
             INSERT INTO TuserSheetNotation 
@@ -186,6 +190,7 @@ public partial class TuserSheetNotation : ITableSheetBase<TuserSheetNotation>
                 ($IdAnime, $Section, $SheetId, $WatchingStatus, $Note, $PublicComment, $PrivateComment)
             """;
         
+        //Ajoute les paramètres
         command.Parameters.AddWithValue("$SheetId", SheetId);
         command.Parameters.AddWithValue("$Section", (byte)Section);
         command.Parameters.AddWithValue("$WatchingStatus", (byte)WatchStatus);

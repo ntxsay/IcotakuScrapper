@@ -1,4 +1,5 @@
-﻿using IcotakuScrapper.Extensions;
+﻿using IcotakuScrapper.Common;
+using IcotakuScrapper.Extensions;
 using Microsoft.Data.Sqlite;
 using System.Diagnostics;
 
@@ -13,7 +14,7 @@ public enum GenreSortBy
 /// <summary>
 /// Représente un format de diffusion d'un anime ou Manga ou autre
 /// </summary>
-public class TcontactGenre
+public class TcontactGenre : ITableNameDescriptionBase<TcontactGenre>
 {
     public int Id { get; protected set; }
     public string Name { get; set; } = null!;
@@ -75,8 +76,6 @@ public class TcontactGenre
         await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT COUNT(Id) FROM TcontactGenre WHERE Id = $Id";
 
-        
-
         command.Parameters.AddWithValue("$Id", id);
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
         if (result is long count)
@@ -98,13 +97,16 @@ public class TcontactGenre
         await using var command = Main.Connection.CreateCommand();
         command.CommandText = "SELECT COUNT(Id) FROM TcontactGenre WHERE Name = $Name COLLATE NOCASE";
 
-        
-
         command.Parameters.AddWithValue("$Name", name.Trim());
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
         if (result is long count)
             return (int)count;
         return 0;
+    }
+
+    static Task<int> ITableNameDescriptionBase<TcontactGenre>.CountAsync(string name, IcotakuSection section, CancellationToken? cancellationToken = null)
+    {
+        throw new NotImplementedException();
     }
 
     public static async Task<int?> GetIdOfAsync(string name,
@@ -125,6 +127,10 @@ public class TcontactGenre
         return null;
     }
 
+    static Task<int?> ITableNameDescriptionBase<TcontactGenre>.GetIdOfAsync(string name, IcotakuSection section, CancellationToken? cancellationToken = null)
+    {
+        throw new NotImplementedException();
+    }
     #endregion
 
     #region Exists
@@ -134,6 +140,12 @@ public class TcontactGenre
 
     public static async Task<bool> ExistsAsync(string name, CancellationToken? cancellationToken = null)
         => await CountAsync(name, cancellationToken) > 0;
+
+    static Task<bool> ITableNameDescriptionBase<TcontactGenre>.ExistsAsync(string name, IcotakuSection section, CancellationToken? cancellationToken = null)
+    {
+        throw new NotImplementedException();
+    }
+
 
     #endregion
 
@@ -197,6 +209,11 @@ public class TcontactGenre
             .FirstOrDefaultAsync(cancellationToken ?? CancellationToken.None);
     }
 
+    static Task<TcontactGenre?> ITableNameDescriptionBase<TcontactGenre>.SingleAsync(string name, IcotakuSection section, CancellationToken? cancellationToken = null)
+    {
+        throw new NotImplementedException();
+    }
+
     #endregion
 
     #region Insert
@@ -240,28 +257,7 @@ public class TcontactGenre
         }
     }
 
-    public static async Task<TcontactGenre?> SingleOrCreateAsync(TcontactGenre value, bool reloadIfExist = false, CancellationToken? cancellationToken = null)
-    {
-        if (!reloadIfExist)
-        {
-            var id = await GetIdOfAsync(value.Name, cancellationToken);
-            if (id.HasValue)
-            {
-                value.Id = id.Value;
-                return value;
-            }
-
-            var result2 = await value.InsertAsync(false, cancellationToken);
-            return !result2.IsSuccess ? null : value;
-        }
-
-        var record = await SingleAsync(value.Name, cancellationToken);
-        if (record != null)
-            return record;
-
-        var result = await value.InsertAsync(false, cancellationToken);
-        return !result.IsSuccess ? null : value;
-    }
+   
     #endregion
 
     #region Update
@@ -307,6 +303,76 @@ public class TcontactGenre
             Debug.WriteLine(e.Message);
             return new OperationState(false, "Une erreur est survenue lors de la mise à jour");
         }
+    }
+
+    #endregion
+
+    #region AddOrUpdate
+    static Task<OperationState> ITableNameDescriptionBase<TcontactGenre>.InsertOrReplaceAsync(IReadOnlyCollection<TcontactGenre> values, DbInsertMode insertMode = DbInsertMode.InsertOrReplace, CancellationToken? cancellationToken = null)
+    {
+        throw new NotImplementedException();
+    }
+
+    public static async Task<TcontactGenre?> SingleOrCreateAsync(TcontactGenre value, bool reloadIfExist = false, CancellationToken? cancellationToken = null)
+    {
+        if (!reloadIfExist)
+        {
+            var id = await GetIdOfAsync(value.Name, cancellationToken);
+            if (id.HasValue)
+            {
+                value.Id = id.Value;
+                return value;
+            }
+        }
+        else
+        {
+            var record = await SingleAsync(value.Name, cancellationToken);
+            if (record != null)
+                return record;
+        }
+
+        var result = await value.InsertAsync(false, cancellationToken);
+        return !result.IsSuccess ? null : value;
+    }
+
+    public async Task<OperationState<int>> AddOrUpdateAsync(CancellationToken? cancellationToken = null)
+        => await AddOrUpdateAsync(this, cancellationToken);
+
+    public static async Task<OperationState<int>> AddOrUpdateAsync(TcontactGenre value, CancellationToken? cancellationToken = null)
+    {
+        //Si la validation échoue, on retourne le résultat de la validation
+        if (value.Name.IsStringNullOrEmptyOrWhiteSpace())
+            return new OperationState<int>(false, "Le nom de l'item ne peut pas être vide");    
+
+        //Vérifie si l'item existe déjà
+        var existingId = await GetIdOfAsync(value.Name, cancellationToken);
+
+        //Si l'item existe déjà
+        if (existingId.HasValue)
+        {
+            /*
+             * Si l'id de la item actuel n'est pas neutre c'est-à-dire que l'id n'est pas inférieur ou égal à 0
+             * Et qu'il existe un Id correspondant à un enregistrement dans la base de données
+             * mais que celui-ci ne correspond pas à l'id de l'item actuel
+             * alors l'enregistrement existe déjà et on annule l'opération
+             */
+            if (value.Id > 0 && existingId.Value != value.Id)
+                return new OperationState<int>(false, "Un item autre que celui-ci existe déjà");
+
+            /*
+             * Si l'id de l'item actuel est neutre c'est-à-dire que l'id est inférieur ou égal à 0
+             * alors on met à jour l'id de l'item actuel avec l'id de l'enregistrement existant
+             */
+            if (existingId.Value != value.Id)
+                value.Id = existingId.Value;
+
+            //On met à jour l'enregistrement
+            return (await value.UpdateAsync(true, cancellationToken)).ToGenericState(value.Id);
+        }
+
+        //Si l'item n'existe pas, on l'ajoute
+        var addResult = await value.InsertAsync(true, cancellationToken);
+        return addResult;
     }
 
     #endregion
@@ -375,6 +441,8 @@ public class TcontactGenre
             yield return GetRecord(reader, idIndex, nameIndex, descriptionIndex);
         }
     }
+
+    
 
     private const string SqlSelectScript =
         """

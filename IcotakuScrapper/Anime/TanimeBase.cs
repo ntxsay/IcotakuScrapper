@@ -1036,8 +1036,24 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
         throw new NotImplementedException();
     }
 
+    public static Task<TanimeBase?> SingleOrCreateAsync(TanimeBase value, bool reloadIfExist = false, CancellationToken? cancellationToken = null)
+    {
+        throw new NotImplementedException();
+    }
+
+
+    Task<OperationState<int>> ITableBase<TanimeBase>.AddOrUpdateAsync(CancellationToken? cancellationToken = null)
+    {
+        throw new NotImplementedException();
+    }
+
+    static Task<OperationState<int>> ITableBase<TanimeBase>.AddOrUpdateAsync(TanimeBase value, CancellationToken? cancellationToken = null)
+    {
+        throw new NotImplementedException();
+    }
+
     #endregion
-    
+
     #region Delete
 
     public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null)
@@ -1286,6 +1302,7 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
 
         return [.. records];
     }
+
 
     private const string IcotakuSqlSelectScript =
         """
