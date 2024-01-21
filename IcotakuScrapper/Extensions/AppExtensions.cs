@@ -5,6 +5,34 @@ namespace IcotakuScrapper.Extensions
     public static class AppExtensions
     {
         /// <summary>
+        /// Retourne la chaîne de caractères saisit avec la première lettre en majuscule.
+        /// </summary>
+        /// <param name="self"></param>
+        /// <returns></returns>
+        public static string? ToUpperFirstLetter(this string? self) => ExtensionMethods.ToUpperFirstLetter(self);
+
+        /// <summary>
+        /// Retourne la chaîne de caractères saisit avec la première lettre en minuscule.
+        /// </summary>
+        /// <param name="self"></param>
+        /// <returns></returns>
+        public static string? ToLowerFirstLetter(this string? self) => ExtensionMethods.ToLowerFirstLetter(self);
+
+        /// <summary>
+        /// Retourne la chaîne de caractères saisit avec toutes les premières lettres en majuscule.
+        /// </summary>
+        /// <param name="self"></param>
+        /// <returns></returns>
+        public static string? ToUpperAllFirstLetter(this string? self) => ExtensionMethods.ToUpperAllFirstLetter(self);
+
+        /// <summary>
+        /// Retourne la chaîne de caractères saisit avec toutes les premières lettres en minuscule.
+        /// </summary>
+        /// <param name="self"></param>
+        /// <returns></returns>
+        public static string? ToLowerAllFirstLetter(this string? self) => ExtensionMethods.ToLowerAllFirstLetter(self);
+
+        /// <summary>
         /// Retourne une valeur booléenne indiquant si la valeur de type string est null, vide ou ne contient que des espaces blancs
         /// </summary>
         /// <param name="self">Valeur</param>
@@ -107,6 +135,68 @@ namespace IcotakuScrapper.Extensions
 
     internal static class ExtensionMethods
     {
+        /// <summary>
+        /// Retourne la chaîne de caractères saisit avec la première lettre en majuscule.
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        public static string? ToUpperFirstLetter(string? value)
+        {
+            if (value == null || IsStringNullOrEmptyOrWhiteSpace(value))
+                return value;
+            return char.ToUpper(value[0]) + value[1..];
+        }
+
+        /// <summary>
+        /// Retourne la chaîne de caractères saisit avec la première lettre en minuscule.
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        public static string? ToLowerFirstLetter(string? value)
+        {
+            if (value == null || IsStringNullOrEmptyOrWhiteSpace(value))
+                return value;
+            return char.ToLower(value[0]) + value[1..];
+        }
+
+        /// <summary>
+        /// Retourne la chaîne de caractères saisit avec toutes les premières lettres en majuscule.
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        public static string? ToUpperAllFirstLetter(string? value)
+        {
+            if (value == null || IsStringNullOrEmptyOrWhiteSpace(value))
+                return value;
+            string[] words = value.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            for (int i = 0; i < words.Length; i++)
+            {
+                var upper = ToUpperFirstLetter(words[i]);
+                if (upper != null)
+                    words[i] = upper;
+            }
+            return string.Join(' ', words);
+        }
+
+        /// <summary>
+        /// Retourne la chaîne de caractères saisit avec toutes les premières lettres en minuscule.
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        public static string? ToLowerAllFirstLetter(string? value)
+        {
+            if (value == null || IsStringNullOrEmptyOrWhiteSpace(value))
+                return value;
+            string[] words = value.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            for (int i = 0; i < words.Length; i++)
+            {
+                var lower = ToLowerFirstLetter(words[i]);
+                if (lower != null)
+                    words[i] = lower;
+            }
+            return string.Join(' ', words);
+        }
+
         /// <summary>
         /// Obtient une valeur Booléenne indiquant si la chaîne de caractères saisit est Null ou vide ou ne contenant que des espaces blancs.
         /// </summary>

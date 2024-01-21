@@ -114,6 +114,17 @@ public enum IcotakuSheetType : byte
     Distributor,
 }
 
+public enum IcotakuAnimeSearchType
+{
+    StatusDiffusion,
+    Distributor,
+    Format,
+    OrigineAdaptation,
+    Target,
+    Genre,
+    Theme
+}
+
 
 public enum IcotakuDefaultSubFolder : byte
 {

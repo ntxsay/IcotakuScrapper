@@ -62,8 +62,14 @@ namespace IcotakuScrapper.Services
         /// </summary>
         /// <param name="element"></param>
         /// <returns></returns>
-        public static string? GetHrefFromElement(HtmlNode element)
+        public static string? GetHrefFromElement(HtmlNode? element)
         {
+            if (element == null)
+            {
+                LogServices.LogDebug("L'élément spécifié est null");
+                return null;
+            }
+
             string? href = element.GetAttributeValue("href", null);
             if (href == null || href.IsStringNullOrEmptyOrWhiteSpace())
             {
