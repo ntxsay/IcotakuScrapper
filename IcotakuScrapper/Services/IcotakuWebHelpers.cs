@@ -153,6 +153,15 @@ public static class IcotakuWebHelpers
     }
 
     #region Get Url
+    
+    /// <summary>
+    /// Retourne l'url de la page des épisodes d'une fiche depuis icotaku.com
+    /// </summary>
+    /// <param name="sheetId"></param>
+    /// <returns></returns>
+    internal static string GetAnimeEpisodesUrl(int sheetId)
+        => $"https://anime.icotaku.com/anime/episodes/{sheetId}.html";
+
 
     /// <summary>
     /// Retourne l'url de la page de l'évaluation d'une fiche depuis icotaku.com

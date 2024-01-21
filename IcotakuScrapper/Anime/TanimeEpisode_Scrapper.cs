@@ -1,20 +1,16 @@
-﻿using System.Globalization;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using System.Web;
 using HtmlAgilityPack;
 using IcotakuScrapper.Extensions;
-
 
 namespace IcotakuScrapper.Anime;
 
 public partial class TanimeEpisode
 {
-    private static string GetAnimeEpisodesUrl(int sheetId)
-        => $"https://anime.icotaku.com/anime/episodes/{sheetId}.html";
 
-    internal static IEnumerable<TanimeEpisode> GetAnimeEpisode(int sheetId)
+    internal static IEnumerable<TanimeEpisode> ScrapEpisode(int sheetId)
     {
-        var url = GetAnimeEpisodesUrl(sheetId);
+        var url = IcotakuWebHelpers.GetAnimeEpisodesUrl(sheetId);
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || !uri.IsAbsoluteUri)
             yield break;
 
@@ -62,11 +58,11 @@ public partial class TanimeEpisode
             var releaseDateRegex = GetReleaseDateRegex();
 
             // Recherche de la date dans la chaîne
-            var ReleaseDateMatch = releaseDateRegex.Match(diffusedAt);
-            if (!ReleaseDateMatch.Success)
+            var releaseDateMatch = releaseDateRegex.Match(diffusedAt);
+            if (!releaseDateMatch.Success)
                 continue;
 
-            var releaseDate = DateHelpers.GetNullableDateOnly(ReleaseDateMatch.Value, "dd/MM/yyyy");
+            var releaseDate = DateHelpers.GetNullableDateOnly(releaseDateMatch.Value, "dd/MM/yyyy");
             if (releaseDate is null)
                 continue;
 

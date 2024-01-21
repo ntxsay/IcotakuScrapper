@@ -76,7 +76,7 @@ public partial class Tanime
             //Episodes
             if (options.HasFlag(AnimeScrapingOptions.Episodes))
             {
-                var episodes = TanimeEpisode.GetAnimeEpisode(anime.SheetId).ToArray();
+                var episodes = TanimeEpisode.ScrapEpisode(anime.SheetId).ToArray();
                 if (episodes.Length > 0)
                 {
                     foreach (var episode in episodes)
