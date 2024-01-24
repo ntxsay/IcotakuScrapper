@@ -100,6 +100,8 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
     public Tseason? Season { get; set; }
     
     public TsheetStatistic? Statistic { get; set; }
+    public TuserSheetNotation? UserNotation { get; set; }
+
 
     /// <summary>
     /// Obtient ou définit la description de l'anime.
@@ -174,6 +176,7 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
         EpisodesCount = value.EpisodesCount;
         Duration = value.Duration;
         Statistic = value.Statistic?.Clone() ?? null;
+        UserNotation = value.UserNotation?.Clone() ?? null;
         Format = value.Format;
         Target = value.Target;
         OrigineAdaptation = value.OrigineAdaptation;

@@ -168,6 +168,8 @@ public partial class TanimeBase
                 sqlScript += "";
         }
 
+        #region Adult Content
+
         if (Main.IsAccessingToAdultContent)
         {
             if (options.IsAdultContent != null)
@@ -189,7 +191,11 @@ public partial class TanimeBase
 
             sqlScript += "Tanime.IsAdultContent = 0";
         }
-        
+
+        #endregion
+
+        #region Explicit Content
+
         if (options.IsExplicitContent != null)
         {
             if (sqlScript.Contains("WHERE", StringComparison.OrdinalIgnoreCase))
@@ -208,6 +214,10 @@ public partial class TanimeBase
             
             sqlScript += "Tanime.IsExplicitContent = 0";
         }
+
+        #endregion
+
+        #region Origine
 
         if (options.HasIdOrigineAdaptationToInclude)
         {
@@ -229,6 +239,82 @@ public partial class TanimeBase
             sqlScript += $"Tanime.IdOrigine NOT IN ({string.Join(',', options.IdOrigineAdaptationToExclude)})";
         }
 
+        #endregion
+
+        #region Format
+
+        if (options.HasIdFormatToInclude)
+        {
+            if (sqlScript.Contains("WHERE", StringComparison.OrdinalIgnoreCase))
+                sqlScript += Environment.NewLine + "AND ";
+            else
+                sqlScript += Environment.NewLine + "WHERE ";
+            
+            sqlScript += $"Tformat.Id IN ({string.Join(',', options.IdFormatToInclude)})";
+        }
+        
+        if (options.HasIdFormatToExclude)
+        {
+            if (sqlScript.Contains("WHERE", StringComparison.OrdinalIgnoreCase))
+                sqlScript += Environment.NewLine + "AND ";
+            else
+                sqlScript += Environment.NewLine + "WHERE ";
+            
+            sqlScript += $"Tformat.Id NOT IN ({string.Join(',', options.IdFormatToExclude)})";
+        }
+
+        #endregion
+
+        #region Target
+
+        if (options.HasIdTargetToInclude)
+        {
+            if (sqlScript.Contains("WHERE", StringComparison.OrdinalIgnoreCase))
+                sqlScript += Environment.NewLine + "AND ";
+            else
+                sqlScript += Environment.NewLine + "WHERE ";
+            
+            sqlScript += $"Ttarget.Id IN ({string.Join(',', options.IdTargetToInclude)})";
+        }
+        
+        if (options.HasIdTargetToExclude)
+        {
+            if (sqlScript.Contains("WHERE", StringComparison.OrdinalIgnoreCase))
+                sqlScript += Environment.NewLine + "AND ";
+            else
+                sqlScript += Environment.NewLine + "WHERE ";
+            
+            sqlScript += $"Ttarget.Id NOT IN ({string.Join(',', options.IdTargetToExclude)})";
+        }
+
+        #endregion
+        
+        #region Categories
+        
+        if (options.HasIdCategoryToInclude)
+        {
+            if (sqlScript.Contains("WHERE", StringComparison.OrdinalIgnoreCase))
+                sqlScript += Environment.NewLine + "AND ";
+            else
+                sqlScript += Environment.NewLine + "WHERE ";
+            
+            sqlScript += $"Tcategory.Id IN ({string.Join(',', options.IdCategoriesToInclude)})";
+        }
+        
+        if (options.HasIdCategoryToExclude)
+        {
+            if (sqlScript.Contains("WHERE", StringComparison.OrdinalIgnoreCase))
+                sqlScript += Environment.NewLine + "AND ";
+            else
+                sqlScript += Environment.NewLine + "WHERE ";
+            
+            sqlScript += $"Tcategory.Id NOT IN ({string.Join(',', options.IdCategoriesToExclude)})";
+        }
+        
+        #endregion
+        
+        #region Distributors
+
         if (options.HasIdDistributorsToInclude)
         {
             if (sqlScript.Contains("WHERE", StringComparison.OrdinalIgnoreCase))
@@ -249,6 +335,10 @@ public partial class TanimeBase
             sqlScript += $"TanimeLicense.IdDistributor NOT IN ({string.Join(',', options.IdDistributorsToExclude)})";
         }
 
+        #endregion
+
+        #region Studios
+
         if (options.HasIdStudiosToInclude)
         {
             if (sqlScript.Contains("WHERE", StringComparison.OrdinalIgnoreCase))
@@ -268,6 +358,8 @@ public partial class TanimeBase
 
             sqlScript += $"TanimeStudio.IdStudio NOT IN ({string.Join(',', options.IdStudiosToExclude)})";
         }
+
+        #endregion
         
         AnimeFilterSelection(ref sqlScript, options.ItemGroupCountData);
 

@@ -49,8 +49,8 @@ namespace IcotakuScrapper.Objects.Models
             Description = description;
         }
 
-        protected IncludeDataMode _Mode;
-        public virtual IncludeDataMode Mode
+        private IncludeDataMode _Mode;
+        public IncludeDataMode Mode
         {
             get => _Mode;
             set
@@ -70,8 +70,8 @@ namespace IcotakuScrapper.Objects.Models
             }
         }
 
-        protected bool? _IsIncluded;
-        public virtual bool? IsIncluded
+        private bool? _IsIncluded;
+        public bool? IsIncluded
         {
             get => _IsIncluded;
             set
@@ -90,8 +90,8 @@ namespace IcotakuScrapper.Objects.Models
             }
         }
 
-        protected string _Header = string.Empty;
-        public virtual string Header
+        private string _Header = string.Empty;
+        public string Header
         {
             get => _Header;
             set
@@ -104,8 +104,8 @@ namespace IcotakuScrapper.Objects.Models
             }
         }
 
-        protected object? _Data;
-        public virtual object? Data
+        private object? _Data;
+        public object? Data
         {
             get => _Data;
             set
@@ -118,8 +118,8 @@ namespace IcotakuScrapper.Objects.Models
             }
         }
 
-        protected string? _Description;
-        public virtual string? Description
+        private string? _Description;
+        public string? Description
         {
             get => _Description;
             set
@@ -132,7 +132,12 @@ namespace IcotakuScrapper.Objects.Models
             }
         }
 
-        public void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        public override string ToString()
+        {
+            return $"{_Header} : {_Mode}";
+        }
+
+        private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 

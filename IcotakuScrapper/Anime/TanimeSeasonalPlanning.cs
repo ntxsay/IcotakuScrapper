@@ -2,6 +2,7 @@
 using IcotakuScrapper.Extensions;
 using Microsoft.Data.Sqlite;
 using System.Diagnostics;
+using IcotakuScrapper.Contact;
 using IcotakuScrapper.Objects;
 
 namespace IcotakuScrapper.Anime;
@@ -103,6 +104,25 @@ public partial class TanimeSeasonalPlanning
         ThumbnailUrl = model.ThumbnailUrl;
     }
 
+    public TanimeBase ConvertToAnimeBase()
+    {
+        var animeBase = new TanimeBase()
+        {
+            Name = AnimeName,
+            Url = Url,
+            SheetId = SheetId,
+            IsAdultContent = IsAdultContent,
+            IsExplicitContent = IsExplicitContent,
+            ReleaseMonth = MonthDate.FromNumberedDate(ReleaseMonth),
+            ThumbnailUrl = ThumbnailUrl,
+            Description = Description,
+            OrigineAdaptation = OrigineAdaptation?.Clone(),
+            Season = Season,
+        };
+
+        return animeBase;
+    }
+    
     /// <summary>
     /// Retourne le chemin d'accès vers l'affiche de l'anime.
     /// </summary>

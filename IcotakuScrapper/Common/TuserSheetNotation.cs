@@ -13,6 +13,25 @@ public partial class TuserSheetNotation : ITableSheetBase<TuserSheetNotation>
     public float? Note { get; set; }
     public string? PublicComment { get; set; }
     public string? PrivateComment { get; set; }
+    
+    public void Copy(TuserSheetNotation value)
+    {
+        Id = value.Id;
+        SheetId = value.SheetId;
+        Section = value.Section;
+        WatchStatus = value.WatchStatus;
+        Note = value.Note;
+        PublicComment = value.PublicComment;
+        PrivateComment = value.PrivateComment;
+        IdAnime = value.IdAnime;
+    }
+    
+    public TuserSheetNotation Clone()
+    {
+        var clone = new TuserSheetNotation();
+        clone.Copy(this);
+        return clone;
+    }
 
     #region Count
 

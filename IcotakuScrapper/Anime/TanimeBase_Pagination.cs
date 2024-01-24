@@ -461,16 +461,6 @@ public partial class TanimeBase
             sqlScript += $"ContactStudioId NOT IN ({string.Join(',', options.IdStudiosToExclude)})";
         }
 
-        if (options.HasThumbnail != null)
-        {
-            AddWhereOrAndClause(ref sqlScript);
-
-            if (options.HasThumbnail.Value)
-                sqlScript += "Tanime.ThumbnailUrl IS NOT NULL";
-            else
-                sqlScript += "Tanime.ThumbnailUrl IS NULL";
-        }
-
         FilterSelection(ref command, ref sqlScript, options.ItemGroupCountData);
 
         sqlScript += Environment.NewLine;

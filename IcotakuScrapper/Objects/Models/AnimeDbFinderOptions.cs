@@ -4,30 +4,38 @@ namespace IcotakuScrapper.Objects.Models;
 
 public record AnimeDbFinderOptions
 {
-    public string? Keyword { get; init; } = null;
+    public string? Keyword { get; init; }
     public bool IsFindInDescription { get; init; }
     public bool IsFindInTitles { get; init; }
     public bool IsFindInRemark { get; init; }
     public bool? IsAdultContent { get; init; }
     public bool? IsExplicitContent { get; init; }
-    public bool? HasThumbnail { get; init; }
     public MonthDate MinDate { get; init; }
     public MonthDate MaxDate { get; init; }
 
     public ItemGroupCountStruct[] ItemGroupCountData { get; init; } = [];
 
+    //Origines
     public HashSet<int> IdOrigineAdaptationToInclude { get; init; } = [];
     public HashSet<int> IdOrigineAdaptationToExclude { get; init; } = [];
     
+    //Distributeurs
     public HashSet<int> IdDistributorsToInclude { get; init; } = [];
     public HashSet<int> IdDistributorsToExclude { get; init; } = [];
     
+    //Studios
     public HashSet<int> IdStudiosToInclude { get; init; } = [];
     public HashSet<int> IdStudiosToExclude { get; init; } = [];
 
+    //Cible démographique
     public HashSet<int> IdTargetToInclude { get; init; } = [];
     public HashSet<int> IdTargetToExclude { get; init; } = [];
     
+    //Formats
+    public HashSet<int> IdFormatToInclude { get; init; } = [];
+    public HashSet<int> IdFormatToExclude { get; init; } = [];
+    
+    //Catégories
     public HashSet<int> IdCategoriesToInclude { get; init; } = [];
     public HashSet<int> IdCategoriesToExclude { get; init; } = [];
     
@@ -47,8 +55,11 @@ public record AnimeDbFinderOptions
     public bool HasIdTargetToInclude => IdTargetToInclude.Count > 0;
     public bool HasIdTargetToExclude => IdTargetToExclude.Count > 0;
     
-    public bool HasIdGenreToInclude => IdCategoriesToInclude.Count > 0;
-    public bool HasIdGenreToExclude => IdCategoriesToExclude.Count > 0;
+    public bool HasIdCategoryToInclude => IdCategoriesToInclude.Count > 0;
+    public bool HasIdCategoryToExclude => IdCategoriesToExclude.Count > 0;
+    
+    public bool HasIdFormatToInclude => IdFormatToInclude.Count > 0;
+    public bool HasIdFormatToExclude => IdFormatToExclude.Count > 0;
     
     
 }
