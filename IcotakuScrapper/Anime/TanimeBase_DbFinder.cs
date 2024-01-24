@@ -7,6 +7,18 @@ namespace IcotakuScrapper.Anime;
 
 public partial class TanimeBase
 {
+    /// <summary>
+    /// Pagine les éléments en fonction des options
+    /// </summary>
+    /// <param name="options"></param>
+    /// <param name="currentPage"></param>
+    /// <param name="maxContentByPage"></param>
+    /// <param name="sortBy"></param>
+    /// <param name="groupBy"></param>
+    /// <param name="itemsOrderedBy"></param>
+    /// <param name="groupHeaderOrderedBy"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     public static async Task<Paginate<TanimeBase>> PaginateAsync(AnimeDbFinderOptions options,
         uint currentPage = 1, uint maxContentByPage = 20,
         AnimeSortBy sortBy = AnimeSortBy.ReleaseMonth,
@@ -14,16 +26,56 @@ public partial class TanimeBase
         OrderBy itemsOrderedBy = OrderBy.Asc, OrderBy groupHeaderOrderedBy = OrderBy.Asc,
         CancellationToken? cancellationToken = null)
     {
+        //Initialise la connexion à la base de données
         await using var command = Main.Connection.CreateCommand();
 
-        int totalItems = 0;
-        _ = GetSqlSelectScript(command, DbScriptMode.Count, options, sortBy, groupBy, itemsOrderedBy, groupHeaderOrderedBy);
+        //Declaration de la variable qui permet de compter le nombre total d'éléments
+        uint totalItems;
+        
+        //Initialise la liste qui contiendra les Ids des éléments
+        List<int> resultIds = [];
+        
+        //Obtient le script de sélection des Id des éléments en prenant en compte les options
+        GetSqlSelectScript(command, DbScriptMode.GetId, options, sortBy, groupBy, itemsOrderedBy, groupHeaderOrderedBy);
 
-        var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
-        if (result is long count)
-            totalItems = (int)count;
+        //Execute la requête
+        await using (var resultReader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None))
+        {
+            //Si la requête ne retourne aucun élément, on retourne une pagination vide
+            if (!resultReader.HasRows)
+                return new Paginate<TanimeBase>(
+                    currentPage: 1,
+                    totalPages: 1,
+                    maxItemsPerPage: maxContentByPage,
+                    totalItems: 0,
+                    items: []);
+            
+            //Lit les Ids des éléments et les ajoutes à la liste
+            while (await resultReader.ReadAsync(cancellationToken ?? CancellationToken.None))
+                if (!resultReader.IsDBNull(resultReader.GetOrdinal("AnimeId")))
+                    resultIds.Add(resultReader.GetInt32(resultReader.GetOrdinal("AnimeId")));
 
-        if (totalItems <= 0)
+            //Met à jour le nombre total d'éléments
+            totalItems = (uint)resultIds.Count;
+        
+            //Si le nombre total d'éléments est égal à 0, on retourne une pagination vide
+            if (totalItems == 0)
+                return new Paginate<TanimeBase>(
+                    currentPage: 1,
+                    totalPages: 1,
+                    maxItemsPerPage: maxContentByPage,
+                    totalItems: 0,
+                    items: []);
+        }
+        
+        //Obtient le nombre total de pages
+        var totalPages = ExtensionMethods.CountPage(totalItems, maxContentByPage);
+        
+        //Obtient les Ids des éléments de la page actuelle
+        var paginatedValues = ExtensionMethods.GetPage(resultIds, currentPage, maxContentByPage);
+        
+        //Si les Ids des éléments de la page actuelle est vide, on retourne une pagination vide
+        if (paginatedValues.Length == 0)
             return new Paginate<TanimeBase>(
                 currentPage: 1,
                 totalPages: 1,
@@ -31,13 +83,14 @@ public partial class TanimeBase
                 totalItems: 0,
                 items: []);
 
-        var totalPages = ExtensionMethods.CountPage((uint)totalItems, maxContentByPage);
+        //Obtient le script de sélection des éléments en fonction des Ids précédemment récupérés
+        command.CommandText = IcotakuSqlSelectScript + Environment.NewLine +
+                              $"WHERE Tanime.Id IN ({string.Join(',', paginatedValues)})";
 
-
-        _ = GetSqlSelectScript(command, DbScriptMode.Select, options, sortBy, groupBy, itemsOrderedBy, groupHeaderOrderedBy);
-        command.AddPagination(currentPage, maxContentByPage);
-
+        //Execute la requête
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
+        
+        //Si la requête ne retourne aucun élément, on retourne une pagination vide
         if (!reader.HasRows)
             return new Paginate<TanimeBase>(
                 currentPage: 1,
@@ -46,7 +99,10 @@ public partial class TanimeBase
                 totalItems: 0,
                 items: []);
 
+        //Obtient les éléments
         var records = await GetRecords(reader, cancellationToken);
+        
+        //Si les éléments sont vides, on retourne une pagination vide
         if (records.Length == 0)
             return new Paginate<TanimeBase>(
                 currentPage: 1,
@@ -55,15 +111,27 @@ public partial class TanimeBase
                 totalItems: 0,
                 items: []);
 
+        //Retourne la pagination
         return new Paginate<TanimeBase>(
                 currentPage: currentPage,
                 totalPages: totalPages,
                 maxItemsPerPage: maxContentByPage,
-                totalItems: (uint)totalItems,
+                totalItems: totalItems,
                 items: records);
     }
     
-    private static string GetSqlSelectScript(SqliteCommand command, DbScriptMode scriptMode,
+    /// <summary>
+    /// Prépare la requête en fonction des options
+    /// </summary>
+    /// <param name="command"></param>
+    /// <param name="scriptMode"></param>
+    /// <param name="options"></param>
+    /// <param name="sortBy"></param>
+    /// <param name="groupBy"></param>
+    /// <param name="itemsOrderedBy"></param>
+    /// <param name="groupHeaderOrderedBy"></param>
+    /// <exception cref="ArgumentOutOfRangeException"></exception>
+    private static void GetSqlSelectScript(SqliteCommand command, DbScriptMode scriptMode,
             AnimeDbFinderOptions options,
         AnimeSortBy sortBy = AnimeSortBy.Name, 
         AnimeGroupBy groupBy = AnimeGroupBy.Format,
@@ -73,15 +141,15 @@ public partial class TanimeBase
         {
             DbScriptMode.Select => IcotakuSqlSelectScript,
             DbScriptMode.Count => IcotakuSqlCountScript,
+            DbScriptMode.GetId => IcotakuSqlGetIdScript,
             _ => throw new ArgumentOutOfRangeException(nameof(scriptMode), scriptMode,
                 "Le mode de script n'est pas supporté")
         };
 
         if (options.HasKeyword)
             sqlScript += Environment.NewLine +
-                         $"WHERE (Tanime.Name LIKE $Keyword COLLATE NOCASE OR Tanime.Description LIKE $Keyword COLLATE NOCASE)";
-
-
+                         "WHERE (Tanime.Name LIKE $Keyword COLLATE NOCASE OR Tanime.Description LIKE $Keyword COLLATE NOCASE)";
+        
         if (options.HasMinDate || options.HasMaxDate)
         {
             if (sqlScript.Contains("WHERE", StringComparison.OrdinalIgnoreCase))
@@ -122,7 +190,6 @@ public partial class TanimeBase
             sqlScript += "Tanime.IsAdultContent = 0";
         }
         
-
         if (options.IsExplicitContent != null)
         {
             if (sqlScript.Contains("WHERE", StringComparison.OrdinalIgnoreCase))
@@ -131,6 +198,15 @@ public partial class TanimeBase
                 sqlScript += Environment.NewLine + "WHERE ";
 
             sqlScript += "Tanime.IsExplicitContent = $IsExplicitContent";
+        }
+        else
+        {
+            if (sqlScript.Contains("WHERE", StringComparison.OrdinalIgnoreCase))
+                sqlScript += Environment.NewLine + "AND ";
+            else
+                sqlScript += Environment.NewLine + "WHERE ";
+            
+            sqlScript += "Tanime.IsExplicitContent = 0";
         }
 
         if (options.HasIdOrigineAdaptationToInclude)
@@ -195,12 +271,8 @@ public partial class TanimeBase
         
         AnimeFilterSelection(ref sqlScript, options.ItemGroupCountData);
 
-        if (scriptMode == DbScriptMode.Select)
-            sqlScript += Environment.NewLine + "GROUP BY Tanime.Id";
-        
         OrderRequestBy(ref sqlScript, sortBy, groupBy, itemsOrderedBy, groupHeaderOrderedBy);
         
-
         command.CommandText = sqlScript;
         command.Parameters.Clear();
 
@@ -218,8 +290,6 @@ public partial class TanimeBase
 
         if (options.IsExplicitContent != null)
             command.Parameters.AddWithValue("$IsExplicitContent", options.IsExplicitContent.Value ? 1 : 0);
-
-        return sqlScript;
     }
 
     private static void OrderRequestBy(ref string sqlScript, AnimeSortBy sortBy,
@@ -366,15 +436,15 @@ public partial class TanimeBase
     
     private static void AnimeFilterSelection(ref string sqlScript, IReadOnlyCollection<ItemGroupCountStruct> groups)
     {
-        //Si la requête est vide, on ne fait rien
+        //Si la requête est vide, on sort de la méthode
         if (sqlScript.IsStringNullOrEmptyOrWhiteSpace())
             return;
         
-        //Si la liste est vide, on ne fait rien
+        //Si la liste est vide, on sort de la méthode
         if (groups.Count == 0)
             return;
         
-        //Si la liste contient plus d'un élément, on ne fait rien
+        //Si la liste contient plus d'un élément, on sort de la méthode
         var isSame = groups.Select(x => x.IdentifierKind).Distinct().Count() == 1;
         if (!isSame)
         {
@@ -384,7 +454,7 @@ public partial class TanimeBase
 
         //On récupère le type de données
         var kind = groups.First().IdentifierKind;
-        //Si le type de données est None, on ne fait rien
+        //Si le type de données est None, on sort de la méthode
         if (kind == ItemGroupCountKind.None)
             return;
         
