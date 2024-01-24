@@ -1,8 +1,9 @@
 ﻿using System.Diagnostics;
+using IcotakuScrapper.Anime;
 using IcotakuScrapper.Extensions;
 using Microsoft.Data.Sqlite;
 
-namespace IcotakuScrapper.Anime;
+namespace IcotakuScrapper.Common;
 
 public enum AnimeEpisodeSortBy : byte
 {
@@ -14,7 +15,7 @@ public enum AnimeEpisodeSortBy : byte
     Day
 }
 
-public partial class TanimeEpisode
+public partial class Tepisode : ITableBase<Tepisode>
 {
     public const string ReleaseDateFormat = "yyyy-MM-dd";
 
@@ -26,28 +27,28 @@ public partial class TanimeEpisode
     public DayOfWeek Day { get; set; }
     public string? Description { get; set; }
 
-    public TanimeEpisode()
+    public Tepisode()
     {
     }
 
-    public TanimeEpisode(int id)
+    public Tepisode(int id)
     {
         Id = id;
     }
 
-    public TanimeEpisode(int id, int idAnime)
+    public Tepisode(int id, int idAnime)
     {
         Id = id;
         IdAnime = idAnime;
     }
-    
-    public TanimeEpisode(int idAnime, ushort noEpisode)
+
+    public Tepisode(int idAnime, ushort noEpisode)
     {
         IdAnime = idAnime;
         NoEpisode = noEpisode;
     }
 
-    public TanimeEpisode(int id, int idAnime, DateOnly releaseDate, ushort noEpisode, string episodeName,
+    public Tepisode(int id, int idAnime, DateOnly releaseDate, ushort noEpisode, string episodeName,
         DayOfWeek day, string? description)
     {
         Id = id;
@@ -62,14 +63,14 @@ public partial class TanimeEpisode
     #region Count
 
     /// <summary>
-    /// Compte le nombre d'entrées dans la table TanimeEpisode
+    /// Compte le nombre d'entrées dans la table Tepisode
     /// </summary>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
     public static async Task<int> CountAsync(CancellationToken? cancellationToken = null)
     {
         await using var command = Main.Connection.CreateCommand();
-        command.CommandText = "SELECT COUNT(Id) FROM TanimeEpisode";
+        command.CommandText = "SELECT COUNT(Id) FROM Tepisode";
 
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
         if (result is long count)
@@ -77,8 +78,39 @@ public partial class TanimeEpisode
         return 0;
     }
 
+    public static async Task<int> CountByIdAsync(int id, CancellationToken? cancellationToken = null)
+    {
+        await using var command = Main.Connection.CreateCommand();
+        command.CommandText = "SELECT COUNT(Id) FROM Tepisode WHERE Id = $Id";
+
+        command.Parameters.AddWithValue("$Id", id);
+
+        var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
+        if (result is long count)
+            return (int)count;
+        return 0;
+    }
+
+    public static async Task<int> CountByIdAnimeAsync(int idAnime, CancellationToken? cancellationToken = null)
+    {
+        await using var command = Main.Connection.CreateCommand();
+        command.CommandText = "SELECT COUNT(Id) FROM Tepisode WHERE IdAnime = $Id";
+
+        command.Parameters.AddWithValue("$Id", idAnime);
+
+        var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
+        if (result is long count)
+            return (int)count;
+        return 0;
+    }
+
+    static Task<int> ITableBase<Tepisode>.CountAsync(int id, CancellationToken? cancellationToken)
+    {
+        throw new NotImplementedException();
+    }
+
     /// <summary>
-    /// Compte le nombre d'entrées dans la table TanimeEpisode ayant l'identifiant spécifié
+    /// Compte le nombre d'entrées dans la table Tepisode ayant l'identifiant spécifié
     /// </summary>
     /// <param name="id"></param>
     /// <param name="columnSelect"></param>
@@ -98,10 +130,11 @@ public partial class TanimeEpisode
         {
             return 0;
         }
+
         command.CommandText = columnSelect switch
         {
-            IntColumnSelect.Id => "SELECT COUNT(Id) FROM TanimeEpisode WHERE Id = $Id",
-            IntColumnSelect.IdAnime => "SELECT COUNT(Id) FROM TanimeEpisode WHERE IdAnime = $Id",
+            IntColumnSelect.Id => "SELECT COUNT(Id) FROM Tepisode WHERE Id = $Id",
+            IntColumnSelect.IdAnime => "SELECT COUNT(Id) FROM Tepisode WHERE IdAnime = $Id",
             _ => throw new ArgumentOutOfRangeException(nameof(columnSelect), columnSelect,
                 "La valeur spécifiée est invalide")
         };
@@ -114,7 +147,7 @@ public partial class TanimeEpisode
     }
 
     /// <summary>
-    /// Compte le nombre d'entrées dans la table TanimeEpisode
+    /// Compte le nombre d'entrées dans la table Tepisode
     /// </summary>
     /// <param name="releaseDate"></param>
     /// <param name="cancellationToken"></param>
@@ -122,7 +155,7 @@ public partial class TanimeEpisode
     public static async Task<int> CountAsync(DateOnly releaseDate, CancellationToken? cancellationToken = null)
     {
         await using var command = Main.Connection.CreateCommand();
-        command.CommandText = "SELECT COUNT(Id) FROM TanimeEpisode WHERE ReleaseDate = $ReleaseDate";
+        command.CommandText = "SELECT COUNT(Id) FROM Tepisode WHERE ReleaseDate = $ReleaseDate";
 
         command.Parameters.AddWithValue("$ReleaseDate", releaseDate.ToString(ReleaseDateFormat));
 
@@ -133,7 +166,7 @@ public partial class TanimeEpisode
     }
 
     /// <summary>
-    /// Compte le nombre d'entrées dans la table TanimeEpisode
+    /// Compte le nombre d'entrées dans la table Tepisode
     /// </summary>
     /// <param name="noEpisode"></param>
     /// <param name="cancellationToken"></param>
@@ -143,7 +176,7 @@ public partial class TanimeEpisode
     {
         await using var command = Main.Connection.CreateCommand();
         command.CommandText =
-            "SELECT COUNT(Id) FROM TanimeEpisode WHERE IdAnime = $IdAnime AND NoEpisode = $NoEpisode";
+            "SELECT COUNT(Id) FROM Tepisode WHERE IdAnime = $IdAnime AND NoEpisode = $NoEpisode";
 
         command.Parameters.AddWithValue("$IdAnime", idAnime);
         command.Parameters.AddWithValue("$NoEpisode", noEpisode);
@@ -159,7 +192,7 @@ public partial class TanimeEpisode
     {
         await using var command = Main.Connection.CreateCommand();
         command.CommandText =
-            "SELECT COUNT(Id) FROM TanimeEpisode WHERE IdAnime = $IdAnime AND NoEpisode = $NoEpisode";
+            "SELECT COUNT(Id) FROM Tepisode WHERE IdAnime = $IdAnime AND NoEpisode = $NoEpisode";
 
         command.Parameters.AddWithValue("$IdAnime", idAnime);
         command.Parameters.AddWithValue("$NoEpisode", noEpisode);
@@ -189,18 +222,18 @@ public partial class TanimeEpisode
 
     #region Select
 
-    public static async Task<TanimeEpisode[]> SelectAsync(AnimeEpisodeSortBy sortBy, OrderBy orderBy, uint limit = 0,
+    public static async Task<Tepisode[]> SelectAsync(AnimeEpisodeSortBy sortBy, OrderBy orderBy, uint limit = 0,
         uint offset = 0, CancellationToken? cancellationToken = null)
     {
         await using var command = Main.Connection.CreateCommand();
         command.CommandText = SqlSelectScript + Environment.NewLine + sortBy switch
         {
-            AnimeEpisodeSortBy.Id => $"ORDER BY TanimeEpisode.Id {orderBy}",
-            AnimeEpisodeSortBy.IdAnime => $"ORDER BY TanimeEpisode.IdAnime {orderBy}",
-            AnimeEpisodeSortBy.ReleaseDate => $"ORDER BY TanimeEpisode.ReleaseDate {orderBy}",
-            AnimeEpisodeSortBy.EpisodeNumber => $"ORDER BY TanimeEpisode.NoEpisode {orderBy}",
-            AnimeEpisodeSortBy.EpisodeName => $"ORDER BY TanimeEpisode.EpisodeName {orderBy}",
-            AnimeEpisodeSortBy.Day => $"ORDER BY TanimeEpisode.NoDay {orderBy}",
+            AnimeEpisodeSortBy.Id => $"ORDER BY Tepisode.Id {orderBy}",
+            AnimeEpisodeSortBy.IdAnime => $"ORDER BY Tepisode.IdAnime {orderBy}",
+            AnimeEpisodeSortBy.ReleaseDate => $"ORDER BY Tepisode.ReleaseDate {orderBy}",
+            AnimeEpisodeSortBy.EpisodeNumber => $"ORDER BY Tepisode.NoEpisode {orderBy}",
+            AnimeEpisodeSortBy.EpisodeName => $"ORDER BY Tepisode.EpisodeName {orderBy}",
+            AnimeEpisodeSortBy.Day => $"ORDER BY Tepisode.NoDay {orderBy}",
             _ => throw new ArgumentOutOfRangeException(nameof(sortBy), sortBy, "La valeur spécifiée est invalide")
         };
         command.AddLimitOffset(limit, offset);
@@ -213,26 +246,39 @@ public partial class TanimeEpisode
         return await GetRecords(reader, cancellationToken).ToArrayAsync(cancellationToken ?? CancellationToken.None);
     }
 
-    public static async Task<TanimeEpisode[]> SelectAsync(int idAnime, AnimeEpisodeSortBy sortBy, OrderBy orderBy,
+    public static async Task<Tepisode[]> SelectAsync(int id, IcotakuSection section, AnimeEpisodeSortBy sortBy,
+        OrderBy orderBy,
         uint limit = 0, uint offset = 0, CancellationToken? cancellationToken = null)
     {
+        if (section != IcotakuSection.Anime && section != IcotakuSection.Drama)
+            throw new NotSupportedException(
+                $"Seules les section {nameof(IcotakuSection.Anime)} et {nameof(IcotakuSection.Drama)} sont supportées.");
+
         await using var command = Main.Connection.CreateCommand();
-        command.CommandText = SqlSelectScript + Environment.NewLine + "WHERE IdAnime = $IdAnime" + Environment.NewLine +
-                              sortBy switch
-                              {
-                                  AnimeEpisodeSortBy.Id => $"ORDER BY TanimeEpisode.Id {orderBy}",
-                                  AnimeEpisodeSortBy.IdAnime => $"ORDER BY TanimeEpisode.IdAnime {orderBy}",
-                                  AnimeEpisodeSortBy.ReleaseDate => $"ORDER BY TanimeEpisode.ReleaseDate {orderBy}",
-                                  AnimeEpisodeSortBy.EpisodeNumber => $"ORDER BY TanimeEpisode.NoEpisode {orderBy}",
-                                  AnimeEpisodeSortBy.EpisodeName => $"ORDER BY TanimeEpisode.EpisodeName {orderBy}",
-                                  AnimeEpisodeSortBy.Day => $"ORDER BY TanimeEpisode.NoDay {orderBy}",
-                                  _ => throw new ArgumentOutOfRangeException(nameof(sortBy), sortBy,
-                                      "La valeur spécifiée est invalide")
-                              };
+        command.CommandText = SqlSelectScript + Environment.NewLine;
+        command.CommandText += section switch
+        {
+            IcotakuSection.Anime => "WHERE IdAnime = $Id",
+            IcotakuSection.Drama => "WHERE IdDrama = $Id",
+            _ => throw new NotSupportedException(
+                $"Seules les section {nameof(IcotakuSection.Anime)} et {nameof(IcotakuSection.Drama)} sont supportées.")
+        };
+
+        command.CommandText += Environment.NewLine + sortBy switch
+        {
+            AnimeEpisodeSortBy.Id => $"ORDER BY Tepisode.Id {orderBy}",
+            AnimeEpisodeSortBy.IdAnime => $"ORDER BY Tepisode.IdAnime {orderBy}",
+            AnimeEpisodeSortBy.ReleaseDate => $"ORDER BY Tepisode.ReleaseDate {orderBy}",
+            AnimeEpisodeSortBy.EpisodeNumber => $"ORDER BY Tepisode.NoEpisode {orderBy}",
+            AnimeEpisodeSortBy.EpisodeName => $"ORDER BY Tepisode.EpisodeName {orderBy}",
+            AnimeEpisodeSortBy.Day => $"ORDER BY Tepisode.NoDay {orderBy}",
+            _ => throw new ArgumentOutOfRangeException(nameof(sortBy), sortBy,
+                "La valeur spécifiée est invalide")
+        };
 
         command.AddLimitOffset(limit, offset);
 
-        command.Parameters.AddWithValue("$IdAnime", idAnime);
+        command.Parameters.AddWithValue("$Id", id);
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
@@ -241,7 +287,7 @@ public partial class TanimeEpisode
         return await GetRecords(reader, cancellationToken).ToArrayAsync(cancellationToken ?? CancellationToken.None);
     }
 
-    public static async Task<TanimeEpisode[]> SelectAsync(DateOnly minDate, DateOnly maxDate,
+    public static async Task<Tepisode[]> SelectAsync(DateOnly minDate, DateOnly maxDate,
         AnimeEpisodeSortBy sortBy, OrderBy orderBy,
         uint limit = 0, uint offset = 0, CancellationToken? cancellationToken = null)
     {
@@ -249,12 +295,12 @@ public partial class TanimeEpisode
         command.CommandText = SqlSelectScript + Environment.NewLine +
                               "WHERE ReleaseDate BETWEEN $MinDate AND $MaxDate" + Environment.NewLine + sortBy switch
                               {
-                                  AnimeEpisodeSortBy.Id => $"ORDER BY TanimeEpisode.Id {orderBy}",
-                                  AnimeEpisodeSortBy.IdAnime => $"ORDER BY TanimeEpisode.IdAnime {orderBy}",
-                                  AnimeEpisodeSortBy.ReleaseDate => $"ORDER BY TanimeEpisode.ReleaseDate {orderBy}",
-                                  AnimeEpisodeSortBy.EpisodeNumber => $"ORDER BY TanimeEpisode.NoEpisode {orderBy}",
-                                  AnimeEpisodeSortBy.EpisodeName => $"ORDER BY TanimeEpisode.EpisodeName {orderBy}",
-                                  AnimeEpisodeSortBy.Day => $"ORDER BY TanimeEpisode.NoDay {orderBy}",
+                                  AnimeEpisodeSortBy.Id => $"ORDER BY Tepisode.Id {orderBy}",
+                                  AnimeEpisodeSortBy.IdAnime => $"ORDER BY Tepisode.IdAnime {orderBy}",
+                                  AnimeEpisodeSortBy.ReleaseDate => $"ORDER BY Tepisode.ReleaseDate {orderBy}",
+                                  AnimeEpisodeSortBy.EpisodeNumber => $"ORDER BY Tepisode.NoEpisode {orderBy}",
+                                  AnimeEpisodeSortBy.EpisodeName => $"ORDER BY Tepisode.EpisodeName {orderBy}",
+                                  AnimeEpisodeSortBy.Day => $"ORDER BY Tepisode.NoDay {orderBy}",
                                   _ => throw new ArgumentOutOfRangeException(nameof(sortBy), sortBy,
                                       "La valeur spécifiée est invalide")
                               };
@@ -275,7 +321,7 @@ public partial class TanimeEpisode
 
     #region Single
 
-    public static async Task<TanimeEpisode?> SingleAsync(int id,
+    public static async Task<Tepisode?> SingleAsync(int id,
         CancellationToken? cancellationToken = null)
     {
         await using var command = Main.Connection.CreateCommand();
@@ -291,7 +337,7 @@ public partial class TanimeEpisode
             .FirstOrDefaultAsync(cancellationToken ?? CancellationToken.None);
     }
 
-    public static async Task<TanimeEpisode?> SingleAsync(int idAnime, ushort noEpisode,
+    public static async Task<Tepisode?> SingleAsync(int idAnime, ushort noEpisode,
         CancellationToken? cancellationToken = null)
     {
         await using var command = Main.Connection.CreateCommand();
@@ -314,12 +360,14 @@ public partial class TanimeEpisode
 
     #region Insert
 
-    public async Task<OperationState<int>> InsertAsync(bool disableVerification = false, CancellationToken? cancellationToken = null)
+    public async Task<OperationState<int>> InsertAsync(bool disableVerification = false,
+        CancellationToken? cancellationToken = null)
     {
         if (NoEpisode <= 0)
             return new OperationState<int>(false, "Le numéro de l'épisode ne peut pas être inférieur ou égal à 0");
-        
-        if (IdAnime <= 0 || (!disableVerification && !await TanimeBase.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken)))
+
+        if (IdAnime <= 0 || (!disableVerification &&
+                             !await TanimeBase.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken)))
             return new OperationState<int>(false, "L'identifiant de l'anime est invalide");
 
         if (!disableVerification && await ExistsAsync(IdAnime, NoEpisode, cancellationToken))
@@ -328,7 +376,7 @@ public partial class TanimeEpisode
         await using var command = Main.Connection.CreateCommand();
         command.CommandText =
             """
-            INSERT INTO TanimeEpisode
+            INSERT INTO Tepisode
                 (IdAnime, ReleaseDate, NoEpisode, EpisodeName, NoDay, Description)
             VALUES
                 ($IdAnime, $ReleaseDate, $NoEpisode, $EpisodeName, $NoDay, $Description)
@@ -361,7 +409,8 @@ public partial class TanimeEpisode
 
     #region Update
 
-    public async Task<OperationState> UpdateAsync(bool disableVerification = false, CancellationToken? cancellationToken = null)
+    public async Task<OperationState> UpdateAsync(bool disableVerification = false,
+        CancellationToken? cancellationToken = null)
     {
         if (NoEpisode <= 0)
             return new OperationState(false, "Le numéro de l'épisode ne peut pas être inférieur ou égal à 0");
@@ -369,7 +418,8 @@ public partial class TanimeEpisode
         if (Id <= 0 || (!disableVerification && !await ExistsAsync(Id, IntColumnSelect.Id, cancellationToken)))
             return new OperationState(false, "L'identifiant de l'épisode est invalide");
 
-        if (IdAnime <= 0 || (!disableVerification && !await TanimeBase.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken)))
+        if (IdAnime <= 0 || (!disableVerification &&
+                             !await TanimeBase.ExistsAsync(IdAnime, IntColumnSelect.Id, cancellationToken)))
             return new OperationState(false, "L'identifiant de l'anime est invalide");
 
         if (!disableVerification)
@@ -382,7 +432,7 @@ public partial class TanimeEpisode
         await using var command = Main.Connection.CreateCommand();
         command.CommandText =
             """
-            UPDATE TanimeEpisode SET
+            UPDATE Tepisode SET
                 IdAnime = $IdAnime,
                 ReleaseDate = $ReleaseDate,
                 NoEpisode = $NoEpisode,
@@ -391,7 +441,7 @@ public partial class TanimeEpisode
                 Description = $Description
             WHERE Id = $Id
             """;
-        
+
         command.Parameters.AddWithValue("$IdAnime", IdAnime);
         command.Parameters.AddWithValue("$ReleaseDate", ReleaseDate.ToString(ReleaseDateFormat));
         command.Parameters.AddWithValue("$NoEpisode", NoEpisode);
@@ -415,10 +465,10 @@ public partial class TanimeEpisode
     }
 
     #endregion
-    
+
     #region AddOrUpdate
-    
-    public static async Task<OperationState> InsertOrReplaceAsync(int idAnime, IReadOnlyCollection<TanimeEpisode> values,
+
+    public static async Task<OperationState> InsertOrReplaceAsync(int idAnime, IReadOnlyCollection<Tepisode> values,
         DbInsertMode insertMode = DbInsertMode.InsertOrReplace, CancellationToken? cancellationToken = null)
     {
         if (values.Count == 0)
@@ -426,11 +476,12 @@ public partial class TanimeEpisode
 
         if (idAnime <= 0 || !await TanimeBase.ExistsAsync(idAnime, IntColumnSelect.Id, cancellationToken))
             return new OperationState(false, "L'anime n'existe pas.");
-        
+
         await using var command = Main.Connection.CreateCommand();
         command.StartWithInsertMode(insertMode);
-        command.CommandText += " INTO TanimeEpisode (IdAnime, ReleaseDate, NoEpisode, EpisodeName, NoDay, Description) VALUES";
-        
+        command.CommandText +=
+            " INTO Tepisode (IdAnime, ReleaseDate, NoEpisode, EpisodeName, NoDay, Description) VALUES";
+
 
         for (var i = 0; i < values.Count; i++)
         {
@@ -464,7 +515,8 @@ public partial class TanimeEpisode
         try
         {
             var count = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
-            return new OperationState(count > 0, $"{count} enregistrement(s) sur {values.Count} ont été insérés avec succès.");
+            return new OperationState(count > 0,
+                $"{count} enregistrement(s) sur {values.Count} ont été insérés avec succès.");
         }
         catch (Exception e)
         {
@@ -472,54 +524,76 @@ public partial class TanimeEpisode
             return new OperationState(false, "Une erreur est survenue lors de l'insertion");
         }
     }
-    
-    public async Task<OperationState> AddOrUpdateAsync(CancellationToken? cancellationToken = null)
+
+    public static async Task<Tepisode?> SingleOrCreateAsync(Tepisode value, bool reloadIfExist = false,
+        CancellationToken? cancellationToken = null)
+    {
+        if (!reloadIfExist)
+        {
+            var id = await GetIdOfAsync(value.IdAnime, value.NoEpisode, cancellationToken);
+            if (id.HasValue)
+            {
+                value.Id = id.Value;
+                return value;
+            }
+        }
+        else
+        {
+            var record = await SingleAsync(value.IdAnime, value.NoEpisode, cancellationToken);
+            if (record != null)
+                return record;
+        }
+
+        var result = await value.InsertAsync(false, cancellationToken);
+        return !result.IsSuccess ? null : value;
+    }
+
+    public async Task<OperationState<int>> AddOrUpdateAsync(CancellationToken? cancellationToken = null)
         => await AddOrUpdateAsync(this, cancellationToken);
-    
-    public static async Task<OperationState> AddOrUpdateAsync(TanimeEpisode value,
+
+    public static async Task<OperationState<int>> AddOrUpdateAsync(Tepisode value,
         CancellationToken? cancellationToken = null)
     {
         //Si la validation échoue, on retourne le résultat de la validation
         if (!await TanimeBase.ExistsAsync(value.IdAnime, IntColumnSelect.Id, cancellationToken))
-            return new OperationState(false, "L'anime n'existe pas.");
-        
+            return new OperationState<int>(false, "L'anime n'existe pas.");
+
         //Vérifie si l'item existe déjà
         var existingId = await GetIdOfAsync(value.IdAnime, value.NoEpisode, cancellationToken);
-        
+
         //Si l'item existe déjà
         if (existingId.HasValue)
         {
             //Si l'id n'appartient pas à l'item alors l'enregistrement existe déjà on annule l'opération
             if (value.Id > 0 && existingId.Value != value.Id)
-                return new OperationState(false, "Le nom de l'item existe déjà");
-            
+                return new OperationState<int>(false, "Le nom de l'item existe déjà");
+
             //Si l'id appartient à l'item alors on met à jour l'enregistrement
             if (existingId.Value != value.Id)
                 value.Id = existingId.Value;
-            return await value.UpdateAsync(true, cancellationToken);
+            return (await value.UpdateAsync(true, cancellationToken)).ToGenericState(value.Id);
         }
 
         //Si l'item n'existe pas, on l'ajoute
         var addResult = await value.InsertAsync(true, cancellationToken);
-        if (addResult.IsSuccess)
-            value.Id = addResult.Data;
-        
-        return addResult.ToBaseState();
+        return addResult;
     }
+
     #endregion
 
     #region Delete
 
     /// <summary>
-    /// Supprime les enregistrements de la table TanimeEpisode qui ne sont pas dans la liste spécifiée
+    /// Supprime les enregistrements de la table Tepisode qui ne sont pas dans la liste spécifiée
     /// </summary>
     /// <param name="actualValues">valeurs actuellement utilisées</param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<OperationState> DeleteUnusedAsync(HashSet<(ushort noEpisode, int idAnime)> actualValues, CancellationToken? cancellationToken = null)
+    public static async Task<OperationState> DeleteUnusedAsync(HashSet<(ushort noEpisode, int idAnime)> actualValues,
+        CancellationToken? cancellationToken = null)
     {
         await using var command = Main.Connection.CreateCommand();
-        command.CommandText = "DELETE FROM TanimeEpisode WHERE NoEpisode NOT IN (";
+        command.CommandText = "DELETE FROM Tepisode WHERE NoEpisode NOT IN (";
 
         var i = 0;
         foreach (var (noEpisode, _) in actualValues)
@@ -528,6 +602,7 @@ public partial class TanimeEpisode
             command.Parameters.AddWithValue($"$NoEpisode{i}", noEpisode);
             i++;
         }
+
         command.CommandText += ") AND IdAnime NOT IN (";
         i = 0;
         foreach (var (_, idAnime) in actualValues)
@@ -536,6 +611,7 @@ public partial class TanimeEpisode
             command.Parameters.AddWithValue($"$IdAnime{i}", (byte)idAnime);
             i++;
         }
+
         command.CommandText += ")";
 
         try
@@ -549,17 +625,14 @@ public partial class TanimeEpisode
             return new OperationState(false, "Une erreur est survenue lors de la suppression");
         }
     }
-    
+
     public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null)
         => await DeleteAsync(Id, cancellationToken);
 
     public static async Task<OperationState> DeleteAsync(int id, CancellationToken? cancellationToken = null)
     {
-        if (id <= 0 || !await ExistsAsync(id, IntColumnSelect.Id, cancellationToken))
-            return new OperationState(false, "L'identifiant de l'épisode est invalide");
-
         await using var command = Main.Connection.CreateCommand();
-        command.CommandText = "DELETE FROM TanimeEpisode WHERE Id = $Id";
+        command.CommandText = "DELETE FROM Tepisode WHERE Id = $Id";
 
         command.Parameters.AddWithValue("$Id", id);
 
@@ -577,16 +650,17 @@ public partial class TanimeEpisode
 
     #endregion
 
-    private static async IAsyncEnumerable<TanimeEpisode> GetRecords(SqliteDataReader reader,
+    private static async IAsyncEnumerable<Tepisode> GetRecords(SqliteDataReader reader,
         CancellationToken? cancellationToken = null)
     {
         while (await reader.ReadAsync(cancellationToken ?? CancellationToken.None))
         {
-            yield return new TanimeEpisode()
+            yield return new Tepisode()
             {
                 Id = reader.GetInt32(reader.GetOrdinal("BaseId")),
                 IdAnime = reader.GetInt32(reader.GetOrdinal("IdAnime")),
-                ReleaseDate = DateHelpers.GetDateOnly(reader.GetString(reader.GetOrdinal("ReleaseDate")), ReleaseDateFormat),
+                ReleaseDate = DateHelpers.GetDateOnly(reader.GetString(reader.GetOrdinal("ReleaseDate")),
+                    ReleaseDateFormat),
                 NoEpisode = (ushort)reader.GetInt16(reader.GetOrdinal("NoEpisode")),
                 EpisodeName = reader.IsDBNull(reader.GetOrdinal("EpisodeName"))
                     ? null
@@ -599,18 +673,19 @@ public partial class TanimeEpisode
         }
     }
 
+
     private const string SqlSelectScript =
         """
         SELECT
-            TanimeEpisode.Id AS BaseId,
-            TanimeEpisode.IdAnime,
-            TanimeEpisode.ReleaseDate,
-            TanimeEpisode.NoEpisode,
-            TanimeEpisode.EpisodeName,
-            TanimeEpisode.NoDay,
-            TanimeEpisode.Description AS BaseDescription
+            Tepisode.Id AS BaseId,
+            Tepisode.IdAnime,
+            Tepisode.ReleaseDate,
+            Tepisode.NoEpisode,
+            Tepisode.EpisodeName,
+            Tepisode.NoDay,
+            Tepisode.Description AS BaseDescription
 
         FROM
-            TanimeEpisode
+            Tepisode
         """;
 }

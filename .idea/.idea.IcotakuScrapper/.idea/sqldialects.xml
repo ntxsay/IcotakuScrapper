@@ -7,7 +7,6 @@
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Anime/TanimeBase_Pagination.cs" dialect="SQLite" />
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Anime/TanimeCategory.cs" dialect="SQLite" />
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Anime/TanimeDailyPlanning.cs" dialect="SQLite" />
-    <file url="file://$PROJECT_DIR$/IcotakuScrapper/Anime/TanimeEpisode.cs" dialect="SQLite" />
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Anime/TanimeLicense.cs" dialect="SQLite" />
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Anime/TanimeSeasonalPlanning.cs" dialect="SQLite" />
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Anime/TanimeSeasonalPlanning_Pagination.cs" dialect="SQLite" />
@@ -15,6 +14,7 @@
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Anime/TanimeStudio.cs" dialect="SQLite" />
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Anime/TanimeWebSite.cs" dialect="SQLite" />
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Common/Tcategory.cs" dialect="SQLite" />
+    <file url="file://$PROJECT_DIR$/IcotakuScrapper/Common/Tepisode.cs" dialect="SQLite" />
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Common/Tformat.cs" dialect="SQLite" />
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Common/TlicenseType.cs" dialect="SQLite" />
     <file url="file://$PROJECT_DIR$/IcotakuScrapper/Common/ToeuvreRole.cs" dialect="SQLite" />

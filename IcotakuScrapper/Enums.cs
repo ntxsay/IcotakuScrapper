@@ -58,6 +58,7 @@ public enum IntColumnSelect
 /// <summary>
 /// Afin d'éviter de créer plusieurs méthodes de sélection, cette énumération permet de sélectionner la colonne à utiliser pour la sélection.
 /// </summary>
+[Obsolete("Utilisez l'énumération IntColumnSelect à la place")]
 public enum SheetIntColumnSelect
 {
     Id,
@@ -174,6 +175,12 @@ public enum IcotakuListType
 public enum AnimeScrapingOptions
 {
     None = 0,
+    
+    /// <summary>
+    /// Inclut le ou les épisodes dans le scraping
+    /// </summary>
+    /// <remarks>Les fiches Icotaku ne contiennent pas la date complète de diffusion sur la page principale de l'animé ou du drama
+    /// mais sur la page dédiée aux épisodes, ce qui signifie que vous n'obtiendrez la date complète de diffusion que si vous incluez cette énumération.</remarks>
     Episodes = 1,
     Studios = 2,
     FullStudios = 4,
@@ -364,6 +371,7 @@ public enum DbScriptMode : byte
 {
     Select,
     Count,
+    GetId
 }
 
 #endregion

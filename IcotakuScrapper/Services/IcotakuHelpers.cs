@@ -2,7 +2,7 @@
 
 namespace IcotakuScrapper.Services
 {
-    public static class IcotakuHelpers
+    public static partial class IcotakuHelpers
     {
         public static DiffusionStateKind GetDiffusionStateKind(string? value)
         {

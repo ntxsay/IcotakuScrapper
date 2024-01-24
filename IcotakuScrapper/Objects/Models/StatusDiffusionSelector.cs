@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-namespace IcotakuScrapper.Objects.ViewModels;
+namespace IcotakuScrapper.Objects.Models;
 
 
 

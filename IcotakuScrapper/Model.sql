@@ -239,6 +239,24 @@ CREATE TABLE IF NOT EXISTS TcontactWebSite
 );
 -- endregion
 
+-- region Table Tepisode
+/*
+ Création de la table Tepisode qui permet 
+ d'enregistrer les informations des épisodes des animés ou de drama
+ */
+DROP TABLE IF EXISTS Tepisode;
+CREATE TABLE IF NOT EXISTS Tepisode
+(
+    Id          INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
+    IdAnime     INTEGER NULL REFERENCES Tanime (Id) ON DELETE CASCADE,
+    ReleaseDate TEXT    NOT NULL, -- Date de sortie de l'animé (yyyy-mm-dd)
+    NoEpisode   INTEGER NOT NULL, -- Numéro de l'épisode
+    EpisodeName TEXT    NULL,
+    NoDay       INTEGER NOT NULL, -- Numéro du jour de diffusion
+    Description TEXT    NULL
+);
+-- endregion
+    
 -- region Table Tanime
 /*
  Création de la table Tanime qui permet 
@@ -381,24 +399,6 @@ CREATE TABLE IF NOT EXISTS TanimeCharacter
     IdRole      INTEGER NULL REFERENCES ToeuvreRole (Id) ON DELETE CASCADE
 );
 
--- endregion
-
--- region Table TanimeEpisode
-/*
- Création de la table TanimeEpisode qui permet 
- d'enregistrer les dates de diffusion des épisodes des animés
- */
-DROP TABLE IF EXISTS TanimeEpisode;
-CREATE TABLE IF NOT EXISTS TanimeEpisode
-(
-    Id          INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
-    IdAnime     INTEGER NOT NULL REFERENCES Tanime (Id) ON DELETE CASCADE,
-    ReleaseDate TEXT    NOT NULL, -- Date de sortie de l'animé (yyyy-mm-dd)
-    NoEpisode   INTEGER NOT NULL, -- Numéro de l'épisode
-    EpisodeName TEXT    NULL,
-    NoDay       INTEGER NOT NULL, -- Numéro du jour de diffusion
-    Description TEXT    NULL
-);
 -- endregion
 
 -- region Table TanimeDailyPlanning

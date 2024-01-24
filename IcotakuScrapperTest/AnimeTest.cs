@@ -32,7 +32,7 @@ namespace IcotakuScrapperTest
         {
             //Récupère les informations de l'anime via l'url de la fiche
             var anime =
-                await Tanime.ScrapAndGetFromUrlAsync(new Uri("https://anime.icotaku.com/anime/5633/Dr-STONE.html"), AnimeScrapingOptions.All &~ AnimeScrapingOptions.FullCategories &~ AnimeScrapingOptions.Episodes);
+                await Tanime.ScrapAndGetFromUrlAsync(new Uri("https://anime.icotaku.com/anime/1226/Gintama-.html"), AnimeScrapingOptions.All &~ AnimeScrapingOptions.FullCategories);
 
             if (anime is null)
             {
@@ -48,6 +48,8 @@ namespace IcotakuScrapperTest
 
             //obtient le synopsis
             Console.WriteLine(anime.Description);
+            
+            Console.WriteLine(anime.ReleaseMonth.ToString());
         }
 
         [Test]
@@ -72,7 +74,9 @@ namespace IcotakuScrapperTest
         public async Task GetSingleAnimeByUrlAsync()
         {
             //Récupère les informations de l'anime précédement "scrapé" via l'url de la fiche
-            Tanime? anime = await Tanime.SingleAsync(new Uri("https://anime.icotaku.com/anime/5633/Dr-STONE.html"));
+            //https://anime.icotaku.com/anime/1226/Gintama-.html
+            //https://anime.icotaku.com/anime/5633/Dr-STONE.html
+            Tanime? anime = await Tanime.SingleAsync(new Uri("https://anime.icotaku.com/anime/1226/Gintama-.html"));
 
             if (anime is null)
             {
@@ -205,59 +209,6 @@ namespace IcotakuScrapperTest
                 return;
             var path = await anime.DownloadThumbnailAsync();
             Assert.IsNotEmpty(path);
-        }
-        
-        [Test]
-        public async Task AdvancedSearch()
-        {
-            var parameter = new AnimeFinderParameterStruct()
-            {
-                Title = null,
-                OrigineAdaptation = null,
-                IncludeGenresId = [9],
-                ExcludeGenresId = [18],
-                IncludeThemesId = [140],
-                ExcludeThemesId = [221]
-            };
-            var animes = await TanimeBase.FindAndSaveAsync(parameter).ToArrayAsync();
-            Assert.IsNotEmpty(animes);
-        }
-
-        [Test]
-        public async Task AdvancedSearch2()
-        {
-            var parameter = new AnimeFinderParameterStruct()
-            {
-                Title = null,
-                OrigineAdaptation = null,
-                IncludeGenresId = [9],
-                ExcludeGenresId = [18],
-                IncludeThemesId = [140],
-                ExcludeThemesId = [221]
-            };
-
-            List<OperationState<TanimeBase?>> animes = new();
-
-            AnimeFinder finder = new();
-            finder.ProgressChangedRequested += (percent, state) =>
-            {
-                animes.Add(state);
-            };
-
-            finder.OperationCompletedRequested += args =>
-            {
-                Console.WriteLine(args.Result);
-            };
-
-            finder.Find(parameter);
-
-            while (finder.IsRunning)
-            {
-                await Task.Delay(100);
-            }
-
-            Assert.IsTrue(animes.Any(x => x.IsSuccess));
-            
         }
         
         [Test]

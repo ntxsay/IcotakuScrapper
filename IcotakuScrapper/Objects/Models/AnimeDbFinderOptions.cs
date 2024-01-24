@@ -1,6 +1,6 @@
 ﻿using IcotakuScrapper.Extensions;
 
-namespace IcotakuScrapper.Objects;
+namespace IcotakuScrapper.Objects.Models;
 
 public record AnimeDbFinderOptions
 {
@@ -18,18 +18,18 @@ public record AnimeDbFinderOptions
 
     public HashSet<int> IdOrigineAdaptationToInclude { get; init; } = [];
     public HashSet<int> IdOrigineAdaptationToExclude { get; init; } = [];
+    
     public HashSet<int> IdDistributorsToInclude { get; init; } = [];
     public HashSet<int> IdDistributorsToExclude { get; init; } = [];
+    
     public HashSet<int> IdStudiosToInclude { get; init; } = [];
     public HashSet<int> IdStudiosToExclude { get; init; } = [];
 
     public HashSet<int> IdTargetToInclude { get; init; } = [];
     public HashSet<int> IdTargetToExclude { get; init; } = [];
     
-    public HashSet<int> IdGenreToInclude { get; init; } = [];
-    public HashSet<int> IdGenreToExclude { get; init; } = [];
-
-
+    public HashSet<int> IdCategoriesToInclude { get; init; } = [];
+    public HashSet<int> IdCategoriesToExclude { get; init; } = [];
     
     public bool HasMinDate => !MinDate.Equals(default(MonthDate)) && MinDate.Month is > 0 and < 13 && MinDate.Year > 0;
     public bool HasMaxDate => !MaxDate.Equals(default(MonthDate)) && MaxDate.Month is > 0 and < 13 && MaxDate.Year > 0;
@@ -43,4 +43,12 @@ public record AnimeDbFinderOptions
 
     public bool HasIdStudiosToInclude => IdStudiosToInclude.Count > 0;
     public bool HasIdStudiosToExclude => IdStudiosToExclude.Count > 0;
+    
+    public bool HasIdTargetToInclude => IdTargetToInclude.Count > 0;
+    public bool HasIdTargetToExclude => IdTargetToExclude.Count > 0;
+    
+    public bool HasIdGenreToInclude => IdCategoriesToInclude.Count > 0;
+    public bool HasIdGenreToExclude => IdCategoriesToExclude.Count > 0;
+    
+    
 }

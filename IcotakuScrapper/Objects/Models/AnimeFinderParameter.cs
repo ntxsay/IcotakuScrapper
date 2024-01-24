@@ -1,13 +1,13 @@
 using IcotakuScrapper.Extensions;
 
-namespace IcotakuScrapper.Objects;
+namespace IcotakuScrapper.Objects.Models;
 
 /// <summary>
-/// Structure contenant les paramètres de recherche avancée d'anime
+/// Record contenant les paramètres de recherche avancée d'anime via le site icotaku
 /// </summary>
-public readonly struct AnimeFinderParameterStruct
+public record AnimeFinderParameter
 {
-    public AnimeFinderParameterStruct()
+    public AnimeFinderParameter()
     {
         
     }

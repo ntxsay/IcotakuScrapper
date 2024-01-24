@@ -1,11 +1,11 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using HtmlAgilityPack;
 using IcotakuScrapper.Anime;
 using IcotakuScrapper.Objects.Models;
 
 namespace IcotakuScrapper.Objects;
 
-public class AnimeFinder : IDisposable
+public class AnimeDbFinder
 {
     public delegate void OperationCompletedEventHandler(RunWorkerCompletedEventArgs args);
     public event OperationCompletedEventHandler? OperationCompletedRequested;
@@ -16,13 +16,13 @@ public class AnimeFinder : IDisposable
 
     private BackgroundWorker _worker;
 
-    private AnimeFinderParameter _parameter;
+    private AnimeDbFinderOptions? _parameter = null;
     private bool disposedValue;
 
     public bool IsRunning => _worker.IsBusy;
     public bool IsCancelled => _worker.CancellationPending;
-
-    public AnimeFinder()
+    
+     public AnimeDbFinder()
     {
         _worker = new BackgroundWorker
         {
@@ -35,7 +35,7 @@ public class AnimeFinder : IDisposable
         _worker.RunWorkerCompleted += WorkerOnRunWorkerCompleted;
     }
 
-    public void Find(AnimeFinderParameter parameter)
+    public void Find(AnimeDbFinderOptions parameter)
     {
         if (IsRunning)
         {
@@ -43,7 +43,7 @@ public class AnimeFinder : IDisposable
             return;
         }
 
-        var uri = IcotakuWebHelpers.GetAdvancedSearchUri(IcotakuSection.Anime, parameter);
+        var uri = IcotakuWebHelpers.GetAdvancedSearchUri(IcotakuSection.Anime, new AnimeFinderParameter());
         if (uri == null)
         {
             LogServices.LogDebug("Impossible de créer l'uri de recherche.");
@@ -108,7 +108,7 @@ public class AnimeFinder : IDisposable
             }
 
             //Obtient l'uri de la page en cours
-            var pageUri = IcotakuWebHelpers.GetAdvancedSearchUri(IcotakuSection.Anime, _parameter, i);
+            var pageUri = IcotakuWebHelpers.GetAdvancedSearchUri(IcotakuSection.Anime, new AnimeFinderParameter(), i);
             if (pageUri == null)
                 continue;
 
@@ -186,7 +186,7 @@ public class AnimeFinder : IDisposable
     }
 
     // TODO: substituer le finaliseur uniquement si 'Dispose(bool disposing)' a du code pour libérer les ressources non managées
-    ~AnimeFinder()
+    ~AnimeDbFinder()
     {
         // Ne changez pas ce code. Placez le code de nettoyage dans la méthode 'Dispose(bool disposing)'
         Dispose(disposing: false);
@@ -198,4 +198,5 @@ public class AnimeFinder : IDisposable
         Dispose(disposing: true);
         GC.SuppressFinalize(this);
     }
+    
 }

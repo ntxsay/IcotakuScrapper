@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-namespace IcotakuScrapper.Objects.ViewModels
+namespace IcotakuScrapper.Objects.Models
 {
     /// <summary>
     /// Enumération permettant de gérer les données à inclure ou exclure dans une recherche

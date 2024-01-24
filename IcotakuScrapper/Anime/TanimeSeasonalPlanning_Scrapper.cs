@@ -5,6 +5,7 @@ using IcotakuScrapper.Extensions;
 using Microsoft.Data.Sqlite;
 using System.Web;
 using IcotakuScrapper.Objects;
+using IcotakuScrapper.Objects.Models;
 
 namespace IcotakuScrapper.Anime;
 

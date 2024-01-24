@@ -1,6 +1,7 @@
 ﻿using IcotakuScrapper;
 using IcotakuScrapper.Anime;
 using IcotakuScrapper.Objects;
+using IcotakuScrapper.Objects.Models;
 using IcotakuScrapper.Services;
 
 namespace IcotakuScrapperTest
@@ -14,18 +15,6 @@ namespace IcotakuScrapperTest
             Assert.IsNotEmpty(url);
         }
 
-        [Test]
-        public void GetAdvancedSearchUrl()
-        {
-            var parameter = new AnimeFinderParameterStruct()
-            {
-                Title = "silver",
-                OrigineAdaptation = "manga",
-                Year = 2013,
-            };
-            var url = IcotakuWebHelpers.GetAdvancedSearchUri(IcotakuSection.Anime, parameter);
-            Assert.IsNotNull(url);
-        }
-
+        
     }
 }

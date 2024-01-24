@@ -1,4 +1,5 @@
 ﻿using IcotakuScrapper.Anime;
+using IcotakuScrapper.Common;
 using Microsoft.Data.Sqlite;
 
 namespace IcotakuScrapper.Extensions
@@ -238,17 +239,17 @@ namespace IcotakuScrapper.Extensions
                 episode.IdAnime = anime.Id;
             }
 
-            return await TanimeEpisode.InsertOrReplaceAsync(anime.Id, anime.Episodes.ToArray(), DbInsertMode.InsertOrReplace, cancellationToken);
+            return await Tepisode.InsertOrReplaceAsync(anime.Id, anime.Episodes.ToArray(), DbInsertMode.InsertOrReplace, cancellationToken);
         }
         
         internal static async Task UpdateEpisodesAsync(this Tanime anime, CancellationToken? cancellationToken = null)
         {
-            await TanimeEpisode.DeleteUnusedAsync(
+            await Tepisode.DeleteUnusedAsync(
                 anime.Episodes.Select(x => (x.NoEpisode, anime.Id)).ToHashSet(), cancellationToken);
             await AddOrUpdateRangeAsync(anime, anime.Episodes.ToHashSet(), cancellationToken);
         }
 
-        private static async Task AddOrUpdateRangeAsync(this Tanime anime, IReadOnlyCollection<TanimeEpisode> values, CancellationToken? cancellationToken = null)
+        private static async Task AddOrUpdateRangeAsync(this Tanime anime, IReadOnlyCollection<Tepisode> values, CancellationToken? cancellationToken = null)
         {
             ArgumentNullException.ThrowIfNull(anime);
 
@@ -264,7 +265,8 @@ namespace IcotakuScrapper.Extensions
                 await anime.AddOrUpdateAsync(value, cancellationToken);
         }
         
-        private static async Task<OperationState> AddOrUpdateAsync(this Tanime anime, TanimeEpisode value, CancellationToken? cancellationToken = null)
+        private static async Task AddOrUpdateAsync(this Tanime anime, Tepisode value,
+            CancellationToken? cancellationToken = null)
         {
             ArgumentNullException.ThrowIfNull(anime);
 
@@ -273,7 +275,7 @@ namespace IcotakuScrapper.Extensions
             if (value.IdAnime != anime.Id)
                 value.IdAnime = anime.Id;
 
-            return await value.AddOrUpdateAsync(cancellationToken);
+            await value.AddOrUpdateAsync(cancellationToken);
         }
 
         #endregion

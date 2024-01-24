@@ -3,6 +3,7 @@ using IcotakuScrapper.Extensions;
 using Microsoft.Data.Sqlite;
 using System.Text;
 using IcotakuScrapper.Objects;
+using IcotakuScrapper.Objects.Models;
 
 namespace IcotakuScrapper.Anime;
 

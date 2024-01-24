@@ -198,6 +198,48 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
         return clone;
     }
 
+    /// <summary>
+    /// Converti l'objet <see cref="TanimeBase"/> en <see cref="Tanime"/>.
+    /// </summary>
+    /// <returns></returns>
+    public Tanime ToFullAnime()
+    {
+        var value = new Tanime
+        {
+            Id = Id,
+            Guid = Guid,
+            Name = Name,
+            Url = Url,
+            IsAdultContent = IsAdultContent,
+            IsExplicitContent = IsExplicitContent,
+            VoteCount = VoteCount,
+            SheetId = SheetId,
+            Duration = Duration,
+            DiffusionState = DiffusionState,
+            ReleaseDate = ReleaseDate,
+            ReleaseMonth = ReleaseMonth,
+            EndDate = EndDate,
+            EpisodesCount = EpisodesCount,
+            Note = Note,
+            Description = Description,
+            Remark = Remark,
+            ThumbnailUrl = ThumbnailUrl,
+            Format = Format?.Clone(),
+            Target = Target?.Clone(),
+            OrigineAdaptation = OrigineAdaptation?.Clone(),
+            Season = Season,
+            Statistic = Statistic?.Clone()
+        };
+        
+        value.AlternativeTitles.ToObservableCollection(AlternativeTitles, true);
+        value.Websites.ToObservableCollection(Websites, true);
+        value.Categories.ToObservableCollection(Categories, true);
+        value.Studios.ToObservableCollection(Studios, true);
+        value.Licenses.ToObservableCollection(Licenses, true);
+        value.Staffs.ToObservableCollection(Staffs, true);
+
+        return value;
+    }
     public override string ToString() => $"{Name} ({Id}/{SheetId})";
 
     #region Folder et download
@@ -425,9 +467,26 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
 
     #region Index
 
-    protected static async Task<OperationState<int>> CreateIndexAsync(string animeName, string animeUrl, int animeSheetId, CancellationToken? cancellationToken = null)
-        => await TsheetIndex.InsertAsync(false, IcotakuSection.Anime, IcotakuSheetType.Anime, animeName, animeUrl, animeSheetId, 0, cancellationToken);
-    
+    /// <summary>
+    /// Insère ou met à jour l'index de l'anime dans la base de données.
+    /// </summary>
+    /// <param name="animeName"></param>
+    /// <param name="animeUri"></param>
+    /// <param name="animeSheetId"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    private static async Task<OperationState<int>> CreateOrUpdateIndexAsync(string animeName, Uri animeUri, int animeSheetId, CancellationToken? cancellationToken = null)
+    {
+        var record = await TsheetIndex.SingleAsync(animeUri, cancellationToken) ?? new TsheetIndex();
+
+        if (!string.Equals(record.SheetName, animeName, StringComparison.OrdinalIgnoreCase))
+            record.SheetName = animeName;
+
+        if (record.SheetId != animeSheetId)
+            record.SheetId = animeSheetId;
+        
+        return await record.AddOrUpdateAsync(cancellationToken);
+    }
 
     #endregion
     
@@ -829,9 +888,9 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
         command.CommandText =
             """
             INSERT OR REPLACE INTO Tanime
-                (SheetId, Url, IsAdultContent, IsExplicitContent, Note, VoteCount, Name, DiffusionState, EpisodeCount, EpisodeDuration, ReleaseDate, EndDate, Description, ThumbnailUrl, IdFormat, IdTarget, IdOrigine, IdSeason, Remark, IdStatistic)
+                (SheetId, Url, IsAdultContent, IsExplicitContent, Note, VoteCount, Name, DiffusionState, EpisodeCount, EpisodeDuration, ReleaseDate, ReleaseMonth , EndDate, Description, ThumbnailUrl, IdFormat, IdTarget, IdOrigine, IdSeason, Remark, IdStatistic)
             VALUES
-                ($SheetId, $Url, $IsAdultContent, $IsExplicitContent, $Note, $VoteCount, $Name, $DiffusionState , $EpisodeCount, $EpisodeDuration, $ReleaseDate, $EndDate, $Description, $ThumbnailUrl, $IdFormat, $IdTarget, $IdOrigine, $IdSeason, $Remark, $IdStatistic)
+                ($SheetId, $Url, $IsAdultContent, $IsExplicitContent, $Note, $VoteCount, $Name, $DiffusionState , $EpisodeCount, $EpisodeDuration, $ReleaseDate, $ReleaseMonth, $EndDate, $Description, $ThumbnailUrl, $IdFormat, $IdTarget, $IdOrigine, $IdSeason, $Remark, $IdStatistic)
             """;
 
         command.Parameters.AddWithValue("$SheetId", SheetId);
@@ -845,6 +904,7 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
         command.Parameters.AddWithValue("$EpisodeCount", EpisodesCount);
         command.Parameters.AddWithValue("$EpisodeDuration", Duration.TotalMinutes);
         command.Parameters.AddWithValue("$ReleaseDate", ReleaseDate ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$ReleaseMonth", ReleaseMonth.ToNumberedDate());
         command.Parameters.AddWithValue("$EndDate", EndDate ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$Description", Description ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$ThumbnailUrl", ThumbnailUrl ?? (object)DBNull.Value);
@@ -855,13 +915,14 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
         command.Parameters.AddWithValue("$Remark", Remark ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$IdStatistic", Statistic is { Id: > 0 } ? Statistic.Id : DBNull.Value);
         
-
         try
         {
-            var result = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
-            if (result <= 0)
+            if (await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None) <= 0)
                 return new OperationState<int>(false, "L'anime n'a pas été ajouté");
+            
             Id = await command.GetLastInsertRowIdAsync();
+            
+            _ = await CreateOrUpdateIndexAsync(Name, uri, SheetId, cancellationToken);
             
             await this.AddOrReplaceAlternativeTitlesAsync(cancellationToken);
             await this.AddOrReplaceWebsitesAsync(cancellationToken);
@@ -925,6 +986,7 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
                 EpisodeCount = $EpisodeCount,
                 EpisodeDuration = $EpisodeDuration,
                 ReleaseDate = $ReleaseDate,
+                ReleaseMonth = $ReleaseMonth,
                 EndDate = $EndDate,
                 Description = $Description,
                 ThumbnailUrl = $ThumbnailUrl,
@@ -947,6 +1009,7 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
         command.Parameters.AddWithValue("$EpisodeCount", EpisodesCount);
         command.Parameters.AddWithValue("$EpisodeDuration", Duration.TotalMinutes);
         command.Parameters.AddWithValue("$ReleaseDate", ReleaseDate ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$ReleaseMonth", ReleaseMonth.ToNumberedDate());
         command.Parameters.AddWithValue("$EndDate", EndDate ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$Description", Description ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$ThumbnailUrl", ThumbnailUrl ?? (object)DBNull.Value);
@@ -1150,7 +1213,7 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
                     DiffusionState = (DiffusionStateKind)reader.GetByte(reader.GetOrdinal("DiffusionState")),
                     EpisodesCount = (ushort)reader.GetInt16(reader.GetOrdinal("EpisodeCount")),
                     Duration = TimeSpan.FromMinutes(reader.GetInt32(reader.GetOrdinal("EpisodeDuration"))),
-                    ReleaseMonth = new MonthDate((uint)reader.GetInt64(reader.GetOrdinal("ReleaseMonth"))),
+                    ReleaseMonth = MonthDate.FromNumberedDate((uint)reader.GetInt64(reader.GetOrdinal("ReleaseMonth"))),
                     ReleaseDate = reader.IsDBNull(reader.GetOrdinal("ReleaseDate"))
                         ? null
                         : reader.GetString(reader.GetOrdinal("ReleaseDate")),
@@ -1410,5 +1473,28 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
         LEFT JOIN main.TanimeStaff on Tanime.Id = TanimeStaff.IdAnime
         LEFT JOIN main.Tcontact contactStaff on contactStaff.Id = TanimeStaff.IdIndividu
 
+        """;
+
+    private const string IcotakuSqlGetIdScript =
+        """
+        SELECT DISTINCT
+            Tanime.Id AS AnimeId
+        FROM
+            Tanime
+        LEFT JOIN main.Tformat  on Tformat.Id = Tanime.IdFormat
+        LEFT JOIN main.Ttarget  on Ttarget.Id = Tanime.IdTarget
+        LEFT JOIN main.TorigineAdaptation on TorigineAdaptation.Id = Tanime.IdOrigine
+        LEFT JOIN main.Tseason  on Tseason.Id = Tanime.IdSeason
+        LEFT JOIN main.TanimeCategory on Tanime.Id = TanimeCategory.IdAnime
+        LEFT JOIN main.Tcategory on Tcategory.Id = TanimeCategory.IdCategory
+        LEFT JOIN main.TanimeAlternativeTitle on Tanime.Id = TanimeAlternativeTitle.IdAnime
+        LEFT JOIN main.TanimeWebSite on Tanime.Id = TanimeWebSite.IdAnime
+        LEFT JOIN main.TanimeStudio on Tanime.Id = TanimeStudio.IdAnime
+        LEFT JOIN main.Tcontact contactStudio on contactStudio.Id = TanimeStudio.IdStudio
+        LEFT JOIN main.TanimeLicense on Tanime.Id = TanimeLicense.IdAnime
+        LEFT JOIN main.Tcontact contactDistributor on contactDistributor.Id = TanimeLicense.IdDistributor
+        LEFT JOIN main.TanimeStaff on Tanime.Id = TanimeStaff.IdAnime
+        LEFT JOIN main.Tcontact contactStaff on contactStaff.Id = TanimeStaff.IdIndividu
+        
         """;
 }

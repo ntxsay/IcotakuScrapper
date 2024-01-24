@@ -1,4 +1,5 @@
 ﻿using HtmlAgilityPack;
+using IcotakuScrapper.Common;
 using IcotakuScrapper.Extensions;
 using Microsoft.Data.Sqlite;
 
@@ -7,30 +8,6 @@ namespace IcotakuScrapper.Anime;
 public partial class Tanime
 {
     #region Preparation scrapping
-
-    /// <summary>
-    /// Récupère l'anime depuis l'url de la fiche icotaku.
-    /// </summary>
-    /// <param name="animeResult">Résultat du scraping</param>
-    /// <param name="cancellationToken"></param>
-    /// <returns></returns>
-    private static async Task<OperationState<int>> ScrapAndAnimeFromUrlAsync(OperationState<Tanime?> animeResult, CancellationToken? cancellationToken = null)
-    {
-        //Si le scraping a échoué alors on sort de la méthode en retournant le message d'erreur
-        if (!animeResult.IsSuccess)
-            return new OperationState<int>(false, animeResult.Message);
-
-        var anime = animeResult.Data;
-        if (anime == null)
-            return new OperationState<int>(false, "Une erreur est survenue lors de la récupération de l'anime");
-
-        if (anime.Url.IsStringNullOrEmptyOrWhiteSpace())
-            return new OperationState<int>(false, "L'url de la fiche de l'anime est introuvable.");
-
-        _ = await CreateIndexAsync(anime.Name, anime.Url, anime.SheetId, cancellationToken);
-
-        return await anime.AddOrUpdateAsync(cancellationToken);
-    }
 
     private static async Task<OperationState<Tanime?>> ScrapAnimeAsync(string htmlContent, Uri sheetUri, AnimeScrapingOptions options, CancellationToken? cancellationToken = null)
     {
@@ -67,16 +44,23 @@ public partial class Tanime
     {
         try
         {
+            var sheetId = IcotakuWebHelpers.GetSheetId(sheetUri);
+            
+            var episodesTask = options.HasFlag(AnimeScrapingOptions.Episodes) ? Tepisode.ScrapEpisode(sheetId).ToArrayAsync() : ValueTask.FromResult<Tepisode[]>([]);
+            
             var animeBaseResult = await ScrapAnimeBaseAsync(documentNode, sheetUri, options, cancellationToken);
             if (!animeBaseResult.IsSuccess || animeBaseResult.Data == null)
                 return new OperationState<Tanime?>(false, animeBaseResult.Message);
 
-            var anime = new Tanime(animeBaseResult.Data);
+            var anime = animeBaseResult.Data.ToFullAnime();
 
             //Episodes
             if (options.HasFlag(AnimeScrapingOptions.Episodes))
             {
-                var episodes = TanimeEpisode.ScrapEpisode(anime.SheetId).ToArray();
+                while (!episodesTask.IsCompleted)
+                    await Task.Delay(100);
+
+                var episodes = episodesTask.Result;
                 if (episodes.Length > 0)
                 {
                     foreach (var episode in episodes)

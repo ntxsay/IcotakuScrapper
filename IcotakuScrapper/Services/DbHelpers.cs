@@ -108,7 +108,7 @@ namespace IcotakuScrapper.Services
                 AnimeSortBy.EpisodesCount => $" ORDER BY Tanime.EpisodeCount {orderBy}",
                 AnimeSortBy.EndDate => $" ORDER BY Tanime.EndDate {orderBy}",
                 AnimeSortBy.Format => $" ORDER BY Tformat.Name {orderBy}",
-                AnimeSortBy.ReleaseDate => $" ORDER BY Tanime.ReleaseDate {orderBy}",
+                AnimeSortBy.ReleaseMonth => $" ORDER BY Tanime.ReleaseDate {orderBy}",
                 _ => throw new ArgumentOutOfRangeException(nameof(sortBy), sortBy, null)
             };
         }

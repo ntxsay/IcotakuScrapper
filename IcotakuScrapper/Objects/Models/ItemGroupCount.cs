@@ -1,4 +1,6 @@
-﻿namespace IcotakuScrapper;
+﻿using IcotakuScrapper.Anime;
+
+namespace IcotakuScrapper.Objects.Models;
 
 public enum ItemGroupCountKind
 {
@@ -8,8 +10,12 @@ public enum ItemGroupCountKind
     OrigineAdaptation,
     Category,
     ReleaseMonth,
+    /// <summary>
+    /// Nom du groupe : Concerne uniquement <see cref="TanimeSeasonalPlanning"/>
+    /// </summary>
     GroupName,
     Target,
+    Format,
 }
 
 public struct ItemGroupCountStruct

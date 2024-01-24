@@ -2,6 +2,7 @@
 using IcotakuScrapper.Contact;
 using IcotakuScrapper.Extensions;
 using IcotakuScrapper.Objects;
+using IcotakuScrapper.Objects.Exceptions;
 using Microsoft.Data.Sqlite;
 
 namespace IcotakuScrapper.Anime;
@@ -12,7 +13,7 @@ public enum AnimeSortBy
     Name,
     SheetId,
     EpisodesCount,
-    ReleaseDate,
+    ReleaseMonth,
     EndDate,
     Duration,
     Format,
@@ -21,51 +22,40 @@ public enum AnimeSortBy
     Season,
 }
 
+public enum AnimeGroupBy
+{
+    Default,
+    ReleaseMonth,
+    Format,
+    Target,
+    Letter,
+    OrigineAdaptation,
+    Season,
+    Categories
+}
+
+public enum AnimeSelectionMode : byte
+{
+    None,
+    OrigineAdaptation,
+    Season,
+    ReleaseMonth,
+    Format,
+    Category,
+    Letter
+}
+
 public partial class Tanime : TanimeBase
 {
-    
-    
     /// <summary>
     /// Obtient ou définit la liste des épisodes de l'anime.
     /// </summary>
-    public HashSet<TanimeEpisode> Episodes { get; } = [];
+    public HashSet<Tepisode> Episodes { get; } = [];
     
 
     public Tanime()
     {
         
-    }
-    
-    public Tanime(TanimeBase animeBase)
-    {
-        Id = animeBase.Id;
-        Guid = animeBase.Guid;
-        Name = animeBase.Name;
-        Url = animeBase.Url;
-        IsAdultContent = animeBase.IsAdultContent;
-        IsExplicitContent = animeBase.IsExplicitContent;
-        VoteCount = animeBase.VoteCount;
-        SheetId = animeBase.SheetId;
-        Duration = animeBase.Duration;
-        DiffusionState = animeBase.DiffusionState;
-        ReleaseDate = animeBase.ReleaseDate;
-        EndDate = animeBase.EndDate;
-        EpisodesCount = animeBase.EpisodesCount;
-        Note = animeBase.Note;
-        Description = animeBase.Description;
-        Remark = animeBase.Remark;
-        ThumbnailUrl = animeBase.ThumbnailUrl;
-        Format = animeBase.Format?.Clone();
-        Target = animeBase.Target?.Clone();
-        OrigineAdaptation = animeBase.OrigineAdaptation?.Clone();
-        Season = animeBase.Season;
-        Statistic = animeBase.Statistic?.Clone();
-        AlternativeTitles.ToObservableCollection(animeBase.AlternativeTitles, true);
-        Websites.ToObservableCollection(animeBase.Websites, true);
-        Categories.ToObservableCollection(animeBase.Categories, true);
-        Studios.ToObservableCollection(animeBase.Studios, true);
-        Licenses.ToObservableCollection(animeBase.Licenses, true);
-        Staffs.ToObservableCollection(animeBase.Staffs, true);
     }
 
     public Tanime(int id)
@@ -75,7 +65,46 @@ public partial class Tanime : TanimeBase
 
     public override string ToString() => $"{Name} ({Id}/{SheetId})";
 
+    public void Copy(Tanime value)
+    {
+        Id = value.Id;
+        Guid = value.Guid;
+        Name = value.Name;
+        Url = value.Url;
+        IsAdultContent = value.IsAdultContent;
+        IsExplicitContent = value.IsExplicitContent;
+        VoteCount = value.VoteCount;
+        SheetId = value.SheetId;
+        Duration = value.Duration;
+        DiffusionState = value.DiffusionState;
+        ReleaseDate = value.ReleaseDate;
+        ReleaseMonth = value.ReleaseMonth;
+        EndDate = value.EndDate;
+        EpisodesCount = value.EpisodesCount;
+        Note = value.Note;
+        Description = value.Description;
+        Remark = value.Remark;
+        ThumbnailUrl = value.ThumbnailUrl;
+        Format = value.Format?.Clone();
+        Target = value.Target?.Clone();
+        OrigineAdaptation = value.OrigineAdaptation?.Clone();
+        Season = value.Season;
+        Statistic = value.Statistic?.Clone();
+        AlternativeTitles.ToObservableCollection(value.AlternativeTitles, true);
+        Websites.ToObservableCollection(value.Websites, true);
+        Categories.ToObservableCollection(value.Categories, true);
+        Studios.ToObservableCollection(value.Studios, true);
+        Licenses.ToObservableCollection(value.Licenses, true);
+        Staffs.ToObservableCollection(value.Staffs, true);
+        Episodes.ToObservableCollection(value.Episodes, true);
+    }
     
+    public new Tanime Clone()
+    {
+        var clone = new Tanime();
+        clone.Copy(this);
+        return clone;
+    }
 
     #region Scrap
 
@@ -136,8 +165,12 @@ public partial class Tanime : TanimeBase
             return new OperationState<int>(false, "L'url de la fiche de l'anime n'est pas une url icotaku.");
 
         var animeResult = await ScrapAnimeAsync(htmlContent, sheetUri, options, cancellationToken);
-
-        return await ScrapAndAnimeFromUrlAsync(animeResult, cancellationToken);
+        
+        //Si le scraping a échoué alors on sort de la méthode en retournant le message d'erreur
+        if (!animeResult.IsSuccess || animeResult.Data == null)
+            return new OperationState<int>(false, animeResult.Message);
+        
+        return await animeResult.Data.AddOrUpdateAsync(cancellationToken);
     }
 
     public static async Task<OperationState<int>> ScrapFromUrlAsync(Uri sheetUri, AnimeScrapingOptions options = AnimeScrapingOptions.All,
@@ -147,17 +180,32 @@ public partial class Tanime : TanimeBase
             return new OperationState<int>(false, "L'url de la fiche de l'anime n'est pas une url icotaku.");
 
         var animeResult = await ScrapAnimeAsync(sheetUri, options, cancellationToken);
-
-        return await ScrapAndAnimeFromUrlAsync(animeResult, cancellationToken);
+        
+        //Si le scraping a échoué alors on sort de la méthode en retournant le message d'erreur
+        if (!animeResult.IsSuccess || animeResult.Data == null)
+            return new OperationState<int>(false, animeResult.Message);
+        
+        return await animeResult.Data.AddOrUpdateAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Scrappe la fiche anime à partir de son url
+    /// </summary>
+    /// <param name="sheetUri">Url absolue de la fiche</param>
+    /// <param name="options">Options de scraping</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns>L'objet Tanime sinon null</returns>
     public static async Task<Tanime?> ScrapAndGetFromUrlAsync(Uri sheetUri, AnimeScrapingOptions options = AnimeScrapingOptions.All,
         CancellationToken? cancellationToken = null)
     {
+        //Scrappe la fiche anime
         var operationResult = await ScrapFromUrlAsync(sheetUri, options, cancellationToken);
+        
+        //Si le scraping a échoué alors on sort de la méthode en retournant null
         if (!operationResult.IsSuccess)
             return null;
 
+        //Si le scraping a réussi alors on retourne l'anime depuis la base de données via son id
         var anime = await SingleByIdAsync(operationResult.Data, cancellationToken);
         return anime;
     }
@@ -217,17 +265,10 @@ public partial class Tanime : TanimeBase
     /// <exception cref="ArgumentOutOfRangeException"></exception>
     public new static async Task<Tanime?> SingleAsync(int id, IntColumnSelect columnSelect, CancellationToken? cancellationToken = null)
     {
+        IntColumnSelectException.ThrowNotSupportedException(columnSelect, nameof(columnSelect),
+            [IntColumnSelect.Id, IntColumnSelect.SheetId]);
+        
         await using var command = Main.Connection.CreateCommand();
-        var isColumnSelectValid = command.IsIntColumnValidated(columnSelect,
-        [
-            IntColumnSelect.Id,
-            IntColumnSelect.SheetId,
-        ]);
-
-        if (!isColumnSelectValid)
-        {
-            return null;
-        }
 
         command.CommandText = IcotakuSqlSelectScript + Environment.NewLine + columnSelect switch
         {
@@ -250,7 +291,7 @@ public partial class Tanime : TanimeBase
     /// <param name="name"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static new async Task<Tanime?> SingleAsync(string name, CancellationToken? cancellationToken = null)
+    public new static async Task<Tanime?> SingleAsync(string name, CancellationToken? cancellationToken = null)
     {
         if (name.IsStringNullOrEmptyOrWhiteSpace())
             return null;
@@ -352,9 +393,6 @@ public partial class Tanime : TanimeBase
 
         //Si l'item n'existe pas, on l'ajoute
         var addResult = await value.InsertAync(true, cancellationToken);
-        if (addResult.IsSuccess)
-            value.Id = addResult.Data;
-        
         return addResult;
     }
 
@@ -381,7 +419,7 @@ public partial class Tanime : TanimeBase
                     SheetId = reader.GetInt32(reader.GetOrdinal("AnimeSheetId")),
                     Duration = TimeSpan.FromMinutes(reader.GetInt32(reader.GetOrdinal("EpisodeDuration"))),
                     DiffusionState = (DiffusionStateKind)reader.GetByte( reader.GetOrdinal("DiffusionState")),
-                    ReleaseMonth = new MonthDate((uint)reader.GetInt64(reader.GetOrdinal("ReleaseMonth"))),
+                    ReleaseMonth = MonthDate.FromNumberedDate((uint)reader.GetInt64(reader.GetOrdinal("ReleaseMonth"))),
                     ReleaseDate = reader.IsDBNull(reader.GetOrdinal("ReleaseDate"))
                         ? null
                         : reader.GetString(reader.GetOrdinal("ReleaseDate")),
@@ -430,7 +468,7 @@ public partial class Tanime : TanimeBase
                             seasonNumberIndex: reader.GetOrdinal("SeasonNumber")),
                 };
 
-                var episodes = await TanimeEpisode.SelectAsync(animeId, AnimeEpisodeSortBy.EpisodeNumber, OrderBy.Asc);
+                var episodes = await Tepisode.SelectAsync(animeId, IcotakuSection.Anime, AnimeEpisodeSortBy.EpisodeNumber, OrderBy.Asc);
                 if (episodes.Length > 0)
                     foreach (var episode in episodes)
                         anime.Episodes.Add(episode);

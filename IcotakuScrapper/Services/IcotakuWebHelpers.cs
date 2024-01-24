@@ -3,9 +3,11 @@ using IcotakuScrapper.Extensions;
 using IcotakuScrapper.Services.IOS;
 using System.Net;
 using System.Net.Http.Headers;
+using System.Web;
 using IcotakuScrapper.Anime;
 using IcotakuScrapper.Common;
 using IcotakuScrapper.Objects;
+using IcotakuScrapper.Objects.Models;
 
 namespace IcotakuScrapper.Services;
 
@@ -153,14 +155,26 @@ public static class IcotakuWebHelpers
     }
 
     #region Get Url
-    
+
     /// <summary>
     /// Retourne l'url de la page des épisodes d'une fiche depuis icotaku.com
     /// </summary>
     /// <param name="sheetId"></param>
+    /// <param name="section"></param>
+    /// <param name="page"></param>
     /// <returns></returns>
-    internal static string GetAnimeEpisodesUrl(int sheetId)
-        => $"https://anime.icotaku.com/anime/episodes/{sheetId}.html";
+    internal static string? GetEpisodesUrl(int sheetId, IcotakuSection section, uint page = 1)
+    {
+        if (section != IcotakuSection.Anime && section != IcotakuSection.Drama)
+            return null;
+        
+        return GetBaseUrl(section) + section switch
+        {
+            IcotakuSection.Anime => $"/fiche/episode/anime/{sheetId}/page/{page}",
+            IcotakuSection.Drama => $"/fiche/episode/drama/{sheetId}/page/{page}",
+            _ => throw new NotSupportedException("Cette section n'est pas supportée.")
+        };
+    }
 
 
     /// <summary>
@@ -306,7 +320,7 @@ public static class IcotakuWebHelpers
         return GetBaseUrl(section) + $"/classement/top/all/{page}.html";
     }
 
-    public static Uri? GetAdvancedSearchUri(IcotakuSection section, AnimeFinderParameterStruct findParameter,
+    public static Uri? GetAdvancedSearchUri(IcotakuSection section, AnimeFinderParameter findParameter,
         uint page = 1)
     {
         var baseUrl = section switch
@@ -578,7 +592,7 @@ public static class IcotakuWebHelpers
         if (href.StartsWith('/'))
             href = href.TrimStart('/');
 
-        href = $"{GetBaseUrl(section)}/{href}";
+        href = $"{GetBaseUrl(section)}/{HttpUtility.UrlDecode(href)}";
 
         href = href.Replace("&amp;", "&");
 
