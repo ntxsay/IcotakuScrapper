@@ -173,36 +173,117 @@ public enum IcotakuListType
 /// Enumère les options de scraping.
 /// </summary>
 [Flags]
-public enum AnimeScrapingOptions
+public enum AnimeScrapingOptions : int
 {
-    None = 0,
+    None = -1,
+    
+    /// <summary>
+    /// Inclut les informations de base de l'animé :
+    /// </summary>
+    Default = 0,
+    
+    /// <summary>
+    /// Inclut le format de l'animé (série, film, OAV, ONA, etc...)
+    /// </summary>
+    Format = 1,
+    
+    /// <summary>
+    /// Inclut l'origine de l'animé (manga, light novel, jeu vidéo, etc...)
+    /// </summary>
+    OriginAdaptation = 2,
+    
+    /// <summary>
+    /// Inclut le public cible de l'animé (shonen, seinen, etc...)
+    /// </summary>
+    Target = 4,
+    
+    /// <summary>
+    /// Inclut la saison de diffusion de l'animé
+    /// </summary>
+    Season = 8,
+    
+    /// <summary>
+    /// Inclut les titres alternatifs de l'animé
+    /// </summary>
+    AlternativeTitles = 16,
+    
+    /// <summary>
+    /// Inclut les sites web de l'animé
+    /// </summary>
+    WebSites = 32,
     
     /// <summary>
     /// Inclut le ou les épisodes dans le scraping
     /// </summary>
     /// <remarks>Les fiches Icotaku ne contiennent pas la date complète de diffusion sur la page principale de l'animé ou du drama
     /// mais sur la page dédiée aux épisodes, ce qui signifie que vous n'obtiendrez la date complète de diffusion que si vous incluez cette énumération.</remarks>
-    Episodes = 1,
-    Studios = 2,
-    FullStudios = 4,
-    Characters = 8,
-    FullCharacters = 16,
-    Staff = 32,
-    FullStaff = 64,
+    Episodes = 64,
+    
+    /// <summary>
+    /// Inclut juste le noms des studios sans la description
+    /// </summary>
+    Studios = 128,
+    
+    /// <summary>
+    /// Inclut les studios avec la description
+    /// </summary>
+    FullStudios = 256,
+    
+    /// <summary>
+    /// Inclut juste le noms des personnages sans la description
+    /// </summary>
+    Characters = 512,
+    
+    /// <summary>
+    /// Inclut les personnages avec la description
+    /// </summary>
+    FullCharacters = 1024,
+    
+    /// <summary>
+    /// Inclut juste le noms du staff sans la description
+    /// </summary>
+    Staff = 2048,
+    
+    /// <summary>
+    /// Inclut les membres du staff avec la description
+    /// </summary>
+    FullStaff = 4096,
+    
     /// <summary>
     /// Inclut les catégories sans la description 
     /// </summary>
-    Categories = 128,
+    Categories = 8192,
+    
     /// <summary>
     /// Inclut les catégories avec la description 
     /// </summary>
     /// <remarks>La fiche anime n'inclut pas naturellement la description de la catégorie, il faut scrapper la fiche de la catégorie elle-même pour obtenir cette information</remarks>
-    FullCategories = 256,
-    Licenses = 512,
-    FullLicenses = 1024,
-    Statistic = 2048,
+    FullCategories = 16384,
     
-    All = Episodes | Studios | FullStudios | Characters | FullCharacters | Staff | FullStaff | Categories | FullCategories | Licenses | FullLicenses | Statistic,
+    /// <summary>
+    /// Inclut les noms des détendeurs de licences pour cet animé sans la description
+    /// </summary>
+    Licenses = 32768,
+    
+    /// <summary>
+    /// Inclut les détendeurs de licences pour cet animé avec la description
+    /// </summary>
+    FullLicenses = 65536,
+    
+    /// <summary>
+    /// Inclut les statistiques de l'animé
+    /// </summary>
+    Statistic = 131072,
+    
+    /// <summary>
+    /// Inclut uniquement les informations nécessaire de l'animé pour le planning saisonnier
+    /// </summary>
+    SeasonalPlanning = Categories | Season,
+    
+    /// <summary>
+    /// Inclut toutes les informations de l'animé
+    /// </summary>
+    All = Default | Format | OriginAdaptation | Target | Season | AlternativeTitles | WebSites | Episodes | FullStudios | FullCharacters | FullStaff | FullCategories | FullLicenses | Statistic,
 }
 
 /// <summary>

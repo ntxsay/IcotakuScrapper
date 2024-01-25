@@ -117,7 +117,7 @@ public partial class Tanime : TanimeBase
     /// <param name="options"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<OperationState<int>> ScrapFromSheetIdAsync(int sheetId, AnimeScrapingOptions options = AnimeScrapingOptions.None,
+    public static async Task<OperationState<int>> ScrapFromSheetIdAsync(int sheetId, AnimeScrapingOptions options = AnimeScrapingOptions.Default,
         CancellationToken? cancellationToken = null)
     {
         //Récupère l'url de l'animé depuis le dictionnaire
@@ -131,7 +131,7 @@ public partial class Tanime : TanimeBase
         return await ScrapFromUrlAsync(sheetUri, options, cancellationToken);
     }
 
-    public static async Task<Tanime?> ScrapAndGetFromSheetIdAsync(int sheetId, AnimeScrapingOptions options = AnimeScrapingOptions.None,
+    public static async Task<Tanime?> ScrapAndGetFromSheetIdAsync(int sheetId, AnimeScrapingOptions options = AnimeScrapingOptions.Default,
         CancellationToken? cancellationToken = null)
     {
         var operationResult = await ScrapFromSheetIdAsync(sheetId, options, cancellationToken);
@@ -154,7 +154,7 @@ public partial class Tanime : TanimeBase
     /// <param name="options"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<OperationState<int>> ScrapFromUrlAsync(Uri sheetUri, string userName, string passWord, AnimeScrapingOptions options = AnimeScrapingOptions.None,
+    public static async Task<OperationState<int>> ScrapFromUrlAsync(Uri sheetUri, string userName, string passWord, AnimeScrapingOptions options = AnimeScrapingOptions.Default,
         CancellationToken? cancellationToken = null)
     {
         var htmlContent = await IcotakuWebHelpers.GetRestrictedHtmlAsync(IcotakuSection.Anime, sheetUri, userName, passWord);
@@ -420,6 +420,7 @@ public partial class Tanime : TanimeBase
                     Duration = TimeSpan.FromMinutes(reader.GetInt32(reader.GetOrdinal("EpisodeDuration"))),
                     DiffusionState = (DiffusionStateKind)reader.GetByte( reader.GetOrdinal("DiffusionState")),
                     ReleaseMonth = MonthDate.FromNumberedDate((uint)reader.GetInt64(reader.GetOrdinal("ReleaseMonth"))),
+                    IsFullyLoaded = reader.GetBoolean(reader.GetOrdinal("AnimeIsFullyLoaded")),
                     ReleaseDate = reader.IsDBNull(reader.GetOrdinal("ReleaseDate"))
                         ? null
                         : reader.GetString(reader.GetOrdinal("ReleaseDate")),
@@ -603,6 +604,7 @@ public partial class Tanime : TanimeBase
             Tanime.Description AS AnimeDescription,
             Tanime.ThumbnailUrl,
             Tanime.Remark AS AnimeRemark,
+            Tanime.IsFullyLoaded AS AnimeIsFullyLoaded,
             
             Tformat.Name as FormatName,
             Tformat.Section as FormatSection,

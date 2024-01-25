@@ -381,9 +381,6 @@ public class TanimeAlternativeTitle
 
         //Si l'item n'existe pas, on l'ajoute
         var addResult = await value.InsertAsync(true, cancellationToken);
-        if (addResult.IsSuccess)
-            value.Id = addResult.Data;
-
         return addResult.ToBaseState();
     }
 

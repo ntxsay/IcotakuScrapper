@@ -113,6 +113,8 @@ public partial class TanimeSeasonalPlanning
         tasks.Clear();
     }
 
+
+    
     /// <summary>
     /// Scrappe l'anime sur le planning ainsi que ses informations supplémentaires
     /// </summary>
@@ -279,4 +281,86 @@ public partial class TanimeSeasonalPlanning
             }
         }
     }
+    
+    public static async Task<OperationState> ScrapAndSaveAsync(WeatherSeason season, CancellationToken? cancellationToken = null)
+    {
+        var seasonalAnimes = await ScrapAnimeBaseSheetAsync(season, cancellationToken).ToArrayAsync();
+        if (seasonalAnimes.Length == 0)
+            return new OperationState(false, "Le planning est vide");
+
+        if (!Main.IsAccessingToAdultContent)
+            seasonalAnimes = seasonalAnimes.Where(w => !w.IsAdultContent).ToArray();
+        
+        if (!Main.IsAccessingToExplicitContent)
+            seasonalAnimes = seasonalAnimes.Where(w => !w.IsExplicitContent).ToArray();
+        
+        List<OperationState> results = [];
+        foreach (var animeBase in seasonalAnimes)
+        {
+            results.Add((await animeBase.AddOrUpdateAsync(cancellationToken)).ToBaseState());
+        }
+
+        return new OperationState(true,
+            $"{results.Count(a => a.IsSuccess)} animés sur {results.Count} ont été ajoutés ou mis à jour");
+    }
+    
+    public static async IAsyncEnumerable<TanimeBase> ScrapAnimeBaseSheetAsync(WeatherSeason season, CancellationToken? cancellationToken = null)
+    {
+        var seasonalPlannings = await ScrapAnimeSheetUriAsync(season, cancellationToken).ToArrayAsync();
+        if (seasonalPlannings.Length == 0)
+            yield break;
+
+        List<Task<OperationState<TanimeBase?>>> results = [];
+        foreach (var animeSheetUri in seasonalPlannings)
+        {
+            await Task.Delay(100);
+            results.Add(TanimeBase.ScrapAnimeBaseAsync(animeSheetUri, AnimeScrapingOptions.SeasonalPlanning, cancellationToken));
+
+            if (results.Count(a => !a.IsCompleted) < 4) continue;
+            {
+                while (results.Count(a => !a.IsCompleted) >= 4)
+                    await Task.Delay(100);
+            }
+        }
+        
+        await Task.WhenAll(results);
+        var animes = results.Select(s => s.Result).Where(w => w.IsSuccess && w.Data != null).Select(s => s.Data).ToArray();
+        if (animes.Length == 0)
+            yield break;
+        
+        foreach (var anime in animes)
+            yield return anime!;
+        
+        results.ForEach(f => f.Dispose());
+    }
+    
+    /// <summary>
+    /// Retourne les liens des fiches des animés du planning saisonnier
+    /// </summary>
+    /// <param name="season">Saison dans laquelle obtenir les liens</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    internal static async IAsyncEnumerable<Uri> ScrapAnimeSheetUriAsync(WeatherSeason season, CancellationToken? cancellationToken = null)
+    {
+        var url = IcotakuWebHelpers.GetAnimeSeasonalPlanningUrl(season);
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || !uri.IsAbsoluteUri)
+            yield break;
+
+        HtmlWeb web = new();
+        var htmlDocument = await web.LoadFromWebAsync(uri.AbsoluteUri, cancellationToken ?? CancellationToken.None);
+        
+        var aNodes = htmlDocument.DocumentNode.SelectNodes("//div[contains(@class, 'planning_saison')]/div[contains(@class, 'categorie')]/table//th[contains(@class, 'titre')]/a")?.ToArray() ?? [];
+        if (aNodes.Length == 0)
+            yield break;
+
+        foreach (var aNode in aNodes)
+        {
+            var animeUri = IcotakuWebHelpers.GetFullHrefFromHtmlNode(aNode, IcotakuSection.Anime);
+            if (animeUri is null)
+                continue;
+            
+            yield return animeUri;
+        }
+    }
+
 }

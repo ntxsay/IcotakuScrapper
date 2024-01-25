@@ -21,6 +21,11 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
     public Guid Guid { get; protected set; } = Guid.Empty;
     
     /// <summary>
+    /// Obtient ou définit une valeur booléenne indiquant si l'anime est entièrement chargé.
+    /// </summary>
+    public bool IsFullyLoaded { get; set; }
+    
+    /// <summary>
     /// Obtient ou définit l'id de la fiche Icotaku de l'anime.
     /// </summary>
     public int SheetId { get; set; }
@@ -895,9 +900,9 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
         command.CommandText =
             """
             INSERT OR REPLACE INTO Tanime
-                (SheetId, Url, IsAdultContent, IsExplicitContent, Note, VoteCount, Name, DiffusionState, EpisodeCount, EpisodeDuration, ReleaseDate, ReleaseMonth , EndDate, Description, ThumbnailUrl, IdFormat, IdTarget, IdOrigine, IdSeason, Remark, IdStatistic)
+                (SheetId, Url, IsAdultContent, IsExplicitContent, Note, VoteCount, Name, DiffusionState, EpisodeCount, EpisodeDuration, ReleaseDate, ReleaseMonth , EndDate, Description, ThumbnailUrl, IdFormat, IdTarget, IdOrigine, IdSeason, Remark, IdStatistic, IsFullyLoaded)
             VALUES
-                ($SheetId, $Url, $IsAdultContent, $IsExplicitContent, $Note, $VoteCount, $Name, $DiffusionState , $EpisodeCount, $EpisodeDuration, $ReleaseDate, $ReleaseMonth, $EndDate, $Description, $ThumbnailUrl, $IdFormat, $IdTarget, $IdOrigine, $IdSeason, $Remark, $IdStatistic)
+                ($SheetId, $Url, $IsAdultContent, $IsExplicitContent, $Note, $VoteCount, $Name, $DiffusionState , $EpisodeCount, $EpisodeDuration, $ReleaseDate, $ReleaseMonth, $EndDate, $Description, $ThumbnailUrl, $IdFormat, $IdTarget, $IdOrigine, $IdSeason, $Remark, $IdStatistic, $IsFullyLoaded)
             """;
 
         command.Parameters.AddWithValue("$SheetId", SheetId);
@@ -921,6 +926,7 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
         command.Parameters.AddWithValue("$IdSeason", Season?.Id ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$Remark", Remark ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$IdStatistic", Statistic is { Id: > 0 } ? Statistic.Id : DBNull.Value);
+        command.Parameters.AddWithValue("$IsFullyLoaded", IsFullyLoaded ? 1 : 0);
         
         try
         {
@@ -1002,7 +1008,8 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
                 IdOrigine = $IdOrigine,
                 IdSeason = $IdSeason,
                 Remark = $Remark,
-                IdStatistic = $IdStatistic
+                IdStatistic = $IdStatistic,
+                IsFullyLoaded = $IsFullyLoaded
             WHERE Id = $Id
             """;
         command.Parameters.AddWithValue("$SheetId", SheetId);
@@ -1027,7 +1034,8 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
         command.Parameters.AddWithValue("$Remark", Remark ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$Id", Id);
         command.Parameters.AddWithValue("$IdStatistic", Statistic is { Id: > 0 } ? Statistic.Id : DBNull.Value);
-
+        command.Parameters.AddWithValue("$IsFullyLoaded", IsFullyLoaded ? 1 : 0);
+        
         try
         {
             var result = await command.ExecuteNonQueryAsync(cancellationToken ?? CancellationToken.None);
@@ -1112,14 +1120,51 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
     }
 
 
-    Task<OperationState<int>> ITableBase<TanimeBase>.AddOrUpdateAsync(CancellationToken? cancellationToken = null)
-    {
-        throw new NotImplementedException();
-    }
+    public async Task<OperationState<int>> AddOrUpdateAsync(CancellationToken? cancellationToken = null)
+        => await AddOrUpdateAsync(this, cancellationToken);
 
-    static Task<OperationState<int>> ITableBase<TanimeBase>.AddOrUpdateAsync(TanimeBase value, CancellationToken? cancellationToken = null)
+    public static async Task<OperationState<int>> AddOrUpdateAsync(TanimeBase value,
+        CancellationToken? cancellationToken = null)
     {
-        throw new NotImplementedException();
+        //Si la validation échoue, on retourne le résultat de la validation
+        if (value.Name.IsStringNullOrEmptyOrWhiteSpace())
+            return new OperationState<int>(false, "Le nom de l'animé n'est pas valide.");
+        
+        if (value.SheetId <= 0)
+            return new OperationState<int>(false, "L'id de la fiche de l'animé n'est pas valide.");
+        
+        if (value.Url.IsStringNullOrEmptyOrWhiteSpace() || !Uri.TryCreate(value.Url, UriKind.Absolute, out var uri) || !uri.IsAbsoluteUri)
+            return new OperationState<int>(false, "L'url de la fiche de l'animé n'est pas valide.");
+
+        //Vérifie si l'item existe déjà
+        var existingId = await GetIdOfAsync(uri, value.SheetId, cancellationToken);
+
+        //Si l'item existe déjà
+        if (existingId.HasValue)
+        {
+            /*
+             * Si l'id de la item actuel n'est pas neutre c'est-à-dire que l'id n'est pas inférieur ou égal à 0
+             * Et qu'il existe un Id correspondant à un enregistrement dans la base de données
+             * mais que celui-ci ne correspond pas à l'id de l'item actuel
+             * alors l'enregistrement existe déjà et on annule l'opération
+             */
+            if (value.Id > 0 && existingId.Value != value.Id)
+                return new OperationState<int>(false, "Un item autre que celui-ci existe déjà");
+
+            /*
+             * Si l'id de l'item actuel est neutre c'est-à-dire que l'id est inférieur ou égal à 0
+             * alors on met à jour l'id de l'item actuel avec l'id de l'enregistrement existant
+             */
+            if (existingId.Value != value.Id)
+                value.Id = existingId.Value;
+
+            //On met à jour l'enregistrement
+            return (await value.UpdateAsync(true, cancellationToken)).ToGenericState(value.Id);
+        }
+
+        //Si l'item n'existe pas, on l'ajoute
+        var addResult = await value.InsertAsync(true, cancellationToken);
+        return addResult;
     }
 
     #endregion
@@ -1222,6 +1267,7 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
                     EpisodesCount = (ushort)reader.GetInt16(reader.GetOrdinal("EpisodeCount")),
                     Duration = TimeSpan.FromMinutes(reader.GetInt32(reader.GetOrdinal("EpisodeDuration"))),
                     ReleaseMonth = MonthDate.FromNumberedDate((uint)reader.GetInt64(reader.GetOrdinal("ReleaseMonth"))),
+                    IsFullyLoaded = reader.GetBoolean(reader.GetOrdinal("AnimeIsFullyLoaded")),
                     ReleaseDate = reader.IsDBNull(reader.GetOrdinal("ReleaseDate"))
                         ? null
                         : reader.GetString(reader.GetOrdinal("ReleaseDate")),
@@ -1401,6 +1447,7 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
             Tanime.ThumbnailUrl AS AnimeThumbnailUrl,
             Tanime.Description AS AnimeDescription,
             Tanime.Remark AS AnimeRemark,
+            Tanime.IsFullyLoaded AS AnimeIsFullyLoaded,
             
             Tformat.Name as FormatName,
             Tformat.Section as FormatSection,

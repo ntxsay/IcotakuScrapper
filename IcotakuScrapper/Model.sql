@@ -293,7 +293,8 @@ CREATE TABLE IF NOT EXISTS Tanime
     "DiffusionState"    INTEGER NOT NULL        DEFAULT 0, -- Etat de diffusion de l'animé
     "Description"       TEXT    NULL,                      -- Description de l'animé
     "ThumbnailUrl"      TEXT    NULL,                      -- Url de l'image de l'animé
-    "Remark"            TEXT    NULL                       -- Remarque sur l'animé
+    "Remark"            TEXT    NULL,                       -- Remarque sur l'animé
+    "IsFullyLoaded"   INTEGER NOT NULL        DEFAULT 0 CHECK ( IsFullyLoaded IN (0, 1) ) -- Est-ce que la fiche a été entièrement chargée ?
 );
 -- endregion
 

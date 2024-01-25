@@ -365,6 +365,7 @@ public partial class Tcategory : ITableSheetBase<Tcategory>
         command.CommandText = IcotakuSqlSelectScript + Environment.NewLine + "WHERE Url = $Url COLLATE NOCASE";
 
         command.Parameters.AddWithValue("$Url", sheetUri.ToString());
+
         await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
         if (!reader.HasRows)
             return null;
@@ -394,9 +395,7 @@ public partial class Tcategory : ITableSheetBase<Tcategory>
             Description = description
         };
         command.CommandText = IcotakuSqlSelectScript + Environment.NewLine + "WHERE Section = $Section COLLATE NOCASE AND Type = $Type AND Name = $Name COLLATE NOCASE";
-
         
-
         command.Parameters.AddWithValue("$Name", name.Trim());
         command.Parameters.AddWithValue("$Section", (byte)section);
         command.Parameters.AddWithValue("$Type", (byte)categoryType);

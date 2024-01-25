@@ -569,8 +569,8 @@ public static class IcotakuWebHelpers
     /// <returns></returns>
     public static Uri? GetFullHrefFromHtmlNode(HtmlNode node, IcotakuSection section)
     {
-        var href = node.GetAttributeValue("href", string.Empty);
-        if (href.IsStringNullOrEmptyOrWhiteSpace())
+        var href = node.GetAttributeValue("href", null);
+        if (href == null || href.IsStringNullOrEmptyOrWhiteSpace())
             return null;
 
         return GetFullHrefFromRelativePath(href, section);

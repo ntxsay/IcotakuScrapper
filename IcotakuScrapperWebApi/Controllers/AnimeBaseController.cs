@@ -17,6 +17,6 @@ public class AnimeBaseController : ControllerBase
     {
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
             return new OperationState<int>(false, "L'url n'est pas valide");
-        return await Tanime.ScrapFromUrlAsync(uri, AnimeScrapingOptions.None);
+        return await Tanime.ScrapFromUrlAsync(uri, AnimeScrapingOptions.Default);
     }
 }

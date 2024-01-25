@@ -312,7 +312,7 @@ public partial class Ttarget : ITableNameDescriptionBase<Ttarget>
                 ($Name, $Section, $Description)
             """;
         command.Parameters.AddWithValue("$Section", (byte)Section);
-        command.Parameters.AddWithValue("$Name", Name.Trim());
+        command.Parameters.AddWithValue("$Name", Name);
         command.Parameters.AddWithValue("$Description", Description ?? (object)DBNull.Value);
 
         try

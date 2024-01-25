@@ -23,7 +23,7 @@
 
   <ItemGroup>
     <None Update="icotaku.db">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 

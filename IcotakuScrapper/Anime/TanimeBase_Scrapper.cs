@@ -75,10 +75,10 @@ public partial class TanimeBase
                 DiffusionState = ScrapDiffusionState(documentNode),
                 EpisodesCount = ScrapTotalEpisodes(documentNode),
                 Duration = ScrapDuration(documentNode),
-                Target = await ScrapTargetAsync(documentNode, cancellationToken),
-                OrigineAdaptation = await ScrapOrigineAdaptationAsync(documentNode, cancellationToken),
-                Format = await ScrapFormatAsync(documentNode, cancellationToken),
-                Season = await ScrapSeason(documentNode, cancellationToken),
+                Target = !options.HasFlag(AnimeScrapingOptions.Target) ? null : await ScrapTargetAsync(documentNode, cancellationToken),
+                OrigineAdaptation = !options.HasFlag(AnimeScrapingOptions.OriginAdaptation) ? null : await ScrapOrigineAdaptationAsync(documentNode, cancellationToken),
+                Format = !options.HasFlag(AnimeScrapingOptions.Format) ? null : await ScrapFormatAsync(documentNode, cancellationToken),
+                Season = !options.HasFlag(AnimeScrapingOptions.Season) ? null : await ScrapSeason(documentNode, cancellationToken),
                 ReleaseMonth = ScrapBeginDate(documentNode),
                 Description = ScrapDescription(ref documentNode),
                 Remark = ScrapRemark(ref documentNode),
@@ -86,27 +86,33 @@ public partial class TanimeBase
             };
 
             //Titres alternatifs
-            var alternativeNames = ScrapAlternativeTitles(documentNode).ToArray();
-            if (alternativeNames.Length > 0)
+            if (options.HasFlag(AnimeScrapingOptions.AlternativeTitles))
             {
-                foreach (var title in alternativeNames)
+                var alternativeNames = ScrapAlternativeTitles(documentNode).ToArray();
+                if (alternativeNames.Length > 0)
                 {
-                    if (!animeBase.AlternativeTitles.Any(a => string.Equals(a.Title, title.Title, StringComparison.OrdinalIgnoreCase)))
+                    foreach (var title in alternativeNames)
                     {
-                        animeBase.AlternativeTitles.Add(title);
+                        if (!animeBase.AlternativeTitles.Any(a => string.Equals(a.Title, title.Title, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            animeBase.AlternativeTitles.Add(title);
+                        }
                     }
                 }
             }
-
+            
             //Websites
-            var websites = ScrapWebsites(documentNode).ToArray();
-            if (websites.Length > 0)
+            if (options.HasFlag(AnimeScrapingOptions.WebSites))
             {
-                foreach (var url in websites)
+                var websites = ScrapWebsites(documentNode).ToArray();
+                if (websites.Length > 0)
                 {
-                    if (!animeBase.Websites.Any(a => string.Equals(a.Url, url.Url, StringComparison.OrdinalIgnoreCase)))
+                    foreach (var url in websites)
                     {
-                        animeBase.Websites.Add(url);
+                        if (!animeBase.Websites.Any(a => string.Equals(a.Url, url.Url, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            animeBase.Websites.Add(url);
+                        }
                     }
                 }
             }
