@@ -26,6 +26,14 @@ public interface ITableBase<T>  where T : class
     public static abstract Task<int> CountAsync(int id, CancellationToken? cancellationToken = null);
     
     /// <summary>
+    /// Retourne une valeur booléenne indiquant si l'objet <typeparamref name="T"/> existe dans la base de données.
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static abstract Task<bool> ExistsAsync(int id, CancellationToken? cancellationToken = null);
+    
+    /// <summary>
     /// Insère l'objet <typeparamref name="T"/> dans la base de données.
     /// </summary>
     /// <param name="disableVerification">Active ou désactive la validation en base de données avant l'insertion</param>
@@ -74,6 +82,14 @@ public interface ITableBase<T>  where T : class
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
     public Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null);
+
+    /// <summary>
+    /// Supprime l'objet <typeparamref name="T"/> dans la base de données.
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static abstract Task<OperationState> DeleteAsync(int id, CancellationToken? cancellationToken = null);
 
     /*/// <summary>
     /// Retourne une valeur booléenne indiquant si l'objet <typeparamref name="T"/>.

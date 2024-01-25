@@ -120,19 +120,15 @@ public partial class TanimeSeasonalPlanning
     /// <param name="categoryName"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    private static async Task<TanimeSeasonalPlanning?> ScrapItemAndGetAdditionalInfosAsync(HtmlNode tableItemNode, string categoryName, CancellationToken? cancellationToken = null)
+    private static async Task<TanimeSeasonalPlanning?> ScrapItemAndGetAdditionalInfosAsync(HtmlNode? tableItemNode, string categoryName, CancellationToken? cancellationToken = null)
     {
         //Si le noeud est null, on retourne null
-        if (tableItemNode is null)
-            return null;
 
         //obtient le noeud a qui contient le titre et lien de la fiche de l'animé 
-        var aNode = tableItemNode.SelectSingleNode(".//th[contains(@class, 'titre')]/a");
-        if (aNode == null)
-            return null;
+        var aNode = tableItemNode?.SelectSingleNode(".//th[contains(@class, 'titre')]/a");
 
         //obtient le titre de l'animé
-        var title = HttpUtility.HtmlDecode(aNode.InnerText?.Trim())?.Trim();
+        var title = HttpUtility.HtmlDecode(aNode?.InnerText?.Trim())?.Trim();
         if (title == null || title.IsStringNullOrEmptyOrWhiteSpace())
             return null;
 

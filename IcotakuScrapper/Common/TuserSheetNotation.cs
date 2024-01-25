@@ -122,6 +122,11 @@ public partial class TuserSheetNotation : ITableSheetBase<TuserSheetNotation>
     
     #region Exists
 
+    static Task<bool> ITableBase<TuserSheetNotation>.ExistsAsync(int id, CancellationToken? cancellationToken = null)
+    {
+        throw new NotImplementedException();
+    }
+    
     public static async Task<bool> ExistsByIdAsync(int id, CancellationToken? cancellationToken = null)
         => await CountAsync(id, cancellationToken) > 0;
     

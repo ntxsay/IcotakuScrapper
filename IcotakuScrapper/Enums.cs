@@ -47,7 +47,8 @@ public enum IntColumnSelect
     /// Représente la colonne Id pointant vers un contact.
     /// </summary>
     IdContact,
-
+    IdDistributor,
+    IdSeasonalPlanning,
     /// <summary>
     /// Représente la colonne "IdLicenseType".
     /// </summary>

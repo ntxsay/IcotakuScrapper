@@ -179,6 +179,11 @@ public partial  class TsheetStatistic : ITableSheetBase<TsheetStatistic>, ITshee
 
     #region Exists
 
+    static Task<bool> ITableBase<TsheetStatistic>.ExistsAsync(int id, CancellationToken? cancellationToken = null)
+    {
+        throw new NotImplementedException();
+    }
+    
     public static async Task<bool> ExistsByIdAsync(int id, CancellationToken? cancellationToken = null)
         => await ExistsAsync(id, IntColumnSelect.Id, cancellationToken);
 

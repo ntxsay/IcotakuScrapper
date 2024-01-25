@@ -256,7 +256,7 @@ CREATE TABLE IF NOT EXISTS Tepisode
     Description TEXT    NULL
 );
 -- endregion
-    
+
 -- region Table Tanime
 /*
  Création de la table Tanime qui permet 
@@ -446,6 +446,26 @@ CREATE TABLE IF NOT EXISTS TanimeSeasonalPlanning
     Distributors      TEXT    NULL,               -- Nom des distributeurs (séparé par des virgules)
     ReleaseMonth      INTEGER NOT NULL DEFAULT 0, -- annnéé et mois de sortie (yymm)
     ThumbnailUrl      TEXT    NULL                -- Url de l'image de l'animé
+);
+-- endregion
+
+-- region Table TanimeSeasonalPlanningDistributor
+DROP TABLE IF EXISTS TanimeSeasonalPlanningDistributor;
+CREATE TABLE IF NOT EXISTS TanimeSeasonalPlanningDistributor
+(
+    Id                 INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
+    IdSeasonalPlanning INTEGER NOT NULL REFERENCES TanimeSeasonalPlanning (Id) ON DELETE CASCADE,
+    IdDistributor      INTEGER NOT NULL REFERENCES Tcontact (Id) ON DELETE CASCADE
+);
+-- endregion
+
+-- region Table TanimeSeasonalPlanningStudio
+DROP TABLE IF EXISTS TanimeSeasonalPlanningStudio;
+CREATE TABLE IF NOT EXISTS TanimeSeasonalPlanningStudio
+(
+    Id                 INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
+    IdSeasonalPlanning INTEGER NOT NULL REFERENCES TanimeSeasonalPlanning (Id) ON DELETE CASCADE,
+    IdStudio           INTEGER NOT NULL REFERENCES Tcontact (Id) ON DELETE CASCADE
 );
 -- endregion
 

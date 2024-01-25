@@ -207,6 +207,11 @@ public partial class Tepisode : ITableBase<Tepisode>
 
     #region Exists
 
+    static Task<bool> ITableBase<Tepisode>.ExistsAsync(int id, CancellationToken? cancellationToken = null)
+    {
+        throw new NotImplementedException();
+    }
+    
     public static async Task<bool> ExistsAsync(int id, IntColumnSelect columnSelect,
         CancellationToken? cancellationToken = null)
         => await CountAsync(id, columnSelect, cancellationToken) > 0;

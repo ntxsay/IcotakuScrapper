@@ -104,21 +104,23 @@ public partial class TanimeSeasonalPlanning
         ThumbnailUrl = model.ThumbnailUrl;
     }
 
-    public TanimeBase ConvertToAnimeBase()
+    public async Task<TanimeBase> GetOrConvertToAnimeBase()
     {
-        var animeBase = new TanimeBase()
-        {
-            Name = AnimeName,
-            Url = Url,
-            SheetId = SheetId,
-            IsAdultContent = IsAdultContent,
-            IsExplicitContent = IsExplicitContent,
-            ReleaseMonth = MonthDate.FromNumberedDate(ReleaseMonth),
-            ThumbnailUrl = ThumbnailUrl,
-            Description = Description,
-            OrigineAdaptation = OrigineAdaptation?.Clone(),
-            Season = Season,
-        };
+        var animeBase = await TanimeBase.SingleAsync(SheetId, IntColumnSelect.SheetId);
+        if (animeBase is null)
+            return new TanimeBase()
+            {
+                Name = AnimeName,
+                Url = Url,
+                SheetId = SheetId,
+                IsAdultContent = IsAdultContent,
+                IsExplicitContent = IsExplicitContent,
+                ReleaseMonth = MonthDate.FromNumberedDate(ReleaseMonth),
+                ThumbnailUrl = ThumbnailUrl,
+                Description = Description,
+                OrigineAdaptation = OrigineAdaptation?.Clone(),
+                Season = Season,
+            };
 
         return animeBase;
     }
@@ -948,7 +950,11 @@ public partial class TanimeSeasonalPlanning
             TorigineAdaptation.Description as OrigineAdaptationDescription,
             
             Tseason.DisplayName as SeasonDisplayName,
-            Tseason.SeasonNumber as SeasonNumber
+            Tseason.SeasonNumber as SeasonNumber,
+        
+            TanimeSeasonalPlanningDistributor.IdDistributor,
+            TanimeSeasonalPlanningStudio.IdStudio
+        
         FROM
             TanimeSeasonalPlanning
         LEFT JOIN main.TorigineAdaptation on TorigineAdaptation.Id = TanimeSeasonalPlanning.IdOrigine
@@ -956,6 +962,8 @@ public partial class TanimeSeasonalPlanning
         LEFT JOIN main.Tanime on Tanime.SheetId = TanimeSeasonalPlanning.SheetId
         LEFT JOIN main.TanimeCategory on TanimeCategory.IdAnime = Tanime.Id
         LEFT JOIN main.Tcategory on Tcategory.Id = TanimeCategory.IdCategory
+        LEFT JOIN main.TanimeSeasonalPlanningDistributor on TanimeSeasonalPlanning.Id = TanimeSeasonalPlanningDistributor.IdSeasonalPlanning
+        LEFT JOIN main.TanimeSeasonalPlanningStudio on TanimeSeasonalPlanning.Id = TanimeSeasonalPlanningStudio.IdSeasonalPlanning
         
         """;
 
@@ -970,6 +978,8 @@ public partial class TanimeSeasonalPlanning
         LEFT JOIN main.Tanime on Tanime.SheetId = TanimeSeasonalPlanning.SheetId
         LEFT JOIN main.TanimeCategory on TanimeCategory.IdAnime = Tanime.Id
         LEFT JOIN main.Tcategory on Tcategory.Id = TanimeCategory.IdCategory
+        LEFT JOIN main.TanimeSeasonalPlanningDistributor on TanimeSeasonalPlanning.Id = TanimeSeasonalPlanningDistributor.IdSeasonalPlanning
+        LEFT JOIN main.TanimeSeasonalPlanningStudio on TanimeSeasonalPlanning.Id = TanimeSeasonalPlanningStudio.IdSeasonalPlanning
         
         """;
 }

@@ -13,6 +13,12 @@ public record AnimeDbFinderOptions
     public MonthDate MinDate { get; init; }
     public MonthDate MaxDate { get; init; }
 
+    /// <summary>
+    /// Obtient ou définit la saison de l'anime
+    /// </summary>
+    /// <remarks>Cette propriété est utiliser pour faire des recherche dans le champs de vision d'une saison</remarks>
+    public WeatherSeason? Season { get; init; }
+
     public ItemGroupCountStruct[] ItemGroupCountData { get; init; } = [];
 
     //Origines
@@ -60,6 +66,9 @@ public record AnimeDbFinderOptions
     
     public bool HasIdFormatToInclude => IdFormatToInclude.Count > 0;
     public bool HasIdFormatToExclude => IdFormatToExclude.Count > 0;
-    
-    
+
+    public bool HasSeason => Season != null && !Season.Equals(default(WeatherSeason));
+
+
+
 }

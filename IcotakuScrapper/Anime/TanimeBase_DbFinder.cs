@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using IcotakuScrapper.Extensions;
+using IcotakuScrapper.Objects;
 using IcotakuScrapper.Objects.Models;
 using Microsoft.Data.Sqlite;
 
@@ -131,13 +132,25 @@ public partial class TanimeBase
     /// <param name="itemsOrderedBy"></param>
     /// <param name="groupHeaderOrderedBy"></param>
     /// <exception cref="ArgumentOutOfRangeException"></exception>
-    private static void GetSqlSelectScript(SqliteCommand command, DbScriptMode scriptMode,
+    internal static void GetSqlSelectScript(SqliteCommand command, DbScriptMode scriptMode,
             AnimeDbFinderOptions options,
         AnimeSortBy sortBy = AnimeSortBy.Name, 
         AnimeGroupBy groupBy = AnimeGroupBy.Format,
         OrderBy itemsOrderedBy = OrderBy.Asc, OrderBy groupHeaderOrderedBy = OrderBy.Asc)
     {
-        var sqlScript = scriptMode switch
+        string sqlScript = "";
+        FilterOptions(ref sqlScript, ref command, options, scriptMode);
+        
+        AnimeFilterSelection(ref sqlScript, options.ItemGroupCountData);
+
+        OrderRequestBy(ref sqlScript, sortBy, groupBy, itemsOrderedBy, groupHeaderOrderedBy);
+        
+        command.CommandText = sqlScript;
+    }
+
+    internal static void FilterOptions(ref string sqlScript, ref SqliteCommand command, AnimeDbFinderOptions options, DbScriptMode scriptMode)
+    {
+        sqlScript = scriptMode switch
         {
             DbScriptMode.Select => IcotakuSqlSelectScript,
             DbScriptMode.Count => IcotakuSqlCountScript,
@@ -360,12 +373,17 @@ public partial class TanimeBase
         }
 
         #endregion
-        
-        AnimeFilterSelection(ref sqlScript, options.ItemGroupCountData);
 
-        OrderRequestBy(ref sqlScript, sortBy, groupBy, itemsOrderedBy, groupHeaderOrderedBy);
+        if (options.HasSeason)
+        {
+            if (sqlScript.Contains("WHERE", StringComparison.OrdinalIgnoreCase))
+                sqlScript += Environment.NewLine + "AND ";
+            else
+                sqlScript += Environment.NewLine + "WHERE ";
+
+            sqlScript += "Tseason.SeasonNumber = $SeasonNumber";
+        }
         
-        command.CommandText = sqlScript;
         command.Parameters.Clear();
 
         if (options.HasKeyword)
@@ -382,8 +400,11 @@ public partial class TanimeBase
 
         if (options.IsExplicitContent != null)
             command.Parameters.AddWithValue("$IsExplicitContent", options.IsExplicitContent.Value ? 1 : 0);
+    
+        if (options.HasSeason)
+            command.Parameters.AddWithValue("$SeasonNumber", options.Season!.Value.ToIntSeason());
     }
-
+    
     private static void OrderRequestBy(ref string sqlScript, AnimeSortBy sortBy,
         AnimeGroupBy groupBy, OrderBy itemsOrderedBy, OrderBy groupHeaderOrderedBy)
     {

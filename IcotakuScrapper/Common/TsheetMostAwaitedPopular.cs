@@ -120,6 +120,11 @@ public partial class TsheetMostAwaitedPopular : ITableSheetBase<TsheetMostAwaite
 
     #region Exists
 
+    static Task<bool> ITableBase<TsheetMostAwaitedPopular>.ExistsAsync(int id, CancellationToken? cancellationToken = null)
+    {
+        throw new NotImplementedException();
+    }
+    
     public static async Task<bool> ExistsByIdAsync(int id, CancellationToken? cancellationToken = null)
         => await CountAsync(id, IntColumnSelect.Id, cancellationToken) > 0;
 
@@ -458,6 +463,9 @@ public partial class TsheetMostAwaitedPopular : ITableSheetBase<TsheetMostAwaite
 
     public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null)
         => await DeleteAsync(Id, IntColumnSelect.Id, cancellationToken);
+    
+    public static async Task<OperationState> DeleteAsync(int id, CancellationToken? cancellationToken = null)
+        => await DeleteAsync(id, IntColumnSelect.Id, cancellationToken);
     
     public static async Task<OperationState> DeleteAsync(int id, IntColumnSelect columnSelect, CancellationToken? cancellationToken = null)
     {

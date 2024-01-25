@@ -665,6 +665,11 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
 
     #region Exists
 
+    static Task<bool> ITableBase<TanimeBase>.ExistsAsync(int id, CancellationToken? cancellationToken = null)
+    {
+        throw new NotImplementedException();
+    }
+    
     public static async Task<bool> ExistsByIdAsync(int id,
         CancellationToken? cancellationToken = null)
         => await CountAsync(id, IntColumnSelect.Id, cancellationToken) > 0;
@@ -672,8 +677,7 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
     public static async Task<bool> ExistsBySheetIdAsync(int sheetId,
         CancellationToken? cancellationToken = null)
         => await CountAsync(sheetId, IntColumnSelect.SheetId, cancellationToken) > 0;
-
-
+    
     public static async Task<bool> ExistsAsync(int id, IntColumnSelect columnSelect,
         CancellationToken? cancellationToken = null)
         => await CountAsync(id, columnSelect, cancellationToken) > 0;
@@ -1125,7 +1129,8 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
     public async Task<OperationState> DeleteAsync(CancellationToken? cancellationToken = null)
         => await DeleteAsync(Id, IntColumnSelect.Id, cancellationToken);
 
-    
+    public static async Task<OperationState> DeleteAsync(int id, CancellationToken? cancellationToken = null)
+        => await DeleteAsync(id, IntColumnSelect.Id, cancellationToken);
 
     public static async Task<OperationState> DeleteAsync(int id, IntColumnSelect columnSelect,
         CancellationToken? cancellationToken = null)
@@ -1499,5 +1504,28 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
         LEFT JOIN main.TanimeStaff on Tanime.Id = TanimeStaff.IdAnime
         LEFT JOIN main.Tcontact contactStaff on contactStaff.Id = TanimeStaff.IdIndividu
         
+        """;
+    
+    private const string IcotakuSqlGetSheetIdScript =
+        """
+        SELECT DISTINCT
+            Tanime.SheetId AS AnimeSheetId
+        FROM
+            Tanime
+        LEFT JOIN main.Tformat  on Tformat.Id = Tanime.IdFormat
+        LEFT JOIN main.Ttarget  on Ttarget.Id = Tanime.IdTarget
+        LEFT JOIN main.TorigineAdaptation on TorigineAdaptation.Id = Tanime.IdOrigine
+        LEFT JOIN main.Tseason  on Tseason.Id = Tanime.IdSeason
+        LEFT JOIN main.TanimeCategory on Tanime.Id = TanimeCategory.IdAnime
+        LEFT JOIN main.Tcategory on Tcategory.Id = TanimeCategory.IdCategory
+        LEFT JOIN main.TanimeAlternativeTitle on Tanime.Id = TanimeAlternativeTitle.IdAnime
+        LEFT JOIN main.TanimeWebSite on Tanime.Id = TanimeWebSite.IdAnime
+        LEFT JOIN main.TanimeStudio on Tanime.Id = TanimeStudio.IdAnime
+        LEFT JOIN main.Tcontact contactStudio on contactStudio.Id = TanimeStudio.IdStudio
+        LEFT JOIN main.TanimeLicense on Tanime.Id = TanimeLicense.IdAnime
+        LEFT JOIN main.Tcontact contactDistributor on contactDistributor.Id = TanimeLicense.IdDistributor
+        LEFT JOIN main.TanimeStaff on Tanime.Id = TanimeStaff.IdAnime
+        LEFT JOIN main.Tcontact contactStaff on contactStaff.Id = TanimeStaff.IdIndividu
+
         """;
 }
