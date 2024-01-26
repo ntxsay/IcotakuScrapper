@@ -1,6 +1,5 @@
 ﻿using System.Text;
 using IcotakuScrapper.Extensions;
-using IcotakuScrapper.Objects;
 using IcotakuScrapper.Objects.Models;
 using Microsoft.Data.Sqlite;
 
@@ -547,7 +546,7 @@ public partial class TanimeBase
         };
     }
     
-    private static void AnimeFilterSelection(ref string sqlScript, IReadOnlyCollection<ItemGroupCountStruct> groups)
+    private static void AnimeFilterSelection(ref string sqlScript, IReadOnlyCollection<AnimeItemGroupCountStruct> groups)
     {
         //Si la requête est vide, on sort de la méthode
         if (sqlScript.IsStringNullOrEmptyOrWhiteSpace())
@@ -568,37 +567,37 @@ public partial class TanimeBase
         //On récupère le type de données
         var kind = groups.First().IdentifierKind;
         //Si le type de données est None, on sort de la méthode
-        if (kind == ItemGroupCountKind.None)
+        if (kind == AnimeItemGroupCountKind.None)
             return;
         
         var sqlPart = "";
         switch (kind)
         {
-            case ItemGroupCountKind.OrigineAdaptation:
+            case AnimeItemGroupCountKind.OrigineAdaptation:
                 var origineData = groups.Select(x => x.Data).OfType<int>().ToArray();
                 if (origineData.Length == 0)
                     return;
                 sqlPart += $"(Tanime.IdOrigine IN ({string.Join(',', origineData)}))";
                 break;
-            case ItemGroupCountKind.Season:
+            case AnimeItemGroupCountKind.Season:
                 var seasonData = groups.Select(x => x.Data).OfType<uint>().ToArray();
                 if (seasonData.Length == 0)
                     return;
                 sqlPart += $"(Tseason.SeasonNumber IN ({string.Join(',', seasonData)}))";
                 break;
-            case ItemGroupCountKind.ReleaseMonth:
+            case AnimeItemGroupCountKind.ReleaseMonth:
                 var releaseMonthData = groups.Select(x => x.Data).OfType<uint>().ToArray();
                 if (releaseMonthData.Length == 0)
                     return;
                 sqlPart += $"(Tanime.ReleaseMonth IN ({string.Join(',', releaseMonthData)}))";
                 break;
-            case ItemGroupCountKind.Format:
+            case AnimeItemGroupCountKind.Format:
                 var groupNameData = groups.Select(x => x.Data).OfType<int>().ToArray();
                 if (groupNameData.Length == 0)
                     return;
                 sqlPart += $"(Tformat.Name IN ({string.Join(',', groupNameData.Select(s => $"'{s}'"))}))";
                 break;
-            case ItemGroupCountKind.AnimeLetter:
+            case AnimeItemGroupCountKind.AnimeLetter:
                 var letterData = groups.Select(x => x.Data).OfType<char>().ToArray();
                 if (letterData.Length == 0)
                     return;
@@ -609,9 +608,9 @@ public partial class TanimeBase
                     letterCondition.Append($" OR Tanime.Name COLLATE NOCASE LIKE '{value}%'");
                 sqlPart += $"({letterCondition})";
                 break;
-            case ItemGroupCountKind.None:
+            case AnimeItemGroupCountKind.None:
                 break;
-            case ItemGroupCountKind.Category:
+            case AnimeItemGroupCountKind.Category:
                 var categoryData = groups.Select(x => x.Data).OfType<int>().ToArray();
                 if (categoryData.Length == 0)
                     return;

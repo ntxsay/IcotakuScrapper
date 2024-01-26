@@ -57,16 +57,6 @@ public enum IntColumnSelect
 }
 
 /// <summary>
-/// Afin d'éviter de créer plusieurs méthodes de sélection, cette énumération permet de sélectionner la colonne à utiliser pour la sélection.
-/// </summary>
-[Obsolete("Utilisez l'énumération IntColumnSelect à la place")]
-public enum SheetIntColumnSelect
-{
-    Id,
-    SheetId,
-}
-
-/// <summary>
 /// Enumération des colonnes d'id permettant de sélectionner ou de compter  des enrehistrements via l'id ou l'idAnime.
 /// </summary>
 public enum SelectCountIdIdAnimeKind

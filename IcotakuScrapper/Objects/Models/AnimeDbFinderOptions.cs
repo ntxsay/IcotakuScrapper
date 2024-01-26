@@ -19,7 +19,7 @@ public record AnimeDbFinderOptions
     /// <remarks>Cette propriété est utiliser pour faire des recherche dans le champs de vision d'une saison</remarks>
     public WeatherSeason? Season { get; init; }
 
-    public ItemGroupCountStruct[] ItemGroupCountData { get; init; } = [];
+    public AnimeItemGroupCountStruct[] ItemGroupCountData { get; init; } = [];
 
     //Origines
     public HashSet<int> IdOrigineAdaptationToInclude { get; init; } = [];

@@ -1,10 +1,12 @@
-﻿using System.Globalization;
+﻿using System.Diagnostics;
+using System.Globalization;
 using IcotakuScrapper.Common;
 using IcotakuScrapper.Extensions;
 using IcotakuScrapper.Services.IOS;
 using Microsoft.Data.Sqlite;
 using IcotakuScrapper.Contact;
 using IcotakuScrapper.Objects;
+using IcotakuScrapper.Objects.Exceptions;
 
 namespace IcotakuScrapper.Anime;
 
@@ -196,7 +198,7 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
         Licenses.ToObservableCollection(value.Licenses, true);
         Studios.ToObservableCollection(value.Studios, true);
         Staffs.ToObservableCollection(value.Staffs, true);
-        
+        IsFullyLoaded = value.IsFullyLoaded;
     }
     
     public TanimeBase Clone()
@@ -250,6 +252,139 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
     }
     public override string ToString() => $"{Name} ({Id}/{SheetId})";
 
+    #region Seasonal
+
+    /// <summary>
+    /// Retourne les Urls des fiches manquantes pour une saison dans la base de données.
+    /// </summary>
+    /// <param name="season"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static async Task<Uri[]> GetMissingUriInSeasonalPlanningAsync(WeatherSeason season, CancellationToken? cancellationToken = null)
+    {
+        var allSeasonalAnimes = await TanimeSeasonalPlanning.ScrapAnimeSheetUriAndFilterContentAsync(season, cancellationToken).ToArrayAsync();
+        if (allSeasonalAnimes.Length == 0)
+            return [];
+        await using var command = Main.Connection.CreateCommand();
+        command.CommandText = 
+            """
+            SELECT Url 
+            FROM Tanime 
+            WHERE IdSeason = (SELECT Id FROM Tseason WHERE Tseason.SeasonNumber = $SeasonNumber)
+            """;
+
+        command.Parameters.AddWithValue("$SeasonNumber", season.ToIntSeason());
+
+        List<Uri> dbUris = [];
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
+        if (!reader.HasRows)
+            return allSeasonalAnimes;
+        while (await reader.ReadAsync(cancellationToken ?? CancellationToken.None))
+        {
+            if (reader.IsDBNull(reader.GetOrdinal("Url")))
+                continue;
+            
+            var url = reader.GetString(reader.GetOrdinal("Url"));
+            if (url.IsStringNullOrEmptyOrWhiteSpace())
+                continue;
+            
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+                continue;
+            
+            dbUris.Add(uri);
+        }
+        
+        return allSeasonalAnimes.Except(dbUris).ToArray();
+    }
+
+    
+    /// <summary>
+    /// Retourne les identifiants des animés de la saison qui ne sont pas entièrement téléchargés.
+    /// </summary>
+    /// <param name="season"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static async Task<int[]> GetNotFullyLoadedAnimeIdAsync(WeatherSeason season, CancellationToken? cancellationToken = null)
+    {
+        await using var command = Main.Connection.CreateCommand();
+        command.CommandText = 
+            """
+            SELECT Id 
+            FROM Tanime 
+            WHERE IdSeason = (SELECT Id FROM Tseason WHERE Tseason.SeasonNumber = $SeasonNumber)
+            AND IsFullyLoaded = 0
+            """;
+
+        command.Parameters.AddWithValue("$SeasonNumber", season.ToIntSeason());
+
+        List<int> dbIds = [];
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
+        if (!reader.HasRows)
+            return [];
+
+        while (await reader.ReadAsync(cancellationToken ?? CancellationToken.None))
+        {
+            var id = reader.GetInt32(reader.GetOrdinal("Id"));
+            if (id <= 0)
+                continue;
+            
+            dbIds.Add(id);
+        }
+        
+        return dbIds.ToArray();
+    }
+    
+    public static async Task<(int Id, Uri SheetUri, string Name)[]> GetNotFullyLoadedAnimeAsync(WeatherSeason season = default, CancellationToken? cancellationToken = null)
+    {
+        await using var command = Main.Connection.CreateCommand();
+        command.CommandText = 
+            """
+            SELECT 
+                Id,
+                Url,
+                Name
+            FROM Tanime
+            WHERE IsFullyLoaded = 0
+            """;
+        
+        if (!season.Equals(default(WeatherSeason)))
+            command.CommandText += " AND IdSeason = (SELECT Id FROM Tseason WHERE Tseason.SeasonNumber = $SeasonNumber)";
+        
+        //sql partiel interdisant l'accès aux contenus explicites et adultes si l'utilisateur n'a pas activé l'option   
+        command.AddExplicitContentFilter(DbStartFilterMode.And, "Tanime.IsAdultContent", "Tanime.IsExplicitContent");
+        
+        command.Parameters.AddWithValue("$SeasonNumber", season.ToIntSeason());
+
+        List<(int Id, Uri SheetUri, string Name)> dbIds = [];
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken ?? CancellationToken.None);
+        if (!reader.HasRows)
+            return [];
+
+        while (await reader.ReadAsync(cancellationToken ?? CancellationToken.None))
+        {
+            var id = reader.GetInt32(reader.GetOrdinal("Id"));
+            if (id <= 0)
+                continue;
+            
+            if (reader.IsDBNull(reader.GetOrdinal("Url")))
+                continue;
+            
+            var url = reader.GetString(reader.GetOrdinal("Url"));
+            if (url.IsStringNullOrEmptyOrWhiteSpace() || !Uri.TryCreate(url, UriKind.Absolute, out var uri) || !uri.IsAbsoluteUri)
+                continue;
+            
+            var name = reader.GetString(reader.GetOrdinal("Name"));
+            if (name.IsStringNullOrEmptyOrWhiteSpace())
+                continue;
+            
+            dbIds.Add((id, uri, name));
+        }
+        
+        return dbIds.ToArray();
+    }
+    
+    #endregion
+    
     #region Folder et download
 
     /// <summary>
@@ -520,17 +655,8 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
     public static async Task<int> CountAsync(int id, IntColumnSelect columnSelect,
         CancellationToken? cancellationToken = null)
     {
+        IntColumnSelectException.ThrowNotSupportedException(columnSelect, nameof(columnSelect), [IntColumnSelect.Id, IntColumnSelect.SheetId]);
         await using var command = Main.Connection.CreateCommand();
-        var isColumnSelectValid = command.IsIntColumnValidated(columnSelect,
-        [
-            IntColumnSelect.Id,
-            IntColumnSelect.SheetId,
-        ]);
-
-        if (!isColumnSelectValid)
-        {
-            return 0;
-        }
 
         command.CommandText = columnSelect switch
         {
@@ -540,6 +666,20 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
         };
         
         command.Parameters.AddWithValue("$Id", id);
+        var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
+        if (result is long count)
+            return (int)count;
+        return 0;
+    }
+    
+    public static async Task<int> CountAsync(WeatherSeason season,
+        CancellationToken? cancellationToken = null)
+    {
+        await using var command = Main.Connection.CreateCommand();
+        command.CommandText = "SELECT COUNT(Id) FROM Tanime WHERE IdSeason = (SELECT Id FROM Tseason WHERE Tseason.SeasonNumber = $SeasonNumber)";
+
+        command.Parameters.AddWithValue("$SeasonNumber", season.ToIntSeason());
+
         var result = await command.ExecuteScalarAsync(cancellationToken ?? CancellationToken.None);
         if (result is long count)
             return (int)count;
@@ -716,6 +856,10 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
     public static async Task<bool> ExistsAsync(Uri sheetUri, int sheetId,
         CancellationToken? cancellationToken = null)
         => await CountAsync(sheetUri, sheetId, cancellationToken) > 0;
+    
+    public static async Task<bool> ExistsAsync(WeatherSeason season,
+        CancellationToken? cancellationToken = null)
+        => await CountAsync(season, cancellationToken) > 0;
 
     #endregion
 
@@ -1054,6 +1198,38 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
         }
     }
 
+    public async Task<bool> SetFullyLoadedAsync(bool isFullyLoaded)
+    {
+        if (Id <= 0)
+            return false;
+        
+        var isSucess = await SetAnimeToFullyLoadedAsync(Id, isFullyLoaded);
+        if (!isSucess)
+            return false;
+        
+        IsFullyLoaded = isFullyLoaded;
+        return true;
+    }
+    
+    public static async Task<bool> SetAnimeToFullyLoadedAsync(int idAnime, bool isFullyLoaded)
+    {
+        await using var command = Main.Connection.CreateCommand();
+        command.CommandText = "UPDATE Tanime SET IsFullyLoaded = $IsFullyLoaded WHERE Id = $Id";
+        command.Parameters.AddWithValue("$IsFullyLoaded", isFullyLoaded ? 1 : 0);
+        command.Parameters.AddWithValue("$Id", idAnime);
+        
+        try
+        {
+            await command.ExecuteNonQueryAsync();
+            return true;
+        }
+        catch (Exception e)
+        {
+            LogServices.LogDebug(e.Message);
+            return false;
+        }
+    }
+    
     /// <summary>
     /// Retourne la liste des animés à mettre à jour en fonction de la saison.
     /// </summary>

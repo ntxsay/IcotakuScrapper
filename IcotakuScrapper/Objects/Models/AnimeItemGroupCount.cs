@@ -1,7 +1,9 @@
-﻿namespace IcotakuScrapper.Objects.Models;
+﻿using System.Collections.ObjectModel;
+
+namespace IcotakuScrapper.Objects.Models;
 
 
-public enum AnimeItemGroupCountKindKind
+public enum AnimeItemGroupCountKind
 {
     None,
     AnimeLetter,
@@ -11,6 +13,13 @@ public enum AnimeItemGroupCountKindKind
     ReleaseMonth,
     Target,
     Format,
+}
+
+public enum AnimeItemGroupCountScopeKind
+{
+    None,
+    Season,
+    Day,
 }
 
 public struct AnimeItemGroupCountStruct
@@ -27,7 +36,7 @@ public struct AnimeItemGroupCountStruct
     /// <summary>
     /// Obtient ou définit le type de données
     /// </summary>
-    public AnimeItemGroupCountKindKind IdentifierKind { get; set; }
+    public AnimeItemGroupCountKind IdentifierKind { get; set; }
 
     public string GroupName { get; set; } = "Groupe inconnu";
 
@@ -48,7 +57,7 @@ public struct AnimeItemGroupCountStruct
     public int Count { get; set; }
 }
 
-public class AnimeItemGroupCountKind
+public class AnimeItemGroupCount
 {
     /// <summary>
     /// Obtient ou définit l'identifiant (Id de la base de données) de l'élément actuel
@@ -71,4 +80,11 @@ public class AnimeItemGroupCountKind
     /// Obtient ou définit le nombre d'éléments en tout
     /// </summary>
     public int Count { get; set; }
+}
+
+public class AnimeItemGroupCountCastVm
+{
+    public string GroupName { get; set; } = "Groupe inconnu";
+    public string? Description { get; set; }
+    public ObservableCollection<AnimeItemGroupCountStruct> Items { get; set; } = [];
 }

@@ -304,14 +304,49 @@ public partial class TanimeSeasonalPlanning
             $"{results.Count(a => a.IsSuccess)} animés sur {results.Count} ont été ajoutés ou mis à jour");
     }
     
+    public static async Task<OperationState> ScrapAndSaveAsync(Uri[] animeUris, CancellationToken? cancellationToken = null)
+    {
+        if (animeUris.Length == 0)
+            return new OperationState(false, "Aucun lien n'a été fourni");
+        
+        var seasonalAnimes = await ScrapAnimeBaseSheetAsync(animeUris, cancellationToken).ToArrayAsync();
+        if (seasonalAnimes.Length == 0)
+            return new OperationState(false, "Le planning est vide");
+
+        if (!Main.IsAccessingToAdultContent)
+            seasonalAnimes = seasonalAnimes.Where(w => !w.IsAdultContent).ToArray();
+        
+        if (!Main.IsAccessingToExplicitContent)
+            seasonalAnimes = seasonalAnimes.Where(w => !w.IsExplicitContent).ToArray();
+        
+        List<OperationState> results = [];
+        foreach (var animeBase in seasonalAnimes)
+        {
+            results.Add((await animeBase.AddOrUpdateAsync(cancellationToken)).ToBaseState());
+        }
+
+        return new OperationState(true,
+            $"{results.Count(a => a.IsSuccess)} animés sur {results.Count} ont été ajoutés ou mis à jour");
+    }
+    
     public static async IAsyncEnumerable<TanimeBase> ScrapAnimeBaseSheetAsync(WeatherSeason season, CancellationToken? cancellationToken = null)
     {
         var seasonalPlannings = await ScrapAnimeSheetUriAsync(season, cancellationToken).ToArrayAsync();
         if (seasonalPlannings.Length == 0)
             yield break;
 
+        var results = ScrapAnimeBaseSheetAsync(seasonalPlannings, cancellationToken);
+        await foreach (var result in results)
+            yield return result;
+    }
+    
+    public static async IAsyncEnumerable<TanimeBase> ScrapAnimeBaseSheetAsync(Uri[] animesSheetUri, CancellationToken? cancellationToken = null)
+    {
+        if (animesSheetUri.Length == 0)
+            yield break;
+
         List<Task<OperationState<TanimeBase?>>> results = [];
-        foreach (var animeSheetUri in seasonalPlannings)
+        foreach (var animeSheetUri in animesSheetUri)
         {
             await Task.Delay(100);
             results.Add(TanimeBase.ScrapAnimeBaseAsync(animeSheetUri, AnimeScrapingOptions.SeasonalPlanning, cancellationToken));
@@ -361,6 +396,89 @@ public partial class TanimeSeasonalPlanning
             
             yield return animeUri;
         }
+    }
+    
+    /// <summary>
+    /// Retourne les liens des fiches des animés du planning saisonnier et filtre le contenu adulte et explicite
+    /// </summary>
+    /// <param name="season">Saison dans laquelle obtenir les liens</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    internal static async IAsyncEnumerable<Uri> ScrapAnimeSheetUriAndFilterContentAsync(WeatherSeason season, CancellationToken? cancellationToken = null)
+    {
+        //Url de la page du planning saisonnier
+        var url = IcotakuWebHelpers.GetAnimeSeasonalPlanningUrl(season);
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || !uri.IsAbsoluteUri)
+            yield break;
+
+        //Charge la page du planning saisonnier
+        HtmlWeb web = new();
+        var htmlDocument = await web.LoadFromWebAsync(uri.AbsoluteUri, cancellationToken ?? CancellationToken.None);
+        
+        //Obtient les noeuds a qui contiennent les liens des fiches des animés
+        var aNodes = htmlDocument.DocumentNode.SelectNodes("//div[contains(@class, 'planning_saison')]/div[contains(@class, 'categorie')]/table//th[contains(@class, 'titre')]/a")?.ToArray() ?? [];
+        if (aNodes.Length == 0)
+            yield break;
+        
+        // Obtient les liens absolue des fiches des animés
+        var animeUris = aNodes.Select(aNode => IcotakuWebHelpers.GetFullHrefFromHtmlNode(aNode, IcotakuSection.Anime))
+            .OfType<Uri>().ToArray();
+        if (animeUris.Length == 0)
+            yield break;
+        
+        List<Task<(bool IsAdultContent, bool IsExplicitContent, Uri AnimeSheetUri)>> results = [];
+
+        //Pour chaque lien de fiche d'animé
+        foreach (var animeUri in animeUris)
+        {
+            //Ajoute la tâche de classification du contenu adulte et explicite
+            results.Add(TanimeBase.ScrapIsAdultAndExplicitContentAsync(animeUri, cancellationToken));
+            
+            //Attends 100ms avant de passer à l'itération suivante
+            await Task.Delay(100);
+            
+            /*
+             * Si le nombre de tâche en cours est inférieur à 4, on passe à l'itération suivante
+             * Sinon on attends que le nombre de tâche en cours soit inférieur à 4
+             */
+            if (results.Count(a => !a.IsCompleted) < 8) 
+                continue;
+            while (results.Count(a => !a.IsCompleted) >= 8)
+                await Task.Delay(100);
+        }
+        
+        //Attends que toutes les tâches soient terminées
+        await Task.WhenAll(results);
+        
+        //Obtient les résultats de la classification du contenu adulte et explicite
+        var classificationResults = results.Select(s => s.Result).Where(w => !w.Equals(default((bool IsAdultContent, bool IsExplicitContent)))).ToArray();
+        
+        //Si aucun résultat n'est retourné, on sort de la méthode
+        if (classificationResults.Length == 0)
+        {
+            results.ForEach(f => f.Dispose());
+            results.Clear();
+            yield break;
+        }
+
+        //Pour chaque résultat de la classification du contenu adulte et explicite
+        foreach (var classification in classificationResults)
+        {
+            //Si l'accès au contenu adulte est désactivé et que le contenu est adulte, on passe à l'itération suivante
+            if (!Main.IsAccessingToAdultContent && classification.IsAdultContent)
+                continue;
+            
+            //Si l'accès au contenu explicite est désactivé et que le contenu est explicite, on passe à l'itération suivante
+            if (!Main.IsAccessingToExplicitContent && classification.IsExplicitContent)
+                continue;
+            
+            //Retourne le lien de la fiche de l'animé
+            yield return classification.AnimeSheetUri;
+        }
+        
+        //Libère les ressources
+        results.ForEach(f => f.Dispose());
+        results.Clear();
     }
 
 }

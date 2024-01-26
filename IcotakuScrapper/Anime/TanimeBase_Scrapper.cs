@@ -583,11 +583,30 @@ public partial class TanimeBase
         return await Ttarget.SingleOrCreateAsync(record, true, cancellationToken);
     }
 
+    internal static async Task<(bool IsAdultContent, bool IsExplicitContent, Uri AnimeSheetUri)> ScrapIsAdultAndExplicitContentAsync(Uri animeSheetUri, CancellationToken? cancellationToken = null)
+    {
+        HtmlWeb web = new();
+        var htmlDocument = await web.LoadFromWebAsync(animeSheetUri.AbsoluteUri, cancellationToken ?? CancellationToken.None);
+        var documentNode = htmlDocument.DocumentNode;
+        
+        var isExplicit = ScrapIsExplicitContent(ref documentNode);
+        var isAdult = ScrapIsAdultContent(ref documentNode);
+        return (isAdult, isExplicit, animeSheetUri);
+    }
+    
     internal static bool ScrapIsAdultContent(Uri animeSheetUri)
     {
         HtmlWeb web = new();
         var htmlDocument = web.Load(animeSheetUri.ToString()).DocumentNode;
         return ScrapIsAdultContent(ref htmlDocument);
+    }
+    
+    internal static async Task<bool> ScrapIsAdultContentAsync(Uri animeSheetUri)
+    {
+        HtmlWeb web = new();
+        var htmlDocument = await web.LoadFromWebAsync(animeSheetUri.ToString());
+        var documentNode = htmlDocument.DocumentNode;
+        return ScrapIsAdultContent(ref documentNode);
     }
 
     internal static bool ScrapIsAdultContent(ref HtmlNode documentNode)
@@ -601,6 +620,14 @@ public partial class TanimeBase
         HtmlWeb web = new();
         var htmlDocument = web.Load(animeSheetUri.ToString()).DocumentNode;
         return ScrapIsExplicitContent(ref htmlDocument);
+    }
+    
+    internal static async Task<bool> ScrapIsExplicitContentAsync(Uri animeSheetUri)
+    {
+        HtmlWeb web = new();
+        var htmlDocument = await web.LoadFromWebAsync(animeSheetUri.ToString());
+        var documentNode = htmlDocument.DocumentNode;
+        return ScrapIsExplicitContent(ref documentNode);
     }
 
     internal static bool ScrapIsExplicitContent(ref HtmlNode documentNode)

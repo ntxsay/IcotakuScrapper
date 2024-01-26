@@ -5,26 +5,26 @@ using IcotakuScrapper.Anime;
 namespace IcotakuScrapper.Objects.Models;
 
 
-public readonly struct AnimeSelectionModeSelector
+public readonly struct AnimeSelectionModeSelectorStruct
 {
     public AnimeSelectionMode Kind { get; init; }
     public string Name { get; init; } = null!;
 
-    public AnimeSelectionModeSelector(AnimeSelectionMode kind, string name)
+    public AnimeSelectionModeSelectorStruct(AnimeSelectionMode kind, string name)
     {
         Kind = kind;
         Name = name;
     }
 
-    public AnimeSelectionModeSelector()
+    public AnimeSelectionModeSelectorStruct()
     {
 
     }
 }
 
-public class AnimeSelectionModeSelectorVm : INotifyPropertyChanged
+public class AnimeSelectionModeSelector : INotifyPropertyChanged
 {
-    public event PropertyChangedEventHandler PropertyChanged = delegate { };
+    public event PropertyChangedEventHandler? PropertyChanged = delegate { };
     private AnimeSelectionMode _Kind;
 
     public AnimeSelectionMode Kind
@@ -55,36 +55,17 @@ public class AnimeSelectionModeSelectorVm : INotifyPropertyChanged
         }
     }
 
-    internal AnimeSelectionModeSelectorVm(AnimeSelectionMode kind, string name)
+    internal AnimeSelectionModeSelector(AnimeSelectionMode kind, string name)
     {
         Kind = kind;
         Name = name;
     }
 
-    internal AnimeSelectionModeSelectorVm()
+    internal AnimeSelectionModeSelector()
     {
     }
 
-    public static IEnumerable<AnimeSelectionModeSelectorVm> GetFilterByList()
-    {
-        var enumValues = Enum.GetValues<AnimeSelectionMode>().ToArray();
-        foreach (var enumValue in enumValues)
-        {
-            yield return enumValue switch
-            {
-                AnimeSelectionMode.None => new AnimeSelectionModeSelectorVm(AnimeSelectionMode.None, "Aucun"),
-                AnimeSelectionMode.Letter => new AnimeSelectionModeSelectorVm(AnimeSelectionMode.Letter, "Lettre"),
-                AnimeSelectionMode.OrigineAdaptation => new AnimeSelectionModeSelectorVm(AnimeSelectionMode.OrigineAdaptation, "Origine de l'adaptation"),
-                AnimeSelectionMode.GroupName => new AnimeSelectionModeSelectorVm(AnimeSelectionMode.GroupName, "Format"),
-                AnimeSelectionMode.Season => new AnimeSelectionModeSelectorVm(AnimeSelectionMode.Season, "Saison"),
-                AnimeSelectionMode.ReleaseMonth => new AnimeSelectionModeSelectorVm(AnimeSelectionMode.ReleaseMonth, "Date de diffusion"),
-                AnimeSelectionMode.Category => new AnimeSelectionModeSelectorVm(AnimeSelectionMode.Category, "Catégorie"),
-                _ => throw new NotImplementedException(),
-            };
-        }
-    }
-
-    public static IEnumerable<AnimeSelectionModeSelector> GetFilterStructByList()
+    public static IEnumerable<AnimeSelectionModeSelector> GetFilterByList()
     {
         var enumValues = Enum.GetValues<AnimeSelectionMode>().ToArray();
         foreach (var enumValue in enumValues)
@@ -94,7 +75,7 @@ public class AnimeSelectionModeSelectorVm : INotifyPropertyChanged
                 AnimeSelectionMode.None => new AnimeSelectionModeSelector(AnimeSelectionMode.None, "Aucun"),
                 AnimeSelectionMode.Letter => new AnimeSelectionModeSelector(AnimeSelectionMode.Letter, "Lettre"),
                 AnimeSelectionMode.OrigineAdaptation => new AnimeSelectionModeSelector(AnimeSelectionMode.OrigineAdaptation, "Origine de l'adaptation"),
-                AnimeSelectionMode.GroupName => new AnimeSelectionModeSelector(AnimeSelectionMode.GroupName, "Format"),
+                AnimeSelectionMode.Format => new AnimeSelectionModeSelector(AnimeSelectionMode.Format, "Format"),
                 AnimeSelectionMode.Season => new AnimeSelectionModeSelector(AnimeSelectionMode.Season, "Saison"),
                 AnimeSelectionMode.ReleaseMonth => new AnimeSelectionModeSelector(AnimeSelectionMode.ReleaseMonth, "Date de diffusion"),
                 AnimeSelectionMode.Category => new AnimeSelectionModeSelector(AnimeSelectionMode.Category, "Catégorie"),
@@ -103,6 +84,25 @@ public class AnimeSelectionModeSelectorVm : INotifyPropertyChanged
         }
     }
 
-    public virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+    public static IEnumerable<AnimeSelectionModeSelectorStruct> GetFilterStructByList()
+    {
+        var enumValues = Enum.GetValues<AnimeSelectionMode>().ToArray();
+        foreach (var enumValue in enumValues)
+        {
+            yield return enumValue switch
+            {
+                AnimeSelectionMode.None => new AnimeSelectionModeSelectorStruct(AnimeSelectionMode.None, "Aucun"),
+                AnimeSelectionMode.Letter => new AnimeSelectionModeSelectorStruct(AnimeSelectionMode.Letter, "Lettre"),
+                AnimeSelectionMode.OrigineAdaptation => new AnimeSelectionModeSelectorStruct(AnimeSelectionMode.OrigineAdaptation, "Origine de l'adaptation"),
+                AnimeSelectionMode.Format => new AnimeSelectionModeSelectorStruct(AnimeSelectionMode.Format, "Format"),
+                AnimeSelectionMode.Season => new AnimeSelectionModeSelectorStruct(AnimeSelectionMode.Season, "Saison"),
+                AnimeSelectionMode.ReleaseMonth => new AnimeSelectionModeSelectorStruct(AnimeSelectionMode.ReleaseMonth, "Date de diffusion"),
+                AnimeSelectionMode.Category => new AnimeSelectionModeSelectorStruct(AnimeSelectionMode.Category, "Catégorie"),
+                _ => throw new NotImplementedException(),
+            };
+        }
+    }
+
+    public virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }
