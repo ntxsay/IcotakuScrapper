@@ -7,6 +7,7 @@ using Microsoft.Data.Sqlite;
 using IcotakuScrapper.Contact;
 using IcotakuScrapper.Objects;
 using IcotakuScrapper.Objects.Exceptions;
+using SQLiteOrm;
 
 namespace IcotakuScrapper.Anime;
 
@@ -16,6 +17,12 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
     /// Obtient ou définit l'id de l'anime.
     /// </summary>
     public int Id { get; protected set; }
+    
+    public int IdStatistic { get; set; }
+    public int IdFormat { get; set; }
+    public int IdTarget { get; set; }
+    public int IdOrigine { get; set; }
+    public int IdSeason { get; set; }
 
     /// <summary>
     /// Obtient ou définit le guid de l'anime.
@@ -1596,7 +1603,7 @@ public partial class TanimeBase : ITableSheetBase<TanimeBase>
         return [.. records];
     }
 
-
+    
     private const string IcotakuSqlSelectScript =
         """
         SELECT
