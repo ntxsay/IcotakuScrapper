@@ -1,5 +1,6 @@
 ﻿using IcotakuScrapper;
 using IcotakuScrapper.Anime;
+using IcotakuScrapper.Extensions;
 using IcotakuScrapper.Objects;
 using IcotakuScrapper.Objects.Models;
 using IcotakuScrapper.Services;
@@ -12,7 +13,7 @@ namespace IcotakuScrapperTest
         public void DownloadFileTest()
         {
             var url = IcotakuWebHelpers.GetDownloadFolderUrl(IcotakuSheetType.Anime, 10, IcotakuDefaultSubFolder.Episod, 1);
-            Assert.IsNotEmpty(url);
+            Assert.That(!url.IsStringNullOrEmptyOrWhiteSpace());
         }
 
         

@@ -10,7 +10,7 @@ public class AnimeUpdaterTest
     {
         var updater = new AnimeUpdater();
         await updater.FindAnimeToUpdateAsync(new WeatherSeason(WeatherSeasonKind.Fall, 2010));
-        Assert.True(updater.Count > 0);
+        Assert.That(updater.Count, Is.GreaterThan(0));
     }
     
     [Test]

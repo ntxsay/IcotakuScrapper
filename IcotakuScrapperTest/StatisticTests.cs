@@ -20,7 +20,7 @@ public class StatisticTests
             Console.WriteLine(statistic.VisitCount);
             Console.WriteLine(statistic.LastVisitedBy);
         }
-        Assert.IsNotNull(statistic);
+        Assert.That(statistic != null);
     }
 
     [Test]
@@ -36,7 +36,7 @@ public class StatisticTests
         
         //Id de l'enregistrement nouvellement inséré
         Console.WriteLine(result.Data);
-        Assert.IsTrue(result.IsSuccess);
+        Assert.That(result.IsSuccess);
     }
     
     [Test]
@@ -53,13 +53,13 @@ public class StatisticTests
             Console.WriteLine(statistic.VisitCount);
             Console.WriteLine(statistic.LastVisitedBy);
         }
-        Assert.IsNotNull(statistic);
+        Assert.That(statistic != null);
     }
 
     [Test]
     public async Task GetSingleAsync()
     {
         TsheetStatistic? result = await TsheetStatistic.SingleAsync(IcotakuSection.Anime, 1);
-        Assert.IsNotNull(result);
+        Assert.That(result != null);
     }
 }

@@ -1,6 +1,7 @@
 ﻿using IcotakuScrapper;
 using IcotakuScrapper.Anime;
 using IcotakuScrapper.Common;
+using IcotakuScrapper.Extensions;
 using IcotakuScrapper.Objects;
 
 namespace IcotakuScrapperTest
@@ -208,14 +209,14 @@ namespace IcotakuScrapperTest
             if (anime is null)
                 return;
             var path = await anime.DownloadThumbnailAsync();
-            Assert.IsNotEmpty(path);
+            Assert.That(!path.IsStringNullOrEmptyOrWhiteSpace());
         }
         
         [Test]
         public async Task SCrapTopAnime()
         {
             var animes = await TsheetMostAwaitedPopular.ScrapPageAsync(15, IcotakuSection.Anime, IcotakuListType.MostPopular);
-            Assert.IsNotEmpty(animes);
+            Assert.That(animes.Length > 0);
         }
     }
 }

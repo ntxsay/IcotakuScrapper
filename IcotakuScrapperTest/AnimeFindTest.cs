@@ -22,7 +22,7 @@ public class AnimeFindTest
         };
         
         var animes = await TanimeBase.FindAndSaveAsync(parameter).ToArrayAsync();
-        Assert.IsNotEmpty(animes);
+        Assert.That(animes.Length > 0);
     }
 
     [Test]
@@ -52,7 +52,7 @@ public class AnimeFindTest
             await Task.Delay(100);
         }
 
-        Assert.IsTrue(animes.Any(x => x.IsSuccess));
+        Assert.That(animes.Any(x => x.IsSuccess));
     }
     
     [Test]
@@ -65,7 +65,7 @@ public class AnimeFindTest
             Year = 2013,
         };
         var url = IcotakuWebHelpers.GetAdvancedSearchUri(IcotakuSection.Anime, parameter);
-        Assert.IsNotNull(url);
+        Assert.That(url != null);
     }
 
 }

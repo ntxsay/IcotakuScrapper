@@ -9,6 +9,6 @@ public class SeasonTest
     public async Task ScrapSeasonAsync()
     {
         var result = await Tseason.ScrapAsync(IcotakuSection.Anime);
-        Assert.IsTrue(result.IsSuccess);
+        Assert.That(result.IsSuccess);
     }
 }
